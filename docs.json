@@ -1,7 +1,8 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "QML Docs",
+  "description": "QML 用户手册与插件开发指南",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
@@ -11,62 +12,96 @@
   "navigation": {
     "pages": [
       {
-        "group": "Getting Started",
+        "group": "开始",
+        "pages": ["index", "guide/index", "guide/getting-started", "guide/first-start"]
+      },
+      {
+        "group": "功能",
         "pages": [
-          "index",
-          "quickstart"
+          "guide/dashboard-widget",
+          "guide/installing-games",
+          "guide/instances",
+          "guide/modpack-support",
+          "guide/resource-center",
+          "guide/downloads",
+          "guide/accounts",
+          "guide/connect",
+          "guide/running",
+          "guide/log-analysis",
+          "guide/plugins",
+          "guide/deep-link"
         ]
+      },
+      {
+        "group": "设置与网络",
+        "pages": ["guide/settings", "guide/mirror"]
+      },
+      {
+        "group": "帮助与优化",
+        "pages": ["guide/glossary", "guide/faq", "guide/report-issue", "guide/optimize", "guide/legal"]
+      },
+      {
+        "group": "插件开发",
+        "pages": [
+          {
+            "group": "入门",
+            "pages": ["plugins/index", "plugins/creating-plugin", "plugins/react-plugin"]
+          },
+          {
+            "group": "核心参考",
+            "pages": ["plugins/manifest", "plugins/plugin-api", "plugins/plugin-ui", "plugins/dependencies"]
+          },
+          {
+            "group": "进阶",
+            "pages": [
+              "plugins/wasm-plugin",
+              "plugins/webview-l4",
+              "plugins/overlay",
+              "plugins/dashboard-widget",
+              "plugins/settings-page",
+              "plugins/hooks",
+              "plugins/theme"
+            ]
+          },
+          {
+            "group": "工具链与调试",
+            "pages": ["plugins/cli", "plugins/debugging", "plugins/ai-development"]
+          },
+          {
+            "group": "发布与质量",
+            "pages": ["plugins/publishing", "plugins/telemetry", "plugins/pitfalls"]
+          }
+        ]
+      },
+      {
+        "group": "前置插件文档",
+        "pages": ["libraries/index", "libraries/markdownlib", "libraries/markitdown"]
+      },
+      {
+        "group": "插件商店",
+        "pages": ["store/publish", "store/index", "store/registry-spec"]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/logo/qomicex.svg",
+    "dark": "/logo/qomicex.svg"
   },
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:support@mintlify.com"
+        "label": "官网",
+        "href": "https://www.qomicex.top/"
+      },
+      {
+        "label": "问题反馈",
+        "href": "https://github.com/Qomicex-Public/Qomicex.Tauri/issues"
       }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
     ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/Qomicex-Public"
     }
   }
 }

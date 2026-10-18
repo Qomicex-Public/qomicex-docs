@@ -1,0 +1,76 @@
+---
+title: "L4 远程 WebView"
+---
+## L4 远程 WebView
+
+L4 是插件渲染的**最高隔离层级**：插件页面运行在独立的 **Tauri WebviewWindow**（独立 renderer 进程）中，与主界面进程级隔离。即使插件陷入 busy-loop 也只冻结自己的窗口，**不影响主 UI**（主界面仍可响应、渲染、关闭）。
+
+适合**重 UI、不受控**的插件（如复杂编辑器、游戏 UI 增强、长驻后台页面）——这类插件在 iframe（L2）里仍与主界面共享同一 WebView，一个死循环就能卡死整个启动器。
+
+## manifest 声明
+
+满足以下**任一条件**即启用 L4 渲染：
+
+```json
+{
+  "render": "webview",
+  "layers": ["l4"]
+}
+```
+
+- `"render": "webview"`，**或**
+- `layers` 数组包含 `"l4"`
+
+判定优先级（`plugin-loader.tsx` `useWebview`）：`render === 'webview' || layers.includes('l4')`。声明 l4 的插件仍须提供 `entry.frontend`（否则不会被激活渲染）。
+
+## 跨窗口桥原理
+
+l4 窗口不是 `window.open` 出来的普通子窗口，而是经 Tauri IPC `WebviewWindow` 创建的**独立 WebView 窗口**（`opener` 为 `null`），因此不能依赖 `window.opener.postMessage`。跨窗口通信走 **Tauri 事件系统**（`emitTo` / `listen`，`core:event` 默认允许）：
+
+```text
+┌─────────────── 主窗口（main） ───────────────┐        ┌──────── l4 窗口（plugin-webview-{id}） ────────┐
+│ plugin-loader: createRemoteWebview()          │        │ App 轻量模式 → PluginWebviewPage             │
+│   ├─ 打开 WebviewWindow(/plugins/p/:id?…)     │──────▶ │   ├─ iframe(sandbox) 加载插件 HTML+桥脚本    │
+│   └─ initL4Bridge() 监听 plugin-l4-api-call   │        │   └─ 插件 __plugin_api_call 消息             │
+│        handleApiCall(权限校验+执行)            │◀───────│        ├─ emitTo('main', plugin-l4-api-call) │
+│        └─ emitTo(l4label, plugin-l4-api-response) ───▶ │        └─ postMessage 回插件 iframe          │
+└──────────────────────────────────────────────┘        └──────────────────────────────────────────────┘
+```
+
+- **激活**：插件启用时 `createRemoteWebview` 打开窗口 `plugin-webview-{id}`（默认 1200×800），地址为插件页 URL 并带 `pluginWebview=1` 标记。
+- **轻量启动**：`App.tsx` 检测到该标记后**不加载主 Layout / 路由 / 插件自动激活**，只渲染 `PluginWebviewPage`。
+- **渲染**：`PluginWebviewPage` 拉取插件前端资源，经 `buildPluginDoc` 注入主题变量与桥脚本，渲染进 `sandbox="allow-scripts"` 的 iframe。
+- **API 转发**：iframe 内 `__PLUGIN_API__` 调用发出 `__plugin_api_call` 消息 → 页面转发为 Tauri 事件 `emitTo('main', 'plugin-l4-api-call', {pluginId, id, method, args})`。
+- **主窗口执行**：主窗口 `initL4Bridge` 收到事件 → 调用与 iframe 相同的 `handleApiCall`（`METHOD_PERMISSIONS` 权限校验 + `executePluginMethod`）→ 响应经 `emitTo(l4label, 'plugin-l4-api-response')` 回发 → `PluginWebviewPage` `listen` 后 `postMessage` 原样回传 iframe。
+- **流式中止**：`__plugin_api_abort` → `plugin-l4-api-abort` 事件 → 主窗口 `abortStream`。
+
+消息体复用 sandbox.ts 的 postMessage 协议（`{type,id,method,args}` / `{type,id,result,error}`），**仅传输层换成跨窗口事件**，插件侧无需感知差异。
+
+## 非 Tauri 降级
+
+l4 依赖 Tauri WebViewWindow，在非 Tauri 环境自动降级为 iframe（l2）：
+
+- **纯浏览器 / Vite dev**（无 `window.__TAURI_INTERNALS__`）：`createRemoteWebview` 直接走 `createSandbox`（iframe 沙箱）。
+- **窗口创建失败**（`tauri://error`）：日志提示「降级为 iframe」，并回退到 `createSandbox`。
+
+窗口按 `plugin-webview-{id}` label **去重**（已存在则聚焦不重建）；用户手动关闭窗口时清理实例表，避免去重误判。
+
+## 与 iframe(l2) / WASM(l3) 的取舍
+
+| 维度 | iframe（l2） | WASM（l3） | 远程 WebView（l4） |
+|------|-------------|-----------|-------------------|
+| 运行位置 | 主窗口内 iframe（opaque origin） | 后端 Wasmtime 沙箱 | 独立 WebViewWindow / renderer 进程 |
+| 隔离强度 | DOM/CSS 隔离 | 无 DOM，纯计算 | **进程级隔离**，崩溃/死循环互不影响 |
+| busy-loop 影响 | 冻结主界面 | 不涉及 UI | 只冻结本窗口 |
+| API 调用 | postMessage 桥 | Host API 门控 | Tauri 事件 → 主窗口桥（权限校验一致） |
+| 适用场景 | 常规 UI 插件（默认推荐） | 协议解析、Agent、复杂逻辑 | 重 UI / 不受控 / 需强隔离的插件 |
+| 运行前提 | 无 | 包内 `plugin.wasm` | Tauri 桌面环境（非 Tauri 自动降级 iframe） |
+
+- 常规 UI 插件 → 默认 iframe（l2），不要随意声明 l4。
+- 插件有重计算或可能卡 UI 的渲染 → 优先把重计算挪到 WASM（l3）；只有"整个页面都必须隔离在独立进程"时才用 l4。
+- 需要访问主界面 DOM → iframe 无法满足，用 `"render": "inline"`（与主界面同 window，隔离最弱，慎用）。
+
+## 已知边界（以代码为准）
+
+- `registerMethod` / `callPlugin` 的插件间调用：l4 窗口经主窗口 `plugin-registry.ts` 中转；l4 侧直接使用 registry 的路径标注为 TODO（见 ADR-054），插件间互调建议以主窗口 registry 为准。
+- 主题推送：l4 窗口无完整主题管线，iframe `onload` 时一次性推送当前主题变量（`__qomicex_theme`）；主题切换后新值不自动同步（以代码为准）。

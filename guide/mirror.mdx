@@ -1,0 +1,71 @@
+---
+title: "下载镜像"
+---
+## 下载镜像
+
+Qomicex 提供多个模组资源下载加速镜像。使用方法很简单：**将原始下载链接中的域名替换为镜像域名即可**，路径保持不变。
+
+## 可用镜像
+
+| 镜像 | 地址 | 适用 |
+| :--- | :--- | :--- |
+| 镜像 1 | [https://mirror.qomicex.dpdns.org/](https://mirror.qomicex.dpdns.org/) | Modrinth / CurseForge / Forge |
+| 镜像 2 | [https://mirror1.qomicex.dpdns.org/](https://mirror1.qomicex.dpdns.org/) | Modrinth / CurseForge / Forge |
+| 镜像 3 | [https://mirror.lenmei233.dpdns.org/](https://mirror.lenmei233.dpdns.org/) | Modrinth / CurseForge / Forge |
+| Modrinth 镜像 1 | [https://modrinth.lenmei233.dpdns.org/](https://modrinth.lenmei233.dpdns.org/) | Modrinth CDN |
+| Modrinth 镜像 2 | [https://modrinth.qomicex.dpdns.org/](https://modrinth.qomicex.dpdns.org/) | Modrinth CDN |
+| Modrinth 镜像 3 | [https://modrinth1.qomicex.dpdns.org/](https://modrinth1.qomicex.dpdns.org/) | Modrinth CDN |
+
+多个节点自动故障转移，任选其一即可；某个不可用时换另一个。
+
+## 使用方法
+
+### Modrinth
+
+原始链接：
+
+```text
+https://cdn.modrinth.com/data/AANobbMI/versions/mc1.16.3-0.1.0/sodium-fabric-mc1.16.3-0.1.0.jar
+```
+
+替换域名后：
+
+```text
+https://mirror.qomicex.dpdns.org/data/AANobbMI/versions/mc1.16.3-0.1.0/sodium-fabric-mc1.16.3-0.1.0.jar
+```
+
+### Forge / CurseForge
+
+原始链接：
+
+```text
+https://mediafilez.forgecdn.net/files/8685/162/jei-26.2-neoforge-30.24.0.176.jar
+```
+
+替换域名后：
+
+```text
+https://mirror.qomicex.dpdns.org/files/8685/162/jei-26.2-neoforge-30.24.0.176.jar
+```
+
+### 支持替换的源域名
+
+- `cdn.modrinth.com`
+- `mediafilez.forgecdn.net` / `edge.forgecdn.net`
+- `files.minecraftforge.net` / `maven.minecraftforge.net`
+
+## 强制 Proxy 模式（可选）
+
+默认路由不可用(可能不走Proxy部分情况)时，可强制走 Proxy：
+
+```text
+https://modrinth.lenmei233.dpdns.org/data/.../file.jar?qml_proxy=true
+```
+
+或通过请求头：
+
+```bash
+curl -H "X-QML-Force-Proxy: true" https://modrinth.lenmei233.dpdns.org/data/.../file.jar
+```
+
+> 仅供学习交流使用，请遵守相关服务条款。

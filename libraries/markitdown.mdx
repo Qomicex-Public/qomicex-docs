@@ -1,0 +1,39 @@
+---
+title: "MarkItDown"
+---
+## MarkItDown
+
+MarkItDown（`top.qomicex.markitdown`）将本地文档转换为 Markdown 文本，供其他插件（如 [AI 助手](/plugins)）解析 PDF / Word / Excel / PPT / 图片 / 音频等二进制文档内容。
+
+## 能力
+
+| 格式 | 说明 |
+|------|------|
+| PDF | 本地文本提取（pdf.js 主线程）；配置视觉模型后逐页渲染为图片做结构化 OCR（保留表格） |
+| DOCX / XLSX / PPTX | mammoth / SheetJS / jszip 解析 |
+| HTML / CSV / JSON / XML | 原生解析 |
+| ZIP / EPUB | 递归解压并转换内部文件 |
+| 图片 / 音频 | 需配置 OpenAI 兼容视觉 / 音频模型（OCR / 转写） |
+
+## 注册方法
+
+```js
+const res = await __PLUGIN_API__.callPlugin('top.qomicex.markitdown', 'convertFile', {
+  base64: '...',            // 文件内容 base64（二进制文件用 readBytes 获取 contentBase64）
+  fileName: 'a.pdf',        // 文件名（用于判断格式）
+  mime: 'application/pdf'   // 可选
+})
+// => { title, markdown, text_content, format } 或 { error }
+```
+
+- `getConfig()`：读取插件的 LLM 配置（baseUrl / apiKey / visionModel / audioModel / prompt）
+- `setConfig(patch)`：写入 LLM 配置（供前端配置页经 `callPlugin` 调用）
+
+## 依赖与配置
+
+- 纯文档转换（PDF / DOCX / XLSX / PPTX 等）无需任何配置
+- **图片 OCR 与音频转写**需要 OpenAI 兼容 API：在 AI 助手设置页的「MarkItDown 文档转换」区块填写视觉 / 音频模型与 Key
+
+## 可选附加
+
+MarkItDown 是 AI 助手的**可选附加**：未安装不影响 AI 助手运行，`convertDocument` 工具会提示安装；图片 / 音频在未配置 API 时返回配置提示。

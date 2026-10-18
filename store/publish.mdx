@@ -1,0 +1,197 @@
+---
+title: "插件发布与打包指南"
+---
+## 插件发布与打包指南
+
+从打包 `.qplugin` 到上架商店的完整流程。API 细节见[插件商店 API 参考](/store/)。
+
+## .qplugin 是什么
+
+`.qplugin` 就是一个 **zip 压缩包**，但有一条硬性规则：**`manifest.json` 必须位于压缩包根目录**。
+
+```text
+my-plugin.zip          ← 重命名为 .qplugin
+├── manifest.json      ← 必须在根目录！
+├── index.html
+└── assets/
+    └── main.js
+```
+
+❌ 错误示范（把 dist 文件夹整个压进去）：
+
+```text
+my-plugin.zip
+└── dist/
+    ├── manifest.json   ← 商店找不到它
+    └── index.html
+```
+
+## manifest.json 最小模板
+
+```json
+{
+  "id": "dev.example.my-plugin",
+  "name": "我的插件",
+  "version": "1.0.0",
+  "minLauncherVersion": "1.0.0",
+  "layers": ["l2"],
+  "permissions": [],
+  "entry": { "frontend": "index.html" }
+}
+```
+
+| 字段 | 必填 | 说明 |
+| :--- | :--- | :--- |
+| `id` | ✅ | 插件唯一标识，建议反向域名风格（如 `dev.example.my-plugin`），一经发布不要更改 |
+| `name` / `version` | ✅ | `version` 必须是合法 semver（如 `1.2.3`） |
+| `minLauncherVersion` | ✅ | 最低启动器版本 |
+| `layers` | ✅ | 图层层级数组：`l0`~`l4`（含页面脚本的插件建议 `["l2"]`） |
+| `permissions` | ✅ | 权限列表（可为空数组） |
+| `entry` | ✅ | 至少提供 `frontend`/`backend`/`theme` 之一 |
+
+## ⚠️ Windows 用户必读：反斜杠 `\` 问题
+
+**这是 Windows 打包最常见的翻车点**，报错长这样：
+
+```text
+包含不安全路径: dist\index.html
+```
+
+### 原因
+
+部分 Windows 工具（老版「发送到压缩文件夹」、PowerShell 5.1 的 `Compress-Archive` 等）生成 zip 时用 **`\` 作为条目路径分隔符**。zip 规范要求用 `/`。商店与启动器会拒绝含 `\` 的包——这是防 zip-slip 路径穿越攻击的安全校验，不会放宽。
+
+### 解决
+
+- ✅ 用下方 PowerShell 一键脚本（自动替换为 `/`）
+- ✅ 用 [7-Zip](https://www.7-zip.org/) 图形界面压缩
+- ✅ 用 PowerShell 7+ 的 `Compress-Archive`
+- ❌ 避开 Windows 10 老版右键「发送到 → 压缩文件夹」、PowerShell 5.1
+
+## 方法一：PowerShell 一键打包脚本（推荐）
+
+支持弹窗选文件夹、自动强制正斜杠。保存为 `pack.ps1`，右键「使用 PowerShell 运行」或命令行执行 `.\pack.ps1 -FolderPath D:\path\to\dist`：
+
+```powershell
+param(
+    [string]$FolderPath
+)
+
+# 如果没有参数，则弹出文件夹选择对话框
+if (-not $FolderPath) {
+    Add-Type -AssemblyName System.Windows.Forms
+    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description = "请选择要打包的文件夹"
+    if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        $FolderPath = $dialog.SelectedPath
+    } else {
+        Write-Host "未选择文件夹，退出。"
+        exit
+    }
+}
+
+# 验证路径
+if (-not (Test-Path $FolderPath -PathType Container)) {
+    Write-Host "错误：无效的文件夹路径！"
+    exit 1
+}
+
+# 生成ZIP文件名（放在同级目录）
+$parent = Split-Path $FolderPath -Parent
+$folderName = Split-Path $FolderPath -Leaf
+$zipPath = Join-Path $parent "$folderName.zip"
+
+# 如果ZIP已存在，询问是否覆盖
+if (Test-Path $zipPath) {
+    $choice = Read-Host "ZIP文件已存在，是否覆盖？(y/n)"
+    if ($choice -ne 'y') { exit }
+    Remove-Item $zipPath -Force
+}
+
+# 创建ZIP
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip = [System.IO.Compression.ZipFile]::Open($zipPath, 'Create')
+
+# 遍历所有文件，添加到ZIP，并强制将路径中的 \ 替换为 /
+Get-ChildItem -Path $FolderPath -Recurse -File | ForEach-Object {
+    $relativePath = $_.FullName.Substring($FolderPath.Length + 1)
+    $entryPath = $relativePath -replace '\\', '/'   # 关键替换
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $entryPath) | Out-Null
+}
+
+$zip.Dispose()
+
+Write-Host "✅ 打包成功！ZIP文件位于：$zipPath"
+Write-Host "✅ 内部路径已全部使用正斜杠 /"
+
+# 暂停以查看结果（如果是从资源管理器双击运行）
+Read-Host "按回车键退出..."
+```
+
+脚本打包的是你选中的**文件夹本身的内容**。请选中构建产物所在目录（如 `dist`），并确保 `manifest.json` 在这个目录的根层级。
+
+## 方法二：其他常用方式
+
+### 7-Zip（图形界面）
+
+- 进入 `dist` 文件夹，**全选内容文件**（不要选外层文件夹）
+- 右键 → 7-Zip → 添加到压缩包
+- 生成的 zip 内部路径天然是 `/`
+
+### PowerShell 7+
+
+```powershell
+# PS7 的 Compress-Archive 已使用正斜杠；注意要压缩的是内容而非父文件夹
+Compress-Archive -Path ./dist/* -DestinationPath my-plugin.zip
+```
+
+### 命令行校验包内路径
+
+上传前自查 zip 条目是否还有反斜杠：
+
+```powershell
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::OpenRead("$pwd\my-plugin.zip").Entries.FullName
+```
+
+输出里不应出现任何 `\`。
+
+## 上传发布
+
+### 方式一：`qomicex publish`（一键，推荐）
+
+CLI 走 RFC 8628 设备流，全程命令行完成：
+
+```bash
+export QOMICEX_SIGN_KEY=<私钥 base64/PEM>   # 或 --key ./key.pem
+qomicex publish --changelog "修复 X"
+```
+
+流程：设备流登录（打印授权码与验证 URL，浏览器确认）→ `POST /developer/keys` 上传开发者公钥获取证书 → 私钥签名包体（`signature.json` + `signature.cert.json` 打进 `.qplugin`）→ 查找/创建插件记录 → `POST /plugins/:id/versions` multipart 上传。详见 [qomicex CLI 工具参考](/plugins/cli)。
+
+### 方式二：网页手动上传
+
+- 登录 [插件商店](https://plugins.qomicex.top) → 升级为开发者
+- 开发者中心 → 新建插件（填 slug、名称、分类）
+- **上传前必须先用 CLI 签名**（商店**强制验签**）：
+
+```bash
+qomicex pack --key ./dev-key.pem    # 产出带 signature.json 的 .qplugin
+```
+
+- 插件管理页 → 「上传新版本」→ 选择签名后的 `.qplugin`（把 zip 改后缀为 `.qplugin`）
+- 纯 L3 层且无危险权限的包**自动发布**；其余进入人工审核，结果在版本列表查看
+
+- **商店上传强制验签**：缺 `signature.json` 或验签失败 → 422 `signature_invalid`，上传被拒
+- 签名 = Ed25519 三级信任链（商店根钥签发开发者公钥证书 → 开发者私钥签包体），`signedHash` 为规范化 manifest + 文件清单的 SHA-256
+- 密钥生成：`openssl genpkey -algorithm Ed25519 -out dev-key.pem` 或 `node scripts/plugin-keygen.mjs generate`
+
+常见上传错误速查：
+
+| 报错 | 原因 |
+| :--- | :--- |
+| `包含不安全路径: xxx\yyy` | Windows 反斜杠问题，见上节 |
+| `缺少根级 manifest.json` | manifest 被压进了子文件夹 |
+| `version 不是合法 semver` | 版本号须形如 `1.2.3` |
+| `版本 x.y.z 已存在` | 同版本号重复上传 |
+| `签名校验失败`（`signature_invalid`） | 未签名 / 签名与开发者公钥不匹配 / 包体被篡改 / 商店未配置根公钥。用 `qomicex pack --key` 重新签名后上传 |

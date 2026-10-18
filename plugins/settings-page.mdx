@@ -1,0 +1,107 @@
+---
+title: "插件设置页（settingsPages）"
+---
+## 插件设置页（settingsPages）
+
+插件经常需要提供自己的配置界面（开关、API Key、默认行为等）。与其把"设置"按钮散落在插件页面各处，不如把设置界面**统一收进启动器**：在「设置 → 插件 → 插件设置」里，左侧纵向 tab 逐插件列出，右侧就是该插件提供的设置界面。用户找得到、不会迷路。
+
+## 快速开始
+
+**第 1 步**：在 `manifest.json` 的 `contributes.settingsPages` 中声明设置页（`.qplugin` 包内 HTML 的相对路径）：
+
+```json
+{
+  "id": "top.qomicex.weather",
+  "name": "天气",
+  "version": "1.0.0",
+  "layers": ["l2"],
+  "entry": { "frontend": "dist/index.html" },
+  "contributes": {
+    "settingsPages": ["dist/settings.html"]
+  }
+}
+```
+
+**第 2 步**：在包内编写 `dist/settings.html`。它是一个普通 HTML 页面，与插件主页运行在**完全相同的沙箱环境**（iframe 沙箱 + 完整 `__PLUGIN_API__` 桥 + 主题变量注入），用 `getSettings` / `setSettings` 读写插件自己的配置即可：
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { margin: 0; padding: 16px; font-family: inherit; color: var(--foreground); background: transparent; }
+    .row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+    .hint { color: var(--muted-foreground); font-size: 12px; }
+    input[type="text"] {
+      background: var(--background); color: var(--foreground);
+      border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <div>
+      <div>城市</div>
+      <div class="hint">天气组件显示的城市名</div>
+    </div>
+    <input id="city" type="text" placeholder="北京" />
+  </div>
+  <div class="row">
+    <div>
+      <div>自动刷新</div>
+      <div class="hint">每 10 分钟刷新一次天气数据</div>
+    </div>
+    <input id="autoRefresh" type="checkbox" />
+  </div>
+
+  <script>
+    const api = window.__PLUGIN_API__
+    // 初始化：读已有配置
+    api.call('getSettings').then((s) => {
+      document.getElementById('city').value = s.city ?? ''
+      document.getElementById('autoRefresh').checked = s.autoRefresh === true
+    })
+    // 修改即保存（setSettings 按 key 合并，无需整包写入）
+    document.getElementById('city').addEventListener('change', (e) =>
+      api.call('setSettings', 'city', e.target.value))
+    document.getElementById('autoRefresh').addEventListener('change', (e) =>
+      api.call('setSettings', 'autoRefresh', e.target.checked))
+  </script>
+</body>
+</html>
+```
+
+**第 3 步**：打包 `.qplugin` 安装并启用插件。「设置 → 插件 → 插件设置」会出现以插件名命名的 tab，打开即是你写的界面。
+
+## 运行环境
+
+- **iframe 沙箱**：`<iframe sandbox="allow-scripts">` + srcdoc 渲染，与主界面 DOM/CSS 隔离；`__PLUGIN_API__` 全部方法可用（权限校验与插件页一致）
+- **主题跟随**：启动器自动注入主题 CSS 变量（`--foreground` / `--background` / `--primary` / `--border` 等）与 `.p-*` 组件样式，明暗主题自动切换，无需自己处理
+- **容器尺寸**：右侧内容区高度约 **560px**，宽度自适应；页面超出时在自身内部滚动，根元素按 100% 高度布局即可
+- **配置持久化**：`getSettings` / `setSettings` 读写 `plugins/{插件id}/settings.json`，`setSettings` 按 key 合并（并发安全），无需一次性写整包
+
+## 一键跳转到设置页
+
+在插件页面 / 悬浮窗里提供"设置"按钮时，用 `openPluginSettings` 跳转，启动器会自动打开「插件设置」并定位到本插件：
+
+```js
+await __PLUGIN_API__.call('openPluginSettings')
+
+// 或定位到其他插件的设置 tab
+await __PLUGIN_API__.call('openPluginSettings', 'top.qomicex.weather')
+```
+
+- 权限：`config:read`
+- 目标插件未声明 `settingsPages` 时仍会打开插件设置区（停留在默认位置）
+- 同插件声明多个设置页时定位到第一个
+
+## 规则与生命周期
+
+| 规则 | 说明 |
+|------|------|
+| tab 生成 | 每个路径一个 tab；单页 tab 名为插件名，多页为 `插件名 1`、`插件名 2`… |
+| 显示条件 | 插件处于 **active** 状态才出现；停用后 tab 立即消失（iframe 一并销毁） |
+| 重新启用 | 重新激活后设置页重新加载，配置从 `settings.json` 恢复 |
+| 与主页小组件的关系 | 互相独立：`slots`（dashboard:widgets）管主页组件，`settingsPages` 管设置界面，可同时声明 |
+
+插件配置的读取方（如小组件、悬浮窗）在自身运行时也应调用 `getSettings` 应用最新配置——设置页只负责写入，不会自动广播变更。

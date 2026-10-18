@@ -1,0 +1,267 @@
+---
+title: "开放注册表协议（Open Registry Protocol）"
+---
+## 开放注册表协议（Open Registry Protocol）
+
+**版本**：1.0
+
+Qomicex 插件商店的 API 协议已抽象为开放标准，允许第三方实现兼容的注册表（镜像/私有仓库/内网定制源），启动器通过**多源发现机制**对接任意兼容实现。
+
+---
+
+## 1. 核心概念
+
+一个**注册表（Registry）**是一个 HTTP API 端点，提供插件元数据查询与分发。注册表有两种身份：
+
+| 身份 | 说明 |
+| :--- | :--- |
+| **主源（Primary）** | 官方商店 `plugins.qomicex.top`，完整实现全部端点（含认证/审核/组织管理） |
+| **镜像（Mirror）** | 第三方兼容实现，至少实现核心端点即可被启动器识别为可用源 |
+
+启动器在 `settings.registryUrl` 中配置源列表，按优先级依次尝试。
+
+---
+
+## 2. 端点子集
+
+### 2.1 核心端点（镜像必须实现）
+
+| 方法 | 路径 | 说明 |
+| :--- | :--- | :--- |
+| `GET` | `/registry` | 注册表元数据（§3），镜像自报能力与数量基数 |
+| `GET` | `/plugins?q&category&tags&sort&page&pageSize&minLauncherVersion` | 插件市场列表（仅已发布）。返回 `{total, page, pageSize, items[Plugin]}` |
+| `GET` | `/plugins/:slug` | 插件详情 → Plugin + `versions[]`（仅已发布：`{id, version, sha256, sizeBytes, ...}`）。未发布或不存在返回 404 |
+| `GET` | `/plugins/:slug/versions/:version/download` | 下载信息 → `{url, mirrorUrl?, sha256, size}`。`:version` 支持 `latest` 别名 |
+| `POST` | `/plugins/check-updates` | 批量更新检查。Body `{launcherVersion, installed:[{slug, version}]}` → `{updates[...]}` |
+
+**Plugin 对象**（核心字段）：`{id, slug, name, description, category?, tags[], iconUrl?, latestVersion?, downloadsCount, ratingAverage?, ratingCount, createdAt}`。
+
+### 2.2 可选端点（镜像可不实现）
+
+| 方法 | 路径 | 说明 |
+| :--- | :--- | :--- |
+| `GET` | `/plugins/:slug/reviews?page&pageSize` | 评价列表 |
+| `POST` | `/auth/*` | 用户注册/登录/设备流 |
+| `GET` | `/orgs/*` | 组织管理 |
+| `GET` | `/admin/*` | 审核与管理员管理 |
+| `GET` | `/plugins/:id/stats` | 插件统计面板 |
+
+启动器对可选端点采用**优雅降级**：不可用时对应 UI 功能隐藏或禁用。
+
+### 2.3 公共约定
+
+- **Base URL**：注册表 API 根路径，如 `https://plugins.qomicex.top/api/v1`
+- **请求/响应**：JSON，字段命名 camelCase；时间为 ISO 8601
+- **错误格式**：统一 `{ "error": { "code": "...", "message": "..." } }`，HTTP 状态码语义化
+- **分页**：`page`（从 1 起）、`pageSize`（默认 20，上限 50）
+- **缓存**：插件列表建议 15s、详情建议 300s、注册表元数据建议 60s
+
+---
+
+## 3. 注册表元数据 `GET /registry`
+
+注册表的**身份牌**。启动器发现 `registryUrl` 后发出的第一个请求即为此端点，用于确认兼容性：
+
+```json
+{
+  "apiVersion": "1.0",
+  "baseUrl": "https://mirror.example.com/api/v1",
+  "pluginCount": 42,
+  "capabilities": ["list", "detail", "download", "check-updates"],
+  "mirrors": ["https://cdn.mirror.example.com"]
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `apiVersion` | string | ✅ | 协议版本号，当前 `"1.0"`；启动器做 major 级比较（`>=1` 可对接） |
+| `baseUrl` | string | ✅ | 注册表 API 根，客户端据此构建后续请求。可不同于真实 host（CDN 回源） |
+| `pluginCount` | integer | ✅ | 已发布插件总数，启动器用于源质量评估（插件少可降权） |
+| `capabilities` | string[] | ✅ | 能力标记列表。核心：`list`、`detail`、`download`、`check-updates`；可选：`reviews`、`auth`、`stats` |
+| `mirrors` | string[] | 可选 | 下载镜像域列表。仅含包体分发镜像，不含 API 回退源 |
+
+> `mirrors` 字段的镜像域用于**竞速下载**而非 **API 回退**。API 回退由启动器 `registryUrl` 多源列表控制。
+
+---
+
+## 4. 客户端发现机制
+
+### 4.1 配置方式
+
+启动器设置支持**插件式多源发现**：
+
+```text
+registryUrl: [
+  { url: "https://plugins.qomicex.top/api/v1",    primary: true,  priority: 1, enabled: true },
+  { url: "https://mirror.example.com/api/v1",      primary: false, priority: 2, enabled: true }
+]
+```
+
+- **主源**（`primary: true`）：启动器默认查询的注册表
+- **备源**（`primary: false`）：主源不可达或超时时自动回退（备源为只读，写操作仅在主源尝试）
+- **优先级**（`priority`）：数字越小越优先
+
+### 4.2 启动流程
+
+- 启动器对所有 `enabled: true` 的源并行发出 `GET /registry`
+- 检测 `apiVersion >= 1` 且 `capabilities` 包含至少 `list`、`detail`、`download` → 标记为**可用**
+- 按 `priority` 排序，选择第一个可用的为主源
+- 缓存所有源的 `pluginCount`，界面中注明插件来源
+- 主源连续失败 N 次后自动切换至存量可用源（如无可用则暂停轮询）
+
+### 4.3 回退策略
+
+| 场景 | 行为 |
+| :--- | :--- |
+| 主源 `GET /registry` 超时 / 5xx | 立即切备源 |
+| 主源 `GET /plugins` 4xx | 透传错误给用户，不自动切源（请求合法但被拒绝） |
+| 主源连续 3 次请求超时 | 标记为不可用，切备源 |
+| 备源全部不可用 | 停用商店功能，提示用户检查网络 |
+| 写操作（安装/登录/评价） | 仅主源尝试，备源不执行写操作 |
+
+---
+
+## 5. 下载双通道与 SHA-256 校验
+
+### 5.1 双通道语义
+
+`GET /plugins/:slug/versions/:version/download` 返回：
+
+```json
+{
+  "url": "https://cdn.registry.example.com/plugins/my-plugin/1.0.0.qplugin",
+  "mirrorUrl": "https://mirror-cdn.example.com/plugins/my-plugin/1.0.0.qplugin",
+  "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "size": 4096
+}
+```
+
+启动器**竞速下载**：同时发起主 URL 与镜像 URL 的请求，取先完成者。无论使用哪个 URL，都必须按 `sha256` 校验完整性。
+
+### 5.2 校验强制规则
+
+- 下载完成后必须计算 SHA-256，与响应中的 `sha256` 比对（全小写 hex）
+- 不匹配 → 拒绝安装，且不留存篡改包
+- 镜像返回的 `sha256` **必须与主源完全一致**——镜像不可修改包内容
+
+### 5.3 镜像包体要求
+
+镜像重传包体时必须：
+
+- 保持包内文件结构完全不变（不可重打包、修改 manifest、增减文件）
+- `signature.json`、`signature.cert.json` 原样保留（**签名链必须完整传递**，接收方验签依赖包内证书）
+- 以 200 状态码返回，`Content-Type: application/octet-stream` 或 `application/zip`
+
+---
+
+## 6. 签名链要求（ADR-050）
+
+开放注册表协议对签名的要求只针对**包体完整性**，不要求镜像自身提供签名验证服务：
+
+| 角色 | 签名要求 |
+| :--- | :--- |
+| **元数据 API**（`/plugins` 等） | 镜像无需签名 API 响应，启动器以主源数据为准 |
+| **包体重传** | 镜像必须原样传递包内 `signature.json` + `signature.cert.json`，不可缺失或修改。接收方完全依赖包内签名链自行验证 |
+
+### 6.1 包内签名链结构
+
+```text
+.qplugin 包内
+├── manifest.json            # 规范化后参与 signedHash
+├── signature.json           # Ed25519 签名
+│   ├── alg: "Ed25519"
+│   ├── signedHash: SHA-256(规范化 manifest + 文件清单)
+│   ├── signerKeyId: "<key id>"
+│   └── signature: "<base64 ed25519 sig>"
+├── signature.cert.json      # 开发者证书（根钥签发）
+│   ├── algorithm: "Ed25519"
+│   ├── keyId / publicKey
+│   ├── issuer: { keyId: "<根钥 id>" }
+│   └── signature: "<base64 root sig>"
+└── dist/…
+```
+
+- 镜像不得重新打包，不得修改 `signature.json` / `signature.cert.json` 或包内任何文件
+- 镜像可在响应头附加额外校验摘要（如 `X-Checksum-SHA256`），但不可替代包内签名
+- 启动器收到包后先校验 Ed25519 签名再安装，镜像服务无需关心验签细节
+
+---
+
+## 7. 自建镜像指南
+
+### 7.1 方案 A：Cloudflare Worker 复制（共享负载）
+
+最适合分担官方商店下载流量的场景：
+
+- Fork / 部署 `qomicex-plugin-store` 仓库的 Worker 代码到自己的 Cloudflare 账号
+- 配置专属 `CDN_BASE_URL`（R2 或外部存储）与 `MIRROR_BASE_URL`
+- 周期性把主商店的插件数据同步到自己的 D1（`wrangler d1 execute --file=sync.sql`）
+- 在启动器设置中添加 `registryUrl: "https://你的域名/api/v1"` 作为备源
+- 下载流量指向你自己的 R2 / CDN
+
+### 7.2 方案 B：纯静态托管（只读镜像）
+
+如果只做只读缓存，无需 Worker 计算能力：
+
+- 周期性抓取主商店的 `GET /plugins` 列表 + 各详情页，生成 `registry.json` 静态文件
+- 把下载的 `.qplugin` 包上传到自己的 CDN / 对象存储
+- 托管 `registry.json` 与下载文件在同一域下
+- 提供静态 `GET /registry` 元数据端点（返回 `registry.json` 内容）
+- 静态镜像只能提供核心读端点，不支持 `check-updates`（需要计算能力，capabilities 中如实声明）
+
+### 7.3 方案 C：自建完整注册表（独立源）
+
+运行自己的审核/组织/认证流程：
+
+- 完整实现核心端点 + `GET /registry`
+- 可选实现 `auth`、`reviews` 等端点（capabilities 中如实声明）
+- 配置自己的签名根公钥（`PLUGIN_ROOT_PUBLIC_KEY`），开发者上传公钥获证书后签名上传
+- 客户端配置 `registryUrl` 后即可作为完整独立源使用
+
+### 7.4 验证镜像兼容性
+
+```bash
+# 1. 元数据端点
+curl https://你的镜像/api/v1/registry
+# 应返回: { apiVersion: "1.0", pluginCount: ..., capabilities: [...] }
+
+# 2. 列表
+curl https://你的镜像/api/v1/plugins?page=1&pageSize=5
+# 应返回: { total, page, pageSize, items: [...] }
+
+# 3. 详情
+curl https://你的镜像/api/v1/plugins/<slug>
+# 应返回 Plugin + versions[]
+
+# 4. 下载信息
+curl https://你的镜像/api/v1/plugins/<slug>/versions/latest/download
+# 应返回: { url, sha256, size }
+
+# 5. 包体校验
+curl -o test.qplugin <url>
+qomicex verify --package test.qplugin   # Ed25519 验签，主源镜像应同样通过
+```
+
+---
+
+## 8. 启动器集成方案（TODO）
+
+当前启动器后端 `services/plugin_store.rs` 使用固定的 `QOMICEX_STORE_API_BASE` 环境变量作为**单源代理**。多源集成的改动点：
+
+| 层 | 改动 | 工作量 |
+| :--- | :--- | :--- |
+| 后端 | `store_api_base()` 改为按请求来源选择；`store_get` / `store_post` 增加 base_url 参数 | 中 |
+| 后端 | 认证 token 存储改为按来源分键（`{registryId}-tokens.json`） | 中 |
+| 后端 | 安装管线 `install` 接受来源参数 | 小 |
+| 后端 | 新增 `GET /store/registry` 透传端点（代理上游 `/registry`） | 小 |
+| 前端 | `settings` 增加 `registryUrl` 配置 UI（多源列表） | 中 |
+| 前端 | `api/pluginStore.ts` 透传来源参数 | 小 |
+
+**建议分步计划**：
+
+- 后端加 `GET /store/registry` 透传（独立小端点，不破坏现有语义）
+- 后端 `store_api_base()` 参数化，按来源选择 base URL
+- 前端设置页加 `registryUrl` 输入（可叠加多条）
+- 安装/更新从指定源拉取；未指定时默认官方源
+
+> 🚧 上述集成**尚未实现**，当前 launcher 仍为单源固定代理模式。本规范作为开放生态基础，由后续 PHASE 任务细化实施。

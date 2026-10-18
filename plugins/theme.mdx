@@ -1,0 +1,271 @@
+---
+title: "主题系统"
+---
+## 主题系统
+
+Qomicex 主题系统采用 **primitive → semantic → component 三级语义 token** 结构，以 `.qtheme` 主题包承载，实现启动器与插件 UI 全量即时换肤，**无需重建 plugin-ui dist**。
+
+## 三级语义模型
+
+```text
+primitives（原始色板，主题包可选）
+  └─ 具体色值（HSL/hex），仅供派生
+semantic（语义层，.qtheme 作者书写）
+  └─ 语义角色：background/foreground/accent/status…（点分命名）
+component（组件消费层 = CSS 变量，唯一被 var() 读取）
+  └─ --background / --accent-foreground …（平铺，与 index.css 一一对应）
+```
+
+- **v1 落点**：`.qtheme` 直接表达 semantic/component 层（即 `--*` 平铺变量），primitive 派生与 `theme.mjs` 计算层留待 v2
+- **plugin-ui 组件只消费 `var(--*)`**，零内联色值 → 换主题 = 全组件即时换肤，消除「改组件须重建 dist」的陈旧问题
+
+## 语义 token 命名
+
+点分命名，`.` 归一化为 `-`（`background.emphasis` → `--background-emphasis`）。
+
+### 色板 token（标准组件级集合 = plugin-ui 消费全集）
+
+| token（theme.json 键） | CSS 变量 | 默认值(dark) | 语义 |
+|---|---|---|---|
+| background | `--background` | `230 20% 6%` | 页面底色 |
+| foreground | `--foreground` | `220 20% 93%` | 主文字 |
+| card / card-foreground | `--card` / `--card-foreground` | `228 18% 10%` / `220 20% 93%` | 卡片 |
+| popover / popover-foreground | `--popover` / `--popover-foreground` | `228 18% 10%` / `220 20% 93%` | 浮层 |
+| primary / primary-foreground | `--primary` / `--primary-foreground` | `142 71% 48%` / `230 20% 6%` | 主强调 |
+| secondary / secondary-foreground | `--secondary` / `--secondary-foreground` | `228 18% 14%` / `220 20% 93%` | 次级 |
+| muted / muted-foreground | `--muted` / `--muted-foreground` | `228 10% 18%` / `228 8% 55%` | 弱化 |
+| accent / accent-foreground | `--accent` / `--accent-foreground` | `228 18% 14%` / `220 20% 93%` | 强调底 |
+| destructive / destructive-foreground | `--destructive` / `--destructive-foreground` | `0 84% 60%` / `220 20% 93%` | 危险 |
+| border | `--border` | `228 14% 21%` | 边框 |
+| input | `--input` | `228 14% 21%` | 输入框 |
+| ring | `--ring` | `142 71% 48%` | 焦点环 |
+
+**扩展语义**（v1 可选，emit 为 `--foreground-accent` 等，供前瞻）：`foreground.accent`、`foreground.muted`、`foreground.destructive`、`background.elevated`、`background.emphasis`、`background.sunken`、`border.strong`、`border.accent`、`accent.hover`、`accent.active`、`status.success`、`status.warning`、`status.error`。
+
+### 非色 token
+
+| token | CSS 变量 | 默认值 | 说明 |
+|---|---|---|---|
+| radius | `--radius` | `0.625rem` | 圆角 |
+| glass-blur | `--glass-blur` | `18px` | 毛玻璃模糊 |
+
+`space.*`、`font.family/size/weight`、`motion.*`、`shadow.*` 归入 v2 非色扩展。
+
+## `.qtheme` 包格式
+
+```text
+.qtheme（zip 或目录）
+  theme.json        ← 颜色主题（v1，见下 schema）
+  theme.css         ← 可选，命名空间注入（--qtx- 前缀 / scoped），v2
+  theme.mjs         ← 可选，CSS-in-JS 计算层（沙箱），v2
+  icon-theme.json   ← 图标主题（v1.5，见下）
+  fonts/            ← 字体贡献，v1.5（经 contributes.fontLinks 注入）
+```
+
+### theme.json schema v1
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "catppuccin-mocha",
+  "name": "Catppuccin Mocha",
+  "type": "color",
+  "scheme": "dark",
+  "colors": {
+    "background": "240 23% 9%",
+    "accent.foreground": "240 23% 9%"
+  },
+  "radius": 10,
+  "glassBlur": 18
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `schemaVersion` | number | ✅ | 当前仅 `1` |
+| `id` | string | ✅ | `^[a-z0-9][a-z0-9-]*$` |
+| `name` | string | ✅ | 显示名 |
+| `type` | string | ❌ | 当前仅 `"color"` |
+| `scheme` | string | ❌ | `"dark"` / `"light"` |
+| `colors` | object | ✅ | 键 = 语义 token（可点分），值 = HSL 色值字符串 |
+| `radius` | number | ❌ | 圆角，单位 rem |
+| `glassBlur` | number | ❌ | 毛玻璃模糊，单位 px |
+
+非法 theme.json 会被 `src/theme/schema.ts` 拒绝并给出友好错误。
+
+## 主题管理器
+
+主题管理器（`src/theme/manager.ts`）提供：
+
+- **`applyTheme(json)`**：校验 + 注入 CSS 变量到 `:root` → 全组件即时换肤；持久化主题 id 到 `localStorage`
+- **`clearTheme()`**：移除自定义主题，回到设置层 light/dark/预设
+- **`restoreSavedTheme()`**：启动时恢复已注册主题
+- **`useTheme()`**：React Hook，订阅变更事件驱动重渲染
+- **`registerTheme()`**：注册打包内置 `.qtheme`（含 Catppuccin 四预设）
+
+## 主题贡献（contributes）
+
+插件与主题包可通过 manifests 声明三类贡献，v1 仅颜色主题：
+
+| 类型 | 说明 | 状态 |
+|------|------|------|
+| **颜色主题** | token 全量映射，插件 UI 与启动器同源 → 原生控件全局换肤 | ✅ v1 已实现 |
+| **图标主题** | icon-theme.json：`{ "plugin-ui 图标名": "path/svg \| codepoint \| url" }` | ✅ v1.5 已实现 |
+| **字体/连字** | 字体资源 + `font-feature-settings` 按作用域 | ✅ v1.5 已实现 |
+
+## 图标主题（icon-theme.json）
+
+图标主题是 `.qtheme` 包中与 `theme.json` 同级的新文件，为插件侧边栏、菜单项等图标提供覆盖映射。
+
+### 格式
+
+```json
+{
+  "schemaVersion": 1,
+  "fonts": ["MyIconFont"],
+  "icons": {
+    "fa-solid fa-robot": { "type": "svg", "path": "M0 0h24v24H0z..." },
+    "fa-solid fa-cog": { "type": "char", "codepoint": "⚙", "fontFamily": "MyIconFont" },
+    "my-custom": { "type": "url", "url": "https://example.com/icon.png" }
+  }
+}
+```
+
+### 字段说明
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `schemaVersion` | number | ✅ | 当前仅 `1` |
+| `fonts` | string[] | ❌ | 本主题依赖的 `font-family` 名称列表（声明性，字体资源需通过 `contributes.fontLinks` 注入） |
+| `icons` | object | ✅ | 图标映射。键 = FontAwesome 类名（如 `fa-solid fa-robot`）或自定义图标 ID；值 = 图标定义对象 |
+
+### 图标定义对象
+
+| 字段 | 类型 | type=svg | type=char | type=url |
+|------|------|----------|-----------|----------|
+| `type` | `"svg"` / `"char"` / `"url"` | ✅ | ✅ | ✅ |
+| `path` | string | ✅ `<path d="...">` | — | — |
+| `codepoint` | string | — | ✅ 字符或实体 | — |
+| `fontFamily` | string | — | ❌ 自定义字体名 | — |
+| `url` | string | — | — | ✅ 图片 URL |
+
+### 渲染优先级
+
+`PluginIcon` 组件渲染顺序：
+
+- 当前主题的 `icon-theme.json` 中查找 `src` 键 → 匹配则渲染 SVG/char/URL
+- 未命中，`src` 为 URL → `<img>`
+- 未命中，`src` 为 FontAwesome 类名 → `<FontAwesomeIcon>`
+- 均未命中 → `null`
+
+### 注册方式
+
+图标主题通过主题管理器注册，与颜色主题绑定：
+
+- `registerTheme(colorJson, iconJson?)` — 同时注册颜色 + 图标主题
+- `registerIconTheme(themeId, iconJson)` — 单独为已注册的颜色主题绑定图标
+
+当前活跃主题的图标映射可通过 `getActiveIconTheme()` 或 `useIconTheme()`（React Hook）获取。主题切换时映射自动更新。
+
+## 字体/连字贡献
+
+### manifest 声明
+
+插件 manifests 通过 `contributes` 字段声明字体资源：
+
+```json
+{
+  "contributes": {
+    "fontLinks": ["https://cdn.example.com/my-icons.css"]
+  }
+}
+```
+
+- `fontLinks`（string[]）：字体 CSS/CDN URL 列表。插件激活时，启动器自动注入 `<link rel="stylesheet">` 到 `<head>`；插件停用时自动移除。
+- 可用 `font-feature-settings` 作用域约定，在特定区域启用连字（见下方）。
+
+### 连字作用域约定
+
+启动器预定义 `.font-ligatures` 类（插件内等价类 `.p-font-ligatures`），应用在需要启用字体连字的区域（如控制台日志、版本号 diff 等）：
+
+```html
+<div class="font-ligatures">-> => <!-- 连字生效 --></div>
+```
+
+对应 CSS：
+
+```css
+.font-ligatures {
+  font-feature-settings: "liga" 1, "calt" 1;
+  font-variant-ligatures: common-ligatures contextual;
+}
+```
+
+插件内可使用 `.p-font-ligatures` 获得同等效果。
+
+## 与 plugin-ui 的关系
+
+**硬性约定**：plugin-ui 组件只允许 `var(--*)` 消费 token，禁止内联色值。审计确认 `packages/plugin-ui/src/` 全量零内联色值 → 换主题 = 即时换肤，无需重建 dist。
+
+## 预设主题
+
+启动器内置 Catppuccin 四预设（latte / frappe / macchiato / mocha），已迁移到新 token 命名。切换预设或自定义 `.qtheme` 时，所有消费 `var(--*)` 的 UI 组件即时响应。
+
+## 插件驱动主题覆盖
+
+插件可通过 `__PLUGIN_API__` 动态覆盖启动器 UI 的 CSS 变量，无需分发 `.qtheme` 包即可实现运行时换肤。
+
+### 优先级层级
+
+```text
+themeColor inline style（--primary/--ring/--primary-foreground，最高）
+  └─ applyThemeOverride（:root:root，选择器特异性 0,2,0）
+    └─ .qtheme 主题（:root）
+      └─ index.css @layer base（最低）
+```
+
+- `applyThemeOverride` 注入的 `<style>` 特异性高于 `.qtheme` 和 `@layer base`
+- 若用户设置了主题色（`themeColor.ts` 的 inline style），`--primary`/`--ring`/`--primary-foreground` 三者由 inline 接管，override 中这三者不生效
+
+### API
+
+| 方法 | 权限 | 说明 |
+|------|------|------|
+| `getThemeColor` | `config:read` | 获取当前种子色 hex（`#rrggbb` 或 `null`） |
+| `applyThemeOverride(vars)` | `config:write` | 覆盖 CSS 变量（HSL 格式，白名单 token） |
+| `clearThemeOverride()` | `config:write` | 移除覆盖样式 |
+
+### 使用示例
+
+```js
+const __PLUGIN_API__ = window.__PLUGIN_API__
+
+// 获取当前主题色，调整插件 UI
+const seedColor = await __PLUGIN_API__.call('getThemeColor')
+if (seedColor) {
+  document.getElementById('my-plugin-card').style.borderColor = seedColor
+}
+
+// 应用自定义主题覆盖
+await __PLUGIN_API__.call('applyThemeOverride', {
+  'background': '240 23% 9%',
+  'foreground': '220 20% 93%',
+  'primary': '262 83% 58%',
+  'accent': '262 83% 58%'
+})
+
+// 用户取消自定义主题时清除
+await __PLUGIN_API__.call('clearThemeOverride')
+```
+
+### 安全限制
+
+- **token 白名单**：仅允许 30 个预定义语义 token（`background`、`foreground`、`primary`、`accent`、`border`、`status-*` 等）
+- **HSL 格式校验**：值必须严格匹配 `H S% L%`（如 `142 71% 48%`），拒绝任意 CSS 注入
+- 不在白名单的 token 和非法格式会被静默忽略
+
+### 生命周期
+
+- `applyThemeOverride` 可重复调用，后者覆盖前者
+- **插件停用时不会自动清除** override（因 token 可能与插件 UI 绑定），需插件自行在停用钩子或用户操作时调用 `clearThemeOverride`
+- `clearThemeOverride` 仅移除 override 样式，不影响 `.qtheme` 或内置 light/dark 主题

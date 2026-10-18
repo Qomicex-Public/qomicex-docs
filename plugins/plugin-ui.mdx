@@ -1,0 +1,212 @@
+---
+title: "UI 组件库（.p-* 样式）"
+---
+## UI 组件库（.p-* 样式）
+
+启动器为插件内置了一套 `.p-*` 样式组件（`plugin-css.ts`），自动注入插件页面、悬浮窗，并跟随明暗主题。插件无需引入任何 CSS 文件即可使用。
+
+## 主题变量
+
+所有颜色通过 CSS 变量定义，自动跟随启动器明暗主题：
+
+```css
+--background  --foreground  --card  --card-foreground
+--popover  --popover-foreground  --primary  --primary-foreground
+--secondary  --secondary-foreground  --muted  --muted-foreground
+--accent  --accent-foreground  --destructive  --destructive-foreground
+--border  --input  --ring
+```
+
+在插件样式里引用：
+
+```css
+.my-box { color: hsl(var(--foreground)); border: 1px solid hsl(var(--border)); }
+```
+
+### 主题跟随机制
+
+- 插件页面/悬浮窗**自动跟随启动器明暗主题**：启动器把当前主题的 CSS 变量注入插件环境（`__qomicex_theme` postMessage 同步），明暗切换即时生效
+- 插件 body 背景为**透明**，露出启动器背景（插件容器无需自设背景色，直接使用 CSS 变量即可）
+- 主题变量在插件页面（内联/沙箱）与悬浮窗（iframe）中都可用
+
+## 组件清单
+
+### 卡片 Card
+
+```html
+<div class="p-card">
+  <div class="p-card-title">标题</div>
+  <div class="p-card-desc">描述文字</div>
+  <div>内容...</div>
+</div>
+```
+
+### 按钮 Button
+
+```html
+<button class="p-btn p-btn--primary">主要</button>
+<button class="p-btn p-btn--default">默认</button>
+<button class="p-btn p-btn--ghost">幽灵</button>
+<button class="p-btn p-btn--danger">危险</button>
+<button class="p-btn p-btn--outline">描边</button>
+<button class="p-btn p-btn--sm">小按钮</button>
+```
+变体：`--primary` `--default` `--ghost` `--danger` `--outline`；尺寸：`--sm`
+
+### 输入 Input / Textarea
+
+```html
+<label class="p-label">API 地址</label>
+<input class="p-input" placeholder="请输入">
+<textarea class="p-textarea"></textarea>
+```
+
+### 徽章 Badge
+
+```html
+<span class="p-badge p-badge--green">成功</span>
+<span class="p-badge p-badge--red">失败</span>
+<span class="p-badge p-badge--yellow">警告</span>
+<span class="p-badge p-badge--blue">信息</span>
+<span class="p-badge p-badge--default">默认</span>
+```
+
+### 标签页 Tabs
+
+```html
+<div class="p-tabs">
+  <button class="p-tab active" data-p-tab="a">标签A</button>
+  <button class="p-tab" data-p-tab="b">标签B</button>
+</div>
+<div class="p-panel active" id="panel-a">A 的内容</div>
+<div class="p-panel" id="panel-b">B 的内容</div>
+```
+- `data-p-tab` 指向面板 `id="panel-{name}"`
+- 点击切换由注入脚本自动处理，无需自己写 JS
+- 悬浮窗环境同样支持
+
+### 开关 Switch
+
+```html
+<label class="p-swiper">
+  <input type="checkbox" checked>
+  <span class="p-swiper-track"></span>
+  启用功能
+</label>
+```
+- 在悬浮窗中，若想用开关控制某个面板显隐，给 input 加 `data-p-switch="panelId"`，脚本自动切换对应 `id` 元素
+
+### 复选 Checkbox
+
+```html
+<label class="p-check-field">
+  <input type="checkbox">
+  记住选择
+</label>
+```
+
+### 进度条 Progress
+
+```html
+<div class="p-progress"><div class="p-progress__bar" style="width:60%"></div></div>
+（不确定进度）
+<div class="p-progress"><div class="p-progress__bar p-progress__bar--indeterminate"></div></div>
+```
+修饰：`--indeterminate` 不确定、`--danger` 危险、`--warn` 警告
+
+### 加载 Spinner
+
+```html
+<div class="p-loader"></div>
+```
+
+### 空状态
+
+```html
+<div class="p-empty">
+  <div class="p-empty__icon">📭</div>
+  <div class="p-empty__text">暂无数据</div>
+</div>
+```
+
+### 提示 Alert
+
+```html
+<div class="p-alert p-alert--info">信息</div>
+<div class="p-alert p-alert--success">成功</div>
+<div class="p-alert p-alert--warn">警告</div>
+<div class="p-alert p-alert--error">错误</div>
+```
+
+### 表格 Table
+
+```html
+<table class="p-table">
+  <tr><th>名称</th><th>值</th></tr>
+  <tr><td>示例</td><td>123</td></tr>
+</table>
+```
+
+### 下拉 Select
+
+```html
+<div class="p-select">
+  <select>
+    <option>选项A</option>
+    <option>选项B</option>
+  </select>
+</div>
+```
+
+### 菜单 Menu
+
+```html
+<div class="p-menu">
+  <div class="p-menu-item">普通项</div>
+  <div class="p-menu-item p-menu-item--danger">危险项</div>
+</div>
+```
+
+### Tooltip
+
+```html
+<span class="p-tooltip" data-tip="提示文字">悬停我</span>
+```
+
+### 取色器
+
+```html
+<div class="p-color-picker"><span class="p-color-picker__swatch" style="background:#f00"></span> 颜色</div>
+```
+
+### 布局与工具类
+
+```html
+<div class="p-row"><span>横向排列</span></div>
+<div class="p-row p-row--between">两端对齐</div>
+<div class="p-col">纵向排列</div>
+```
+- `.p-row` `--wrap` `--between`、`.p-col`
+- `.p-icon` `--lg`、`.p-divider` `.p-hr` `.p-separator`、`.p-status-dot --up/--down/--warn`、`.p-pre`
+- 间距：`.p-mt-1/2/3` `.p-mb-1/2/3` `.p-gap-1/2/3`
+- 文本：`.p-text-center` `.p-text-muted` `.p-text-sm/xs/lg` `.p-font-mono`
+- 其他：`.p-ml-auto` `.p-truncate` `.p-rounded`
+
+## 使用示例
+
+```html
+<div class="p-card">
+  <div class="p-card-title">下载状态</div>
+  <div class="p-row p-row--between">
+    <span>安装中</span>
+    <span class="p-badge p-badge--blue">进行中</span>
+  </div>
+  <div class="p-progress"><div class="p-progress__bar" style="width:45%"></div></div>
+  <div class="p-tabs" style="margin-top:12px">
+    <button class="p-tab active" data-p-tab="log">日志</button>
+    <button class="p-tab" data-p-tab="info">详情</button>
+  </div>
+  <div class="p-panel active" id="panel-log"><pre class="p-pre">下载中...</pre></div>
+  <div class="p-panel" id="panel-info">版本 1.2.0</div>
+</div>
+```

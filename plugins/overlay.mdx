@@ -1,0 +1,139 @@
+---
+title: "悬浮窗开发"
+---
+## 悬浮窗开发
+
+悬浮窗（overlay）是独立于主界面的小窗口，可拖拽、可最小化、可缩放。通常用于需要常驻的工具面板（如 AI 助手聊天窗）。
+
+## 一、声明悬浮窗
+
+在 manifest 中同时声明 `contributes.menuItems`（入口）和 `contributes.overlay`（悬浮窗配置）：
+
+```json
+{
+  "id": "top.qomicex.assistant",
+  "entry": { "frontend": "dist/index.html" },
+  "contributes": {
+    "menuItems": [
+      { "path": "/plugins/p/top.qomicex.assistant", "label": "AI 助手", "icon": "A", "action": "overlay" }
+    ],
+    "overlay": {
+      "file": "dist/overlay.html",
+      "title": "AI 助手",
+      "width": 380,
+      "height": 500,
+      "minimizable": false,
+      "resizable": true
+    }
+  }
+}
+```
+
+要点：
+- `menuItems[].action` 必须为 `"overlay"`，点击侧边栏按钮才打开悬浮窗（而非跳转页面）
+- `overlay.file`：悬浮窗 HTML 文件路径（`.qplugin` 内相对路径）
+- `overlay.title` 缺省取 `menuItems[].label`
+
+## 二、编写悬浮窗 HTML
+
+`overlay.html` 是一个完整 HTML 文档（自带 `<html>`/`<head>`/`<body>`），脚本可直接使用 `.p-*` 组件类和 `window.__PLUGIN_API__`。
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { padding: 12px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="p-card">
+    <div class="p-card-title">快速操作</div>
+    <div class="p-row">
+      <button id="btn" class="p-btn p-btn--primary">刷新</button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('btn').addEventListener('click', async function () {
+      const res = await __PLUGIN_API__.call('callBackend', '/instance')
+      __PLUGIN_API__.call('showToast', '实例数: ' + (res || []).length, 'success')
+    })
+  </script>
+</body>
+</html>
+```
+
+### 悬浮窗环境特性
+
+- 自动注入 `.p-*` 组件样式 + 主题变量，跟随明暗主题
+- `window.__PLUGIN_ID__` = 当前插件 id（悬浮窗内可用）
+- 支持 `__PLUGIN_API__` 全部方法（含流式 `proxyFetchStream`）
+- 悬浮窗是**沙箱 iframe**（`sandbox="allow-scripts"`），脚本与主界面隔离
+- 标题栏由启动器渲染（标题、最小化、关闭按钮），你的 HTML 只负责内容区
+
+### 悬浮窗内的开关控制面板
+
+在悬浮窗中，`.p-swiper` 开关配合 `data-p-switch` 可自动切换面板显隐：
+
+```html
+<label class="p-swiper">
+  <input type="checkbox" checked data-p-switch="settingsPanel">
+  <span class="p-swiper-track"></span>
+  显示设置
+</label>
+<div id="settingsPanel">...设置内容...</div>
+```
+
+## 三、动态创建悬浮窗
+
+不通过侧边栏，插件脚本也可在运行时动态创建悬浮窗：
+
+```js
+const overlayId = await __PLUGIN_API__.call('overlay.create', {
+  title: '我的悬浮窗',
+  html: '<div class="p-card">动态内容</div>',
+  x: 120, y: 80,
+  width: 320, height: 240,
+  minimizable: true,
+  resizable: true
+})
+
+await __PLUGIN_API__.call('overlay.setHtml', overlayId, '<p>更新内容</p>')
+await __PLUGIN_API__.call('overlay.setPosition', overlayId, 300, 200)
+await __PLUGIN_API__.call('overlay.hide', overlayId)     // 最小化
+await __PLUGIN_API__.call('overlay.show', overlayId)     // 恢复
+await __PLUGIN_API__.call('overlay.destroy', overlayId)  // 销毁
+```
+
+### overlay.* 方法一览
+
+| 方法 | 参数 | 说明 |
+|------|------|------|
+| `overlay.create` | `{title, html, x?, y?, width?, height?, minimizable?, resizable?}` | 创建悬浮窗，返回 id |
+| `overlay.show` | `(id)` | 显示 / 恢复 |
+| `overlay.hide` | `(id)` | 隐藏 / 最小化 |
+| `overlay.destroy` | `(id)` | 销毁 |
+| `overlay.setHtml` | `(id, html)` | 更新内容 |
+| `overlay.setPosition` | `(id, x, y)` | 移动位置 |
+
+权限：`ui:sub_window`
+
+## 四、打包发布
+
+悬浮窗 HTML 需随包分发（`overlay.file` 指向包内路径）。用 CLI 打包时 `qomicex pack` 会自动把项目根目录的 `overlay.html` 拷入 `dist/`：
+
+```bash
+qomicex pack                # dist/overlay.html 自动入包
+qomicex pack --key ./dev-key.pem    # 附签名
+```
+
+若 `overlay.file` 引用 `dist/overlay.html` 但源码 `overlay.html` 在项目根目录，`qomicex pack` 会自动拷入；手动打包时需自行拷贝（见 [React + Vite 插件开发](/plugins/react-plugin) 打包章节）。
+
+## 五、注意事项
+
+- 悬浮窗 HTML 内容会被启动器处理：抽离 `<style>`/`<link>` 到 head、剥壳 `<html>/<head>/<body>`、注入组件样式
+- 悬浮窗可拖拽（点击非按钮区域），`resizable: true` 时右下角可缩放（最小 200×120）
+- 关闭悬浮窗请用标题栏的 x 按钮，插件内请通过 `__PLUGIN_API__.call('overlay.destroy', id)` 销毁
+- 悬浮窗脚本出错不影响主界面；如需调试，关注 DevTools 控制台

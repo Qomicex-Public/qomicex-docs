@@ -1,0 +1,238 @@
+---
+title: "MarkdownLib 前置插件"
+---
+## MarkdownLib 前置插件
+
+> MarkdownLib 是一个把 Markdown 解析能力封装成前置插件的库，任何插件都可以通过 `callPlugin` 调用它，把 Markdown 文本渲染成 HTML。
+
+- **插件 ID**：`top.qomicex.markdown`
+- **版本**：`1.2.1`
+- **依赖**：无
+- **引入**：内嵌 `marked v15.0.12`，无外部 CDN 依赖（不受 Tauri CSP 限制）
+
+## 为什么需要它
+
+QML 插件运行在 Tauri WebView 中，打包后 CSP 会拦截所有外部请求与外部 `<script src>` 加载。插件如果直接在 HTML 里引用 CDN 的 marked：
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+```
+
+在打包环境下会被 CSP 拦截，`marked` 未定义，Markdown 无法渲染。
+
+把 marked 抽成独立前置插件后：
+
+- marked 代码内嵌在 MarkdownLib 插件包内，**无需外部 CDN**，天然绕过 CSP；
+- 多个插件可以**共享同一份渲染能力**，避免各自内嵌重复代码；
+- 通过插件依赖机制管理，**版本清晰、可升级**。
+
+## 安装
+
+安装 MarkdownLib 前置插件后，其它插件在 `manifest.json` 声明依赖：
+
+```json
+{
+  "dependencies": [
+    { "id": "top.qomicex.markdown", "version": ">=1.0.0" }
+  ]
+}
+```
+
+依赖字段说明：
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `id` | 是 | 被依赖插件的 manifest id |
+| `version` | 否 | 版本范围，缺省 = 任意版本 |
+| `optional` | 否 | `true` 可选前置，`false`/缺省 必装前置 |
+
+版本支持语法：`>=1.2.0`、`<=1.2.0`、`>1.0`、`<2.0`、`=1.0.1`、精确 `1.2.0`、多条件空格分隔 `">=1.0 <2.0"`。
+
+## 接口
+
+MarkdownLib 通过 `registerMethod` 暴露以下方法：
+
+### `renderMarkdown(md)`
+
+将完整的 Markdown 文本渲染为 HTML 字符串。
+
+| 项 | 说明 |
+|----|------|
+| 参数 | `md: string` — Markdown 文本 |
+| 返回 | `Promise<string>` — HTML 字符串 |
+| 用途 | 渲染段落、标题、粗体、列表、代码块、表格、链接等 |
+
+### `renderMarkdownInline(md)`
+
+将**行内** Markdown 渲染为 HTML（不包含块级元素）。
+
+| 项 | 说明 |
+|----|------|
+| 参数 | `md: string` — 行内 Markdown |
+| 返回 | `Promise<string>` — HTML 字符串 |
+| 用途 | 渲染单行文本中的 `**粗体**`、`` `代码` ``、`[链接](url)` 等 |
+
+### `stripHtml(html)`
+
+去除 HTML 标签，返回纯文本。
+
+| 项 | 说明 |
+|----|------|
+| 参数 | `html: string` — HTML 字符串 |
+| 返回 | `Promise<string>` — 纯文本 |
+| 用途 | 提取文本内容、预览摘要等 |
+
+## 调用方法
+
+通过 `__PLUGIN_API__.callPlugin` 调用：
+
+```js
+await __PLUGIN_API__.callPlugin(插件Id, 方法名, ...参数)
+```
+
+```js
+const html = await __PLUGIN_API__.callPlugin(
+  'top.qomicex.markdown',  // 插件 ID
+  'renderMarkdown',        // 方法名
+  '# 标题\n\n**加粗** 和 `代码`'
+)
+```
+
+## 例子
+
+### 基础渲染
+
+```html
+<div id="out"></div>
+<script>
+  async function render() {
+    try {
+      const html = await __PLUGIN_API__.callPlugin(
+        'top.qomicex.markdown',
+        'renderMarkdown',
+        '## 标题\n\n**加粗**、*斜体*、`行内代码`'
+      )
+      document.getElementById('out').innerHTML = html
+    } catch (e) {
+      document.getElementById('out').textContent = '渲染失败: ' + e.message
+    }
+  }
+  render()
+</script>
+```
+
+### 行内渲染 + 去标签
+
+```js
+const inline = await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdownInline', '**你好** 世界')
+// → '<strong>你好</strong> 世界'
+
+const text = await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'stripHtml', '<p>Hello <b>World</b></p>')
+// → 'Hello World'
+```
+
+### 在悬浮窗（overlay）中使用
+
+Overlay 的 `__PLUGIN_API__` 同样暴露 `callPlugin`，用法一致。
+
+### 处理依赖缺失
+
+```js
+if (await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdown', '**测试**')) {
+  // 正常渲染
+} else {
+  // 依赖缺失或未激活，走降级逻辑
+}
+```
+
+## 实现思路
+
+### 提供方：注册方法
+
+MarkdownLib 的 `dist/index.html` 在插件激活后，通过 `registerMethod` 把 marked 的能力暴露给插件系统：
+
+```html
+<script>
+  __PLUGIN_API__.registerMethod('renderMarkdown', function (md) {
+    return marked.parse(md || '')
+  })
+</script>
+```
+
+要点：
+
+- `registerMethod(methodName, fn)` — `fn` 的返回值可以是普通值或 Promise（异步方法同样支持）；
+- 一个插件可注册多个方法；
+- 插件停用时所有方法自动注销；
+- 方法名建议语义化，避免与其他插件冲突。
+
+### 调用方：调用方法
+
+依赖方插件通过 `callPlugin` 调用：
+
+```js
+await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdown', md)
+```
+
+调用流程：
+
+```text
+调用方插件 ──callPlugin──▶ 主窗口 __pluginRegistry 中转
+                              │
+                              ▼
+                         MarkdownLib（已激活）执行 renderMarkdown
+                              │
+                              ▼
+                    返回渲染结果（Promise 值）
+```
+
+### 为什么内嵌而非 CDN
+
+MarkdownLib 把 `marked.min.js` **内嵌**在插件包内，而非通过 `<script src="CDN">` 引用：
+
+- **打包后 CSP 安全**：外部脚本被拦截，内嵌脚本不受影响；
+- **离线可用**：不依赖网络；
+- **版本锁定**：打包进插件，版本确定可复现。
+
+## 定义原理
+
+### 插件依赖机制
+
+依赖通过 `manifest.json` 的 `dependencies` 数组声明，由后端在安装/启动时校验：
+
+```text
+安装时：检查必装前置是否已安装且版本符合 → 否则拒绝安装（PLUGIN_MISSING_DEPENDENCY）
+启动时：按依赖拓扑排序激活（先激活被依赖方，再激活依赖方）
+运行中：可选前置缺失不影响启用，调用其方法时才报错
+```
+
+依赖方插件在 `__PLUGIN_API__` 上调用 `registerMethod` 注册方法，方法存于主窗口的 `__pluginRegistry`。停用插件时对应方法自动移除。
+
+### 方法注册与调用原理
+
+```text
+registerMethod(name, fn)
+  ──▶ 主窗口 __pluginRegistry[name] = fn
+
+callPlugin(pluginId, name, ...args)
+  ──▶ 查找 pluginId 注册的 name 方法
+       ├── 找到 → 执行 fn(...args)，返回结果（值或 Promise）
+       └── 未找到 → reject（插件未安装 / 未激活 / 方法未注册）
+```
+
+### 错误处理
+
+`callPlugin` 失败会 reject，建议调用方始终 try/catch：
+
+| 场景 | 错误信息 |
+|------|----------|
+| 目标插件未安装 | 插件 xxx 未提供方法 yyy（可能未安装或未激活） |
+| 目标插件未激活 | 同上 |
+| 方法未注册 | 同上 |
+| 方法内部抛错 | 插件 xxx 方法 yyy 执行失败: &lt;具体错误&gt; |
+
+## 修订记录
+
+| 日期 | 版本 | 修改内容 | 修改人 |
+|------|------|----------|--------|
+| 2026-08-02 | v1.0 | 初版创建 | AI Agent |

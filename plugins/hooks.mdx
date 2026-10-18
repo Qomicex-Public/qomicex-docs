@@ -1,0 +1,139 @@
+---
+title: "Hook 系统 — 拦截与增强启动器方法"
+---
+## Hook 系统 — 拦截与增强启动器方法
+
+插件可通过 Hook 系统在启动器的**方法执行前后**注入逻辑：修改参数、修改返回值、阻止执行或完全替换实现。适用于功能强化、性能优化、逻辑重构（例如：为启动注入自定义 JVM 参数、为版本扫描添加虚拟版本、拦截下载等）。
+
+## 执行模型：Koa 式洋葱管道
+
+每个 hook 是一个中间件函数 `(ctx, next) => Promise<void>`，按**洋葱模型**执行：
+
+```text
+插件A hook ─► 插件B hook ─► 默认实现(impl) ─► 插件B hook ─► 插件A hook
+   before                before                        after         after
+```
+
+- **before**：`await next()` 之前的代码，可修改 `ctx.args`（参数）
+- **after**：`await next()` 之后的代码，可修改 `ctx.result`（返回值）
+- **阻止**：调用 `ctx.prevent()` 跳过默认实现与后续 hook
+- **替换**：`ctx.prevent()` + 设置 `ctx.result` 即完全替换实现
+- **嵌套**：多个插件按注册顺序洋葱执行，**先注册者在外层**
+
+## 权限与声明
+
+### 权限
+
+`hook:register`（**危险**级）。manifest `permissions` 需包含，否则注册被拒绝。
+
+### manifest 声明（可选）
+
+```json
+{
+  "permissions": ["hook:register"],
+  "contributes": {
+    "hooks": [
+      { "method": "scanVersions", "priority": 10 }
+    ]
+  }
+}
+```
+
+声明用于文档化与权限预检；实际处理函数在运行时用 `registerHook` 注册。
+
+## registerHook — 注册 hook
+
+```js
+__PLUGIN_API__.registerHook('scanVersions', async (ctx, next) => {
+  // before：next() 前修改参数
+  ctx.args[0] = ctx.args[0] + '/custom'
+
+  // 继续默认实现（impl 使用修改后的 args）
+  await next()
+
+  // after：next() 后修改返回值
+  ctx.result = [...ctx.result, {
+    name: 'virtual-1.20.1',
+    gameVersion: '1.20.1',
+    state: 'Available'
+  }]
+})
+```
+
+- 权限：`hook:register`
+- 参数：`(method: string, handler: (ctx, next) => Promise<void>)`
+- `method` 为启动器可 hook 的方法名（见下表）
+- 插件停用时自动注销其全部 hooks
+
+### Context 对象
+
+| 字段 | 说明 |
+|------|------|
+| `ctx.method` | 方法名 |
+| `ctx.pluginId` | 当前插件 ID |
+| `ctx.args` | 参数数组（before 阶段可修改） |
+| `ctx.result` | 返回值（after 阶段可修改） |
+| `ctx.prevented` | 是否已被阻止 |
+| `ctx.prevent()` | 阻止默认实现与后续 hook |
+
+## 可 hook 的方法
+
+| 方法名 | 位置 | 签名 | 典型用途 |
+|--------|------|------|---------|
+| `launchInstanceFlow` | 前端启动编排（RunningContext） | `(id, name, javaInfo?, quickJoin?)` | 启动拦截、注入参数、阻止启动 |
+| `launchInstance` | 启动 API | `(id, options?)` | 注入 joinServer/accountUuid、修改启动请求 |
+| `syncScan` | 实例同步 API | `(gameDir, versions)` | 修改扫描结果、过滤/增强实例列表 |
+| `scanVersions` | 版本扫描 API | `(gameDir)` | 虚拟版本、过滤版本、自定义 loader 探测 |
+
+## 典型示例
+
+### 阻止特定实例启动
+
+```js
+__PLUGIN_API__.registerHook('launchInstance', async (ctx) => {
+  const [id] = ctx.args
+  if (id === 'blocked-instance') {
+    ctx.prevent()
+    ctx.result = { success: false, error: '被插件阻止启动' }
+  }
+})
+```
+
+### 完全替换实现
+
+```js
+__PLUGIN_API__.registerHook('scanVersions', async (ctx) => {
+  ctx.prevent()
+  ctx.result = [
+    { name: 'custom', gameVersion: '1.20.1', state: 'Available', loaders: [{ type: 'Fabric', version: '0.14.0' }] }
+  ]
+})
+```
+
+### 修改启动参数（注入 JVM 参数）
+
+```js
+__PLUGIN_API__.registerHook('launchInstanceFlow', async (ctx, next) => {
+  // 前端编排阶段在 javaInfo 上附加参数（具体字段取决于启动器版本）
+  await next()
+})
+```
+
+## 执行位置与架构
+
+插件 hook 函数在**插件 iframe 沙箱**中执行，默认实现（impl）在主窗口执行。两者经两阶段桥通信（before → impl → after），保证洋葱语义跨窗口成立：
+
+```text
+主窗口 hookable 调用
+  └─ HookRegistry.run(method, args, impl)
+       ├─ hook(iframe): __plugin_hook_invoke → 改 args → before_done
+       ├─ impl(...args) → ctx.result
+       ├─ __plugin_hook_continue(result) → 恢复 hook after → 改 result → after_done
+       └─ 返回最终 result
+```
+
+## 已知限制
+
+- 仅覆盖前端方法层（用 `hookable()` 包装器暴露的方法）；后端 Rust 进程内 hook 规划中。
+- 内联渲染插件（`render: "inline"`）的 hook 在主窗口上下文直接执行（共享同一注册表）。
+- L4 WebView 插件暂未接入跨窗口 registerHook。

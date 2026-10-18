@@ -1,0 +1,190 @@
+---
+title: "发布规范"
+---
+## 发布规范
+
+本文档说明插件打包格式、签名、分发渠道、更新与发布检查清单。
+
+推荐用 `qomicex` CLI 完成打包 → 签名 → 发布全流程：`qomicex pack` 打包、`qomicex verify --package` 验签、`qomicex publish` 一键发布。完整命令见 [CLI 工具参考](/plugins/cli)。
+
+## 一、打包格式
+
+`.qplugin` 本质是 **ZIP 压缩包**，其中 `manifest.json` 必须位于**根目录**。
+
+```text
+my-plugin.qplugin（即 zip）
+├── manifest.json          # 必须在根目录
+├── signature.json         # 签名（上传商店必须，见 §四）
+├── signature.cert.json    # 开发者证书（商店发布时附带）
+└── dist/
+    ├── index.html
+    ├── app.js
+    └── theme.css
+```
+
+- `manifest.json` 不在根目录 → 安装失败（`Invalid plugin package`）
+- 后端不校验扩展名，任何合法 zip 都能通过上传接口；但**请统一使用 `.qplugin`** 以便识别
+- 包内路径避免 `../` 相对路径（zip-slip 风险，且可能导致文件写入异常位置）
+- 包内条目路径必须使用正斜杠 `/`（Windows 老工具生成的 `\` 会被安全校验拒绝）
+
+### WASM 插件（L3）打包
+
+含 L3 能力的插件需在包内提供 `plugin.wasm`（wasmtime 核心模块）：
+
+```text
+my-wasm-plugin.qplugin（即 zip）
+├── manifest.json          # 必须在根目录，layers 含 "l3"
+└── plugin.wasm            # wasm 编译产物（wasm32-unknown-unknown）
+```
+
+- 编译：`rustup target add wasm32-unknown-unknown && cargo build --release --target wasm32-unknown-unknown`
+- 产物重命名为 `plugin.wasm` 放入包根目录（网关按固定文件名 `plugin.wasm` 加载，无需在 manifest 声明路径）
+- manifest `layers` 需含 `"l3"`，`permissions` 含 `"wasm:execute"`
+- 详见 [WASM 插件（L3）](/plugins/wasm-plugin)
+
+### 主题内容（可选发布物）
+
+主题、图标、字体是**可选**发布内容，通过 `contributes` 声明，不要求独立发布格式：
+
+| 内容 | 声明位置 | 说明 |
+|------|---------|------|
+| 主题 CSS | `entry.theme` | 激活时注入 `<style data-plugin-theme>` |
+| 图标主题 | `contributes.iconTheme` | `.qtheme` 包内 `icon-theme.json` 路径 |
+| 字体/连字 | `contributes.fontLinks` | 字体 CSS/CDN URL，激活时注入 `<link>` |
+
+三者都作为 `.qplugin` 包内资源随包分发，无需单独打包。详见 [主题系统](/plugins/theme)。
+
+## 二、命名规范
+
+| 项目 | 规范 |
+|------|------|
+| 插件 id | 反向域名风格（如 `top.qomicex.assistant`、`dev.example.helloworld`），小写、点分、`id` 一经发布**不要更改**（它是安装目录名与依赖引用 key） |
+| 插件名 | 简洁可读，如「AI 助手」 |
+| 版本号 | 语义化版本 `x.y.z`，用于依赖匹配（见 [版本语法](/plugins/manifest#版本范围语法)） |
+| 包文件名 | 建议 `{插件id}.qplugin` 或 `{插件名}-{版本}.qplugin` |
+
+## 三、权限与安全规范
+
+- **最小权限原则**：只声明真正用到的权限。安装详情页会按风险分级展示（危险权限如 `shell:execute`、`filesystem:write`、`plugin:install` 会醒目提示）
+- 不得在插件内硬编码密钥/凭据
+- 访问外部网络建议走 `proxyFetch`（自带 SSRF 防护），而非直接内网请求
+- 插件脚本默认运行在 iframe 沙箱（opaque origin），**不要依赖全局变量跨插件共享**
+- 重计算请离开 UI 主线程（Web Worker / WASM / 后端代理），`qomicex verify` 会静态告警 `while(true)` / `setInterval` 无界循环
+
+## 四、插件签名（Ed25519 三级信任链）
+
+商店与启动器使用 **Ed25519 三级信任链**（ADR-050）防供应链投毒：
+
+```text
+商店根钥 → 签发开发者公钥证书 → 开发者密钥签每个 release
+```
+
+- **信任链**：商店根钥签发开发者公钥（`signature.cert.json`，内含开发者公钥 + 根钥签名）→ 开发者用私钥签包体（`signature.json`）。启动器内置商店根公钥，可**完全离线验签**。
+- **签名格式**：`signature.json`（包内根目录）：
+
+```json
+{
+  "alg": "Ed25519",
+  "signedHash": "<sha256 hex>",
+  "signerKeyId": "<key id>",
+  "signature": "<base64 ed25519 sig>"
+}
+```
+
+- `signedHash` = **规范化 manifest + 文件清单的 SHA-256**：`SHA-256(canonical JSON 的 { manifest: sha256(manifest.json 原始字节), files: [{path, sha256}] })`。规范化 = 键序递归排序 + 无空白 JSON，保证可复现哈希。
+- **强制范围**：商店新上传版本、启动器手动上传 `.qplugin` **强制验签**（缺签名或验签失败 → 422 `signature_invalid` / 拒绝安装）；商店安装与本地开发目录安装不强制（老版本兼容，开发路径放行）。
+- **降级兼容**：老版本（无签名）已发布可继续安装，不强制重签。更换/泄露私钥后重新生成密钥对并上传新公钥即可，旧证书自动失效。
+- **换根钥注意**：商店更换签名根钥后，内置根公钥（CLI `signature.ts` 的 `STORE_ROOT_PUBLIC_KEY_B64`、启动器 `plugin_signature.rs` 的 `ROOT_PUBLIC_KEY_B64`、CLI 文档 `signing.md`）必须同步更新，且所有旧证书签发的包验签失败、需重新 `qomicex publish` 换新证书。
+
+### 签名工具
+
+- 生成密钥对：`openssl genpkey -algorithm Ed25519 -out dev-key.pem`，或 `node scripts/plugin-keygen.mjs generate`（仓库内脚本）
+- 签名：`qomicex pack --key ./dev-key.pem`（打签名的 `.qplugin`），或 `qomicex publish` 一键走完设备流登录 → 上传公钥获证书 → 签名 → 上传
+- 验签：`qomicex verify --package ./release/xxx.qplugin`
+
+## 五、安装方式
+
+- **上传 .qplugin 文件**：设置 → 插件 → 安装插件，选择 `.qplugin` / `.zip` 文件（**强制验签**，无签名/验签失败被拒）
+- **商店在线安装**：插件商店页面 → 安装（有签名则验签，无签名老版本放行）
+- **目录安装**（开发者调试）：后端 `POST /api/plugins/install`，body `{"sourceDir": "/path/to/dir"}`，直接指向含 `manifest.json` 的目录（不强制签名，`plugins-dev/` 开发路径）
+
+- 上传接口（upload）**不做依赖检查**；依赖检查仅在目录安装（install）与商店安装接口执行。发布前请确保依赖插件已随文档说明。
+- 状态切换（启用/禁用）需要**重启启动器**后生效。
+
+## 六、更新、升级与回滚
+
+- **更新检查**：启动器启动后静默轮询商店 `POST /plugins/check-updates`（按 launcher 版本 + 已装插件清单），有更新时在插件管理页显示升级按钮。
+- **灰度放量**：商店返回 `rolloutPercent`（0-100，缺省/100 = 全量）。`<100` 时启动器按 `hash(slug@latestVersion) % 100 < rolloutPercent` 决定该用户是否看到升级提示，同一用户结果稳定。
+- **遥测自动暂停**：商店按 24h 错误上报计数对版本做**灰度保护**——某版本 24h 错误数超过阈值（默认 10）后，商店不再把该版本作为更新建议下发（已安装用户不受影响）。详见 [灰度遥测](/plugins/telemetry)。
+- **升级流程**：点击升级按钮 → 确认 → 走商店安装管线（下载 → SHA-256 校验 → 验签 → 覆盖安装）。
+- **回滚快照**：覆盖安装前旧目录会改名 `plugins/{id}.bak-{version}` 快照；升级后插件异常可点「回滚」按钮恢复（`POST /api/plugins/{id}/rollback`）。`PluginInfo.hasRollback` 标记是否有可用快照。
+- **卸载**：设置 → 插件 → 删除按钮（会删除 `plugins/{id}/` 整个目录）。
+
+## 七、发布渠道
+
+**早期「GitHub 仓库 + PR」分发模式已由线上商店取代**，正式发布一律走线上商店 [plugins.qomicex.top](https://plugins.qomicex.top)。
+
+### 1. dev 本地安装（开发自测）
+
+开发过程中直接把 `.qplugin` 上传启动器验证，或走 `qomicex dev` + 调试 harness（见 [调试与热重载](/plugins/debugging)）。
+
+### 2. 商店发布（正式渠道）
+
+| 方式 | 流程 |
+|------|------|
+| **`qomicex publish`**（推荐） | RFC 8628 设备流登录 → 上传开发者公钥获取证书 → 签名包体 → multipart 上传。一键完成，无需浏览器操作 |
+| **网页手动上传** | 登录商店 → 升级为开发者 → 新建插件 → 上传新版本（须先用 `qomicex pack --key <私钥>` 签名，商店**强制验签**） |
+
+- **自动发布**：纯 L3 且无危险权限的包上传后**自动发布**，无需人工审核。
+- **人工审核**：其余（含 UI 层或有危险权限）进入审核队列，结果在版本列表查看。
+- 更新版本时**上传同名 slug 的新版本**，商店做版本去重（409 `version_exists`）。
+
+### 3. 自建镜像 / 私有注册表（开放注册表协议）
+
+如果你需要为自己或团队搭建私有的插件分发源，**开放注册表协议**（详见[商店侧边栏「开放注册表协议」](/store/registry-spec)）允许第三方实现兼容的镜像：
+
+- **核心端点**：只需实现 `GET /registry`、`GET /plugins`、`GET /plugins/:slug`、`GET /plugins/:slug/versions/:version/download` 四个端点即可被启动器识别为可用源
+- **下载双通道**：镜像重传包体时必须原样保留 `signature.json` 和 `signature.cert.json`，不可重打包
+- **发现机制**：启动器设置 `registryUrl` 可配置多源列表，主源不可达时自动回退
+- **部署方式**：Cloudflare Worker 复制（共享负载）、纯静态托管（只读）、或自建完整注册表（独立源）
+
+详细实现指南见[开放注册表协议](/store/registry-spec)。
+
+## 八、数据与目录
+
+插件可读写自己的数据（按插件 id 隔离）：
+
+```text
+{数据目录}/plugins/{插件id}/
+├── manifest.json      # 你的插件文件（安装时解包）
+├── settings.json      # getSettings/setSettings 读写
+└── cache.json         # setCache/getCache 读写
+```
+
+数据目录位置：
+- Windows：`%LOCALAPPDATA%\qomicex-launcher`
+- Linux：`$XDG_DATA_HOME` 或 `~/.local/share`
+- macOS：`~/Library/Application Support`
+- 环境变量 `QOMICEX_HOME` 可覆盖（便携模式）
+
+## 九、发布检查清单
+
+- [ ] `manifest.json` 在包根目录，JSON 合法
+- [ ] `id` 唯一且不再更改，`version` 语义化递增（可用 `qomicex bump patch|minor|major`）
+- [ ] `permissions` 只含必要权限（可用 `qomicex verify` 校验最小化）
+- [ ] 依赖插件的 `dependencies` 声明正确（必装/可选、版本范围）
+- [ ] `entry.frontend` 已声明（否则插件不被激活）
+- [ ] 页面/悬浮窗脚本未使用全局变量跨插件通信
+- [ ] 主线程无 `while(true)` / 无界 `setInterval`（`qomicex verify` 告警项）
+- [ ] **已用 `qomicex pack --key` 签名**，`signature.json` 在包根目录
+- [ ] 本地安装测试通过（上传 → 启用 → 重启 → 功能验证）
+- [ ] `qomicex verify --package` 验签通过
+- [ ] 若调用其他插件，已在文档说明前置插件名称与版本
+- [ ] 若贡献了图标/字体主题，已在 `contributes.iconTheme` / `contributes.fontLinks` 声明（见[主题系统](/plugins/theme)）
+- [ ] 发布后关注错误率（灰度遥测阈值默认 10/24h，见[灰度遥测](/plugins/telemetry)）
+
+## 十、版本兼容建议
+
+- `minLauncherVersion` 建议填写，虽然当前版本未强制校验
+- 插件 API 可能演进，发布时说明兼容的启动器版本范围
+- 重大变更（方法签名、权限变化）建议递增主版本

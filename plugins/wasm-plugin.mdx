@@ -1,0 +1,283 @@
+---
+title: "WASM 插件（L3）"
+---
+## WASM 插件（L3）
+
+L3 插件以 **WASM 模块**形式运行在启动器 Rust 层（wasmtime 引擎）的沙箱中，适合 Agent、协议解析器、复杂逻辑等场景。与 L2（前端脚本）不同，L3 在**独立运行时**执行，不依赖浏览器环境。
+
+## 一、工作原理
+
+```text
+后端(C#) ──HTTP──→ 插件网关(localhost:动态端口) ──→ Tauri Rust(wasmtime) ──→ WASM 插件
+```
+
+- 启动器启动时，Rust 网关扫描 `plugins/{插件id}/plugin.wasm`（需 manifest `layers` 含 `l3`）
+- wasmtime 引擎加载模块，注入 host 函数（`qomicex` 模块），调用插件导出的函数
+- 网关端口写入 `plugins/.gateway_port`，后端 `PluginGatewayClient` 读取并代理
+- 前端通过 `__PLUGIN_API__.callWasm(...)` 经后端调用
+
+## 二、插件结构
+
+```text
+my-wasm-plugin/
+├── manifest.json        # layers 需含 "l3"
+└── plugin.wasm          # 核心 wasm 模块（编译产物）
+```
+
+manifest 示例：
+
+```json
+{
+  "id": "dev.example.wasmplugin",
+  "name": "WASM Plugin",
+  "version": "0.1.0",
+  "minLauncherVersion": "0.1.0",
+  "layers": ["l3"],
+  "permissions": ["wasm:execute"]
+}
+```
+
+网关加载的是固定文件名 `plugin.wasm`（位于 `plugins/{插件id}/plugin.wasm`），**无需**在 manifest 里声明路径。`entry.backend` 是保留字段（当前未使用），不要依赖。
+
+## 三、插件导出函数（WASM → 启动器）
+
+| 导出 | 签名 | 说明 |
+|------|------|------|
+| `on_load` | `() -> ()` | 插件加载时调用 |
+| `on_unload` | `() -> ()` | 插件卸载时调用 |
+| `get_manifest` | `() -> i32` | 返回 manifest（预留） |
+| 自定义导出 | `() -> ()` 或 `() -> i32` | 可通过 `callWasm(id, '导出名')` 调用 |
+
+## 四、Host API（启动器 → WASM）
+
+插件通过导入 `qomicex` 模块的函数访问启动器能力：
+
+```rust
+#[link(wasm_import_module = "qomicex")]
+extern "C" {
+    fn log(level: i32, msg_ptr: i32, msg_len: i32);                          // 输出日志
+    fn http_fetch(url_ptr: i32, url_len: i32, method_ptr: i32, method_len: i32,
+                  body_ptr: i32, body_len: i32, out_ptr: i32) -> i32;        // HTTP 请求（预留）
+    fn instance_list(out_ptr: i32) -> i32;                                   // 实例列表（预留）
+    fn db_set(key_ptr: i32, key_len: i32, val_ptr: i32, val_len: i32);       // 写键值
+    fn db_get(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32; // 读键值
+    fn get_plugin_id(out_ptr: i32, out_cap: i32) -> i32;                     // 获取插件 id
+}
+```
+
+- 字符串通过 `(指针, 长度)` 传入，需要插件自行管理 wasm 线性内存
+- `http_fetch` / `instance_list` 当前为预留（返回 -1），网络与实例访问请通过前端 `callBackend` / `proxyFetch` 实现
+
+## 五、多语言编写示例
+
+WASM 插件是**裸 core module**（非 WASI / 非 component），各语言可行性如下：
+
+| 语言 | 可行性 | 说明 |
+|------|--------|------|
+| **Rust** | ✅ 已验证 | `wasm32-unknown-unknown`，推荐首选 |
+| **C / C++** | ✅ 可行 | clang + wasm-ld，`--target=wasm32-unknown-unknown` |
+| **AssemblyScript** | ✅ 可行 | TS 语法，`asc` 编译，默认导出 `memory` |
+| **Zig** | ✅ 可行 | `wasm32-freestanding` 目标 |
+| Go / TinyGo | ⚠️ 受限 | 仅 `wasip1`（WASI 模式），需宿主注册 WASI，非裸模块 |
+| **C# (.NET)** | ❌ 不可 | NativeAOT 不支持 wasm；Mono wasm 产物是整个 .NET runtime，非裸模块 |
+| **Python** | ❌ 不可 | 无 wasm 编译目标；Pyodide 是解释器移植，非代码编译 |
+
+### 公共约定（所有语言）
+
+- 导出 `on_load` / `on_unload`（`() -> ()`）供网关调用；自定义导出 `() -> ()` 或 `() -> i32`
+- 导入 `qomicex` 模块的 host 函数（`log` / `db_set` / `db_get` / `get_plugin_id`）
+- 字符串通过 `(指针, 长度)` 传递，指针是 **wasm 线性内存偏移（i32）**，非宿主指针
+- 线性内存需**导出**（约定名 `memory`），网关用 `caller.get_export("memory")` 读取
+- 函数签名必须与 host 注册签名严格一致，否则实例化报错
+
+### 1. Rust（已验证）
+
+**Cargo.toml：**
+
+```toml
+[package]
+name = "my-wasm-plugin"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = "s"
+```
+
+**src/lib.rs：**
+
+```rust
+#[no_mangle]
+pub extern "C" fn on_load() {
+    unsafe {
+        qomicex_log(0, b"plugin loaded\0".as_ptr() as i32, 14);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn on_unload() {
+    unsafe {
+        qomicex_log(0, b"plugin unloaded\0".as_ptr() as i32, 16);
+    }
+}
+
+#[link(wasm_import_module = "qomicex")]
+extern "C" {
+    #[link_name = "log"]
+    fn qomicex_log(level: i32, msg_ptr: i32, msg_len: i32);
+    #[link_name = "db_set"]
+    fn qomicex_db_set(key_ptr: i32, key_len: i32, val_ptr: i32, val_len: i32);
+}
+```
+
+**编译：**
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo build --release --target wasm32-unknown-unknown
+# 产物：target/wasm32-unknown-unknown/release/my_wasm_plugin.wasm → 重命名 plugin.wasm
+```
+
+### 2. C / C++（可行）
+
+**plugin.c：**
+
+```c
+// 导入 qomicex 模块的 host 函数
+__attribute__((import_module("qomicex"), import_name("log")))
+extern void qomicex_log(int level, int ptr, int len);
+
+__attribute__((import_module("qomicex"), import_name("db_set")))
+extern void qomicex_db_set(int key_ptr, int key_len, int val_ptr, int val_len);
+
+// 导出给网关调用
+__attribute__((export_name("on_load")))
+void on_load(void) {
+    static char msg[] = "hello from C";
+    qomicex_log(0, (int)(long)msg, sizeof(msg) - 1);
+}
+
+__attribute__((export_name("on_unload")))
+void on_unload(void) {}
+```
+
+**编译（需 clang + wasm-ld，如 wasi-sdk / LLVM）：**
+
+```bash
+clang --target=wasm32-unknown-unknown -O2 -nostdlib \
+  -Wl,--no-entry \
+  -Wl,--export=on_load -Wl,--export=on_unload \
+  -Wl,--export-memory \
+  -o plugin.wasm plugin.c
+```
+
+- 必须用 `wasm32-unknown-unknown`（非 `wasm32-wasi`，后者会引入 WASI 导入）
+- `-nostdlib` 下无 `memcpy`/`memset`，用到需自行实现
+- `-Wl,--export-memory` 导出名为 `memory` 的线性内存
+
+### 3. AssemblyScript（可行）
+
+**entry.ts：**
+
+```ts
+// 导入 qomicex 模块的 host 函数
+@external("qomicex", "log")
+declare function log(level: i32, ptr: i32, len: i32): void;
+
+export function on_load(): void {
+  const msg = String.UTF8.encode("hi from AssemblyScript")
+  log(0, changetype<i32>(msg), msg.byteLength)
+}
+
+export function on_unload(): void {}
+```
+
+**编译（需 Node.js + assemblyscript）：**
+
+```bash
+npm install -D assemblyscript
+npx asc entry.ts -o plugin.wasm -O --exportRuntime
+```
+
+AssemblyScript 默认导出名为 `memory` 的内存，与网关约定一致。`--exportRuntime` 导出 `__new`/`__pin` 等内存助手；体积敏感可用 `--runtime stub`。
+
+### 4. Zig（可行）
+
+**plugin.zig：**
+
+```zig
+// 导入 qomicex 模块的 host 函数
+extern "qomicex" fn log(level: i32, ptr: i32, len: i32) void;
+
+export fn on_load() void {
+    const msg = "hello from Zig";
+    log(0, @intFromPtr(msg.ptr), @intCast(msg.len));
+}
+
+export fn on_unload() void {}
+```
+
+**编译：**
+
+```bash
+zig build-exe plugin.zig -target wasm32-freestanding -fno-entry \
+  --export=on_load --export=on_unload -O ReleaseSmall -o plugin.wasm
+```
+
+### 5. Go（受限，WASI 模式）
+
+Go 只有 `js` / `wasip1` 两个 wasm 目标，**无裸 core module 目标**。`wasip1` 产物带 Go runtime 并引入 WASI 导入，需网关注册 WASI 才能跑（当前网关未注册，**不可用**）。仅作参考：
+
+```go
+//go:wasmimport qomicex log
+func log(level, ptr, len uint32)
+
+//go:wasmexport on_load
+func onLoad() {}
+
+func main() {} // wasip1 必须有 main
+```
+
+```bash
+GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o plugin.wasm .
+```
+
+### 6. C# / Python（不可用）
+
+- **C# (.NET)**：NativeAOT 不支持 wasm 目标；Mono 的 browser-wasm / wasi-wasm 产物是整个 .NET runtime（数 MB，WASI 符号），不是裸 core module，无法满足网关约定。
+- **Python**：无 wasm 编译目标；Pyodide 等方案是"把 CPython 解释器移植到 wasm"，不是把你的代码编译成模块。
+
+**替代建议**：wasm 插件逻辑用 Rust / C / AssemblyScript 编写，宿主侧（前端或后端）用你熟悉的语言。
+
+## 六、从插件/前端调用
+
+```js
+// 前端页面 / 悬浮窗 / L2 脚本中
+const res = await __PLUGIN_API__.callWasm('dev.example.wasmplugin', 'on_load')
+// res = { ok: true, result: ... }
+
+const ids = await __PLUGIN_API__.listWasmPlugins()
+```
+
+权限：`wasm:execute`
+
+## 七、后端代理端点
+
+后端将网关能力代理为以下 HTTP 端点（前端 API 已封装）：
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/plugins/wasm` | 列出已加载 WASM 插件 |
+| GET | `/api/plugins/wasm/{id}` | 插件信息（id/name/version/permissions） |
+| POST | `/api/plugins/wasm/{id}/invoke` | body `{"export":"on_load"}` 调用导出 |
+
+## 八、注意事项
+
+- 插件包需包含 `plugin.wasm`，且 manifest `layers` 含 `l3`，才会被网关加载
+- `plugin.wasm` 是**核心 wasm 模块**（core module），非 WASI/component 模块
+- 数据目录与前端插件一致（`{数据目录}/plugins/{id}/`），由 `QOMICEX_HOME` 或系统数据目录决定
+- 网关日志输出到启动器控制台（`[plugin]` / `[gateway]` 前缀）
+- 当前 `db_set`/`db_get` 为网关进程内键值存储，重启清空；`http_fetch`/`instance_list` 预留

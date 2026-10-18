@@ -1,0 +1,703 @@
+---
+title: "插件 API 完整参考"
+---
+## 插件 API 完整参考
+
+插件脚本通过全局对象 `window.__PLUGIN_API__` 与启动器交互。本文档列出全部可调用方法、签名、权限要求与示例。
+
+## 全局变量
+
+### __PLUGIN_API_BASE__ — 插件文件地址前缀
+
+L2 沙箱内，启动器会自动注入 `window.__PLUGIN_API_BASE__`，值为当前插件的文件访问基地址：
+
+```text
+http://localhost:5000/api/plugins/{插件ID}/files
+```
+
+可用于动态拼包内资源地址（如图标、图片）：
+
+```js
+const iconUrl = `${__PLUGIN_API_BASE__}/dist/icon.svg`
+document.getElementById('icon').src = iconUrl
+```
+
+内联渲染（无 `l2`）和悬浮窗（overlay iframe）时该变量不存在，相对路径需通过其他方式解析。
+
+## 调用方式
+
+```js
+const __PLUGIN_API__ = window.__PLUGIN_API__
+
+// ① 通用 call 方式（绝大多数方法）
+const data = await __PLUGIN_API__.call('getSettings')
+
+// ② 专用快捷方式（以下 4 个）
+await __PLUGIN_API__.registerMethod('name', fn)      // 注册方法
+await __PLUGIN_API__.callPlugin('id', 'method', ...) // 调用其他插件方法
+await __PLUGIN_API__.proxyFetchStream(req, handlers) // 流式请求
+await __PLUGIN_API__.registerHook('method', handler) // 注册启动器方法 Hook
+```
+
+## 权限机制
+
+每个 API 方法对应一个权限。调用时启动器会检查插件 manifest 的 `permissions` 是否包含该权限，否则报错：
+
+```text
+Permission denied: requires <权限id>
+```
+
+### 完整权限表
+
+| 权限 ID | 中文 | 风险 |
+|---------|------|------|
+| `instance:read` | 读取实例列表 | 普通 |
+| `instance:write` | 创建/修改/删除实例（含安装整合包） | 警告 |
+| `account:read` | 读取账号列表 | 普通 |
+| `license:read` | 读取许可证信息 | 普通 |
+| `config:read` | 读取启动器配置 | 普通 |
+| `config:write` | 修改启动器配置 | 警告 |
+| `cache:access` | 读写插件缓存 | 普通 |
+| `endpoint:discover` | 获取后端 API 端点 | 普通 |
+| `page:list` | 获取页面列表 | 普通 |
+| `network:fetch` | 发送 HTTP 请求 | 警告 |
+| `network:cors_proxy` | CORS 代理请求 | 警告 |
+| `network:websocket` | WebSocket 连接 | 警告 |
+| `network:proxy` | 修改代理设置 | 警告 |
+| `ui:inject_sidebar` | 注入侧边栏菜单 | 普通 |
+| `ui:inject_settings` | 注入设置页 | 普通 |
+| `ui:picture_in_picture` | 画中画窗口 | 警告 |
+| `ui:sub_window` | 独立子窗口 | 警告 |
+| `ui:context_menu` | 注入右键菜单 | 普通 |
+| `ui:toast` | 应用内通知 | 普通 |
+| `ui:navigate` | 跳转页面 | 普通 |
+| `system:info` | 读取系统和启动器信息 | 普通 |
+| `system:notification` | 发送系统通知 | 普通 |
+| `clipboard:read` | 读取剪贴板 | 警告 |
+| `clipboard:write` | 写入剪贴板 | 警告 |
+| `wasm:execute` | 执行 WASM 模块 | 警告 |
+| `plugin:install` | 安装/卸载/更新插件 | 危险 |
+| `plugin:list` | 读取已安装插件列表 | 普通 |
+| `resource:read` | 读取游戏资源文件 | 普通 |
+| `resource:write` | 写入游戏资源文件 | 警告 |
+| `java:manage` | 管理 Java 运行时 | 警告 |
+| `game:process` | 启停游戏进程 | 警告 |
+| `game:log` | 检测游戏日志 | 普通 |
+| `connector:host` | 启停联机 | 警告 |
+| `connector:scan` | 扫描局域网联机 | 普通 |
+| `shell:execute` | 执行系统命令 | 危险 |
+| `filesystem:read` | 读取文件系统 | 警告 |
+| `filesystem:write` | 写入文件系统 | 危险 |
+| `hook:register` | 钩住启动器方法（拦截/修改参数、阻止执行） | 危险 |
+| `download:manage` | 管理下载中心任务 | 警告 |
+
+「风险」用于安装详情弹窗的视觉提示：普通=蓝、警告=黄、危险=红。声明权限时遵循**最小权限原则**，只声明你真正用到的。
+
+## 方法参考
+
+### getSettings — 读取插件配置
+
+读取插件自己的 `settings.json`。
+
+```js
+const settings = await __PLUGIN_API__.call('getSettings')
+```
+- 权限：`config:read`
+- 返回：`Record<string, unknown>`（无文件时返回 `{}`）
+- 存储位置：`{数据目录}/plugins/{插件id}/settings.json`
+
+### setSettings — 写入插件配置
+
+按 key 合并写入配置（**合并而非覆盖整个文件**）。
+
+```js
+await __PLUGIN_API__.call('setSettings', 'theme', 'dark')
+```
+- 权限：`config:write`
+- 参数：`(key: string, value: any)`，value 可为任意 JSON 值
+- 并发写入由后端加锁保护
+
+### setCache / getCache — 插件缓存
+
+按 key 读写插件自己的缓存文件，支持 TTL 过期。
+
+```js
+// 写缓存，TTL 1 小时（3600 秒）
+await __PLUGIN_API__.call('setCache', 'modelList', { items: [...] }, 3600)
+
+// 读缓存（不存在或过期返回 null）
+const cached = await __PLUGIN_API__.call('getCache', 'modelList')
+```
+- 权限：`cache:access`
+- 存储位置：`{数据目录}/plugins/{插件id}/cache.json`
+- 内部结构 `{ key: { v: 值, e: 过期时间戳|null } }`，无需插件关心
+
+### callBackend — 调用启动器后端 API
+
+直接请求启动器后端（`http://localhost:5000/api/...`），绕过 CORS 限制。
+
+```js
+const instances = await __PLUGIN_API__.call('callBackend', '/instance')
+
+const result = await __PLUGIN_API__.call('callBackend', '/resource-download/start', {
+  instanceId: 'xxx', url: 'https://...', fileName: 'mod.jar', category: 'mods'
+})
+```
+- 权限：`network:fetch`
+- 参数：`(endpoint: string, data?: any)`
+- 有 `data` → POST；无 `data` → GET
+- `data` 对象中可传入 `_method` 字段覆盖 HTTP 方法（如 `{ _method: 'PUT', State: 'active' }`），`_method` 不会被发送到后端
+- `endpoint` 以 `/` 开头（如 `/instance`），不含 `/api` 前缀
+- 返回：后端 JSON 响应；非 2xx 抛错
+- 可用端点清单：见启动器后端 OpenAPI（开发模式 `/openapi/v1.json`），常用如 `/instance`、`/resources/search`、`/settings` 等
+
+L2 沙箱（`sandbox="allow-scripts"`，无 `allow-popups`）里 `window.open(url, '_blank')` 会被拦截。要打开外部链接，应通过后端端点：
+
+```js
+await __PLUGIN_API__.call('callBackend', '/system/open-url', { url: 'https://example.com' })
+```
+
+该端点使用系统默认浏览器打开 `http/https` 链接（仅接受这两种协议，其余返回 400）。
+
+### proxyFetch — CORS 代理请求
+
+经启动器后端转发请求任意外部 URL，绕开浏览器 CORS 限制，且带 SSRF 防护。
+
+```js
+const res = await __PLUGIN_API__.call('proxyFetch', {
+  url: 'https://api.example.com/data',
+  method: 'GET',
+  headers: { 'Accept': 'application/json' },
+  timeoutMs: 15000
+})
+if (res.status === 200) {
+  const data = JSON.parse(res.body)   // 文本响应
+}
+```
+- 权限：`network:cors_proxy`
+- 请求 `ProxyRequest`：
+```ts
+  {
+    url: string                // 必填，http/https
+    method?: string            // 默认 GET
+    headers?: Record<string, string>
+    body?: string              // POST body（字符串）
+    timeoutMs?: number         // 默认 15000，范围 1000–60000
+  }
+```
+- 响应 `ProxyResponse`：
+```ts
+  {
+    status: number
+    headers: Record<string, string>
+    body?: string | null       // 文本响应
+    bodyBase64?: string | null // 二进制响应
+  }
+```
+- **SSRF 防护**：仅 http/https；禁止内网/保留地址（localhost、127.x、10.x、172.16-31.x、192.168.x、169.254.x 等），返回 `PROXY_PRIVATE_ADDRESS`(400)
+
+### proxyFetchStream — 流式代理请求
+
+消费 SSE 流（如 AI 对话逐字输出），逐块回调。
+
+```js
+await __PLUGIN_API__.proxyFetchStream(
+  {
+    url: 'https://api.deepseek.com/v1/chat/completions',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify({ model, messages, stream: true }),
+    timeoutMs: 120000,
+    signal: abortController.signal    // 可选，中断流
+  },
+  {
+    onChunk(chunk) {
+      // chunk 为 SSE data: 行内容（已去 data: 前缀）
+      const json = JSON.parse(chunk)
+      const delta = json.choices?.[0]?.delta?.content
+      if (delta) appendText(delta)
+    },
+    onError(err) { console.error(err) }
+  }
+)
+```
+- 权限：`network:cors_proxy`
+- 后端自动带 `stream: true` 转发上游流
+- `signal`（AbortSignal）用于中断；`req.signal` 经 postMessage 前自动剥离，改走 `__plugin_api_abort` 消息
+- ⚠️ **已知限制**：`proxyFetchStream` 返回的 Promise 在流结束时 resolve，但 chunk 回调可能在 resolve 之后仍触发，建议以 `onError` / 流内 `[DONE]` 标记判断完成
+
+### registerMethod — 注册插件方法
+
+将当前插件的方法注册到全局注册表，供**其他插件**通过 `callPlugin` 调用。
+
+```js
+__PLUGIN_API__.registerMethod('renderMarkdown', function (md) {
+  return marked.parse(md || '')
+})
+
+// 支持异步方法
+__PLUGIN_API__.registerMethod('fetchTranslation', async function (text) {
+  const res = await fetch('https://api.example.com/translate?text=' + encodeURIComponent(text))
+  return res.json()
+})
+```
+- 权限：`config:write`
+- 参数：`(method: string, fn: Function)`，fn 返回值为值或 Promise
+- 插件停用时自动注销所有方法
+- 详细见 [插件依赖与互调用](/plugins/dependencies)
+
+### callPlugin — 调用其他插件方法
+
+调用目标插件已注册的方法。
+
+```js
+try {
+  const html = await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdown', '**加粗**')
+  document.getElementById('out').innerHTML = html
+} catch (e) {
+  console.error(e.message)   // 目标未安装/未激活/未注册都会 reject
+}
+```
+- 权限：`network:fetch`
+- 参数：`(pluginId: string, method: string, ...args)`
+- 目标未安装 / 未激活 / 方法未注册 → reject
+
+### registerHook — 注册启动器方法 Hook
+
+将当前插件注册为启动器某方法的拦截者，在该方法执行前后注入逻辑（修改参数/返回值、阻止执行、完全替换实现）。
+
+```js
+__PLUGIN_API__.registerHook('scanVersions', async (ctx, next) => {
+  ctx.args[0] = ctx.args[0] + '/custom'   // before：修改参数
+  await next()                              // 执行默认实现
+  ctx.result = [...ctx.result, { name: 'virtual-1.20.1', gameVersion: '1.20.1', state: 'Available' }]  // after：修改结果
+})
+```
+- 权限：`hook:register`（**危险**）
+- 参数：`(method: string, handler: (ctx, next) => Promise<void>)`
+- `handler` 为 Koa 式洋葱中间件：`next()` 前改 `ctx.args`，`next()` 后改 `ctx.result`，`ctx.prevent()` 阻止默认实现
+- 插件停用时自动注销其全部 hooks
+- 详细见 [Hook 系统](/plugins/hooks)
+
+### callWasm — 调用 WASM 插件导出函数
+
+调用 L3 WASM 插件导出的函数（`on_load` / `on_unload` / 自定义导出）。经启动器 Rust 网关（wasmtime）执行。
+
+```js
+const result = await __PLUGIN_API__.callWasm('dev.example.wasmplugin', 'on_load')
+```
+- 权限：`wasm:execute`
+- 参数：`(pluginId: string, exportName?: string)`，`exportName` 缺省 `on_load`
+- 返回：`{ ok: true, result: ... }` 或错误
+- 详细见 [WASM 插件](/plugins/wasm-plugin)
+
+### listWasmPlugins — 列出已加载的 WASM 插件
+
+```js
+const ids = await __PLUGIN_API__.listWasmPlugins()   // ['dev.example.wasmplugin', ...]
+```
+- 权限：`wasm:execute`
+
+### readText — 读取文本文件（授权制）
+
+读取指定路径的**文本**文件（UTF-8），支持分段读取。**首次访问需用户授权**（弹窗确认）。
+
+```js
+const file = await __PLUGIN_API__.call('readText', 'C:/Users/me/data.json')
+// file = { path, content: '完整文本内容' }
+
+// 从第 5 个字符开始读 100 个字符
+const seg = await __PLUGIN_API__.call('readText', 'C:/Users/me/log.txt', { start: 5, length: 100 })
+```
+- 权限：`filesystem:read`
+- 参数：`(path: string, options?: { start?: number; length?: number })`
+- `start`：起始位置（字符），默认 0
+- `length`：读取长度（字符），默认读到文件尾
+- 返回：`{ path, content: string }`
+- **授权机制**：首次访问未授权路径返回 403 `FS_AUTHORIZATION_REQUIRED`，启动器自动弹窗询问「是否允许插件访问该路径」，用户同意后授权（按路径前缀持久化），同插件同路径不再弹窗
+- 文件不存在 → `FS_FILE_NOT_FOUND`(404)
+
+### readBytes — 读取二进制文件（授权制）
+
+读取指定路径的**二进制**文件，返回 base64，支持分段读取。
+
+```js
+const bin = await __PLUGIN_API__.call('readBytes', 'C:/Users/me/img.png')
+// bin = { path, contentBase64: 'base64...' }
+
+// 读前 4 字节
+const head = await __PLUGIN_API__.call('readBytes', 'C:/Users/me/img.png', { start: 0, length: 4 })
+```
+- 权限：`filesystem:read`
+- 参数：`(path: string, options?: { start?: number; length?: number })`
+- `start`：起始位置（字节），默认 0
+- `length`：读取长度（字节），默认读到文件尾
+- 返回：`{ path, contentBase64: string }`
+- 授权机制同 `readText`
+
+### writeText — 写入文本文件（授权制）
+
+```js
+await __PLUGIN_API__.call('writeText', 'C:/Users/me/out.txt', '文件内容')
+```
+- 权限：`filesystem:write`
+- 参数：`(path: string, content: string)`，UTF-8 写入
+- 授权机制同 `readText`；自动创建父目录
+- 返回：`{ path }`
+
+### writeBytes — 写入二进制文件（授权制）
+
+```js
+await __PLUGIN_API__.call('writeBytes', 'C:/Users/me/out.bin', new Uint8Array([1,2,3]))
+```
+- 权限：`filesystem:write`
+- 参数：`(path: string, bytes: Uint8Array)`，自动转 base64 传输
+- 授权机制同 `readText`；自动创建父目录
+- 返回：`{ path }`
+
+### deleteFile — 删除文件（授权制）
+
+```js
+await __PLUGIN_API__.call('deleteFile', 'C:/Users/me/tmp.txt')
+```
+- 权限：`filesystem:write`
+- 参数：`(path: string)`，仅删除**文件**（不支持目录）
+- 授权机制同 `readText`（破坏性操作同样需授权确认）
+- 文件不存在 → `FS_FILE_NOT_FOUND`(404)
+- 返回：`{ path }`
+
+### execCommand — 执行 shell 命令
+
+执行系统命令，返回退出码与输出。**Windows 用 powershell，Linux/macOS 用 /bin/sh**。
+
+```js
+const result = await __PLUGIN_API__.call('execCommand', 'echo hello')
+// result = { exitCode: 0, stdout: 'hello\n', stderr: '' }
+
+const fail = await __PLUGIN_API__.call('execCommand', 'nonexistent-cmd')
+// fail = { exitCode: 127, stdout: '', stderr: '...' }
+```
+- 权限：`shell:execute`（**危险权限**，安装时红色提示）
+- 参数：`(command: string, timeoutMs?: number)`，`timeoutMs` 默认 15000，范围 1000–120000
+- 返回：`{ exitCode: number, stdout: string, stderr: string }`
+- 超时 → `SHELL_TIMEOUT`(400)，命令被强制终止
+- 命令为空 → `SHELL_COMMAND_REQUIRED`(400)
+
+### openUrl — 打开外部链接
+
+用系统默认浏览器打开外部 URL。L2 沙箱内 `window.open` 会被 `sandbox` 拦截，请用此方法打开外链。
+
+```js
+await __PLUGIN_API__.call('openUrl', 'https://example.com')
+```
+- 权限：`system:notification`
+- 后台走 `POST /api/system/open-url`，仅接受 `http://` / `https://` 协议，非法 URL 返回 400
+
+### getSystemInfo — 读取系统与启动器信息
+
+读取操作系统、启动器与内存信息，可用于 `minLauncherVersion` 兼容检查或运行时判断平台。
+
+```js
+const info = await __PLUGIN_API__.call('getSystemInfo')
+// { Os, Architecture, OsName, OsVersion, OsVersionId, OsDisplayName, GitCommit,
+//   Memory, AvailableMemory,
+//   LauncherName, LauncherVersion, VersionType, Developers, CoreDependencies }
+```
+- 权限：`system:info`
+- 后台走 `GET /api/systeminfo`（与 `/api/system/info` 等价）
+- `GitCommit` 为启动器 Git 提交哈希；`Memory` / `AvailableMemory` 为字节数
+- 启动器元信息字段：
+- `LauncherName`：启动器名称（如 `Qomicex Launcher`）
+- `LauncherVersion`：启动器版本号（程序集版本，如 `0.1.1`）
+- `VersionType`：版本类型，按版本号预发布标签动态判断（`alpha` / `beta` / `rc` / `dev`，否则 `stable`）
+- `Developers`：`[{ name, role }]` 开发者列表
+- `CoreDependencies`：`[{ name, version, license }]` 核心库列表（.NET / Tauri / Rust / Qomicex.Core 等）
+
+### listPlugins — 读取已安装插件列表
+
+返回已安装插件列表，可用于依赖检测或商店联动。
+
+```js
+const plugins = await __PLUGIN_API__.call('listPlugins')
+// [{ id, name, version, status }, ...]  status: 'installed'|'active'|'disabled'
+```
+- 权限：`plugin:list`
+- 后台走 `GET /api/plugins/`
+
+### uploadPlugin — 安装插件
+
+上传 `.qplugin` 包安装插件。
+
+```js
+const bytes = new TextEncoder().encode('...')  // .qplugin 文件字节
+await __PLUGIN_API__.call('uploadPlugin', Array.from(bytes), 'my-plugin.qplugin')
+```
+- 权限：`plugin:install`（**危险权限**）
+- 参数：`(fileData: number[], fileName: string)`，multipart 字段名 `plugin`
+
+### navigate — 跳转页面
+
+跳转到启动器内部路由。
+
+```js
+await __PLUGIN_API__.call('navigate', '/settings')
+```
+- 权限：`config:read`
+- 注意：应使用启动器内部路由，勿用外部 URL
+
+### openPluginSettings — 打开插件设置页
+
+跳转到「设置 → 插件 → 插件设置」并定位到指定插件的设置 tab。适合在插件页面 / 悬浮窗里提供"设置"按钮。
+
+```js
+// 定位到本插件的设置 tab
+await __PLUGIN_API__.call('openPluginSettings')
+
+// 定位到指定插件的设置 tab
+await __PLUGIN_API__.call('openPluginSettings', 'top.qomicex.weather')
+```
+- 权限：`config:read`
+- 参数：`(targetPluginId?: string)`，缺省定位到**当前插件**
+- 目标插件须在 manifest 声明 `contributes.settingsPages` 才有对应 tab（见 [manifest](/plugins/manifest#settingspages-数组)）；目标无设置页时仍会打开插件设置区，停留在默认位置
+- 同插件有多个设置页时定位到第一个
+
+### showToast — 应用内通知
+
+弹出一条 toast 提示。
+
+```js
+await __PLUGIN_API__.call('showToast', '操作成功', 'success')
+```
+- 权限：`ui:toast`
+- 参数：`(message: string, type?: 'info' | 'error' | 'success')`，默认 `info`
+
+### 文件拖放事件（file-drop）
+
+把文件拖入启动器窗口时，主窗口广播 `file-drop` 事件，payload 为拖入文件的**绝对路径数组**。前端（主界面）可用 `@tauri-apps/api/event` 监听：
+
+```js
+import { listen } from '@tauri-apps/api/event'
+listen<string[]>('file-drop', (event) => {
+  const paths = event.payload   // 例如 ['C:/Users/me/a.pdf', 'D:/b.docx']
+})
+```
+
+- 由启动器 Rust `WindowEvent::DragDrop::Drop { paths, .. }` 触发（`dragDropEnabled` 开启时）
+- 路径为系统绝对路径，适合"拖文件自动填入路径"等交互
+- **注意**：前端原生 `drop` 事件的 `File` 对象拿不到 `.path`（Tauri 拦截系统拖放），必须走该事件
+- L2 沙箱插件如需使用：由主界面前端监听后经 `__pluginRegistry.call(pluginId, '方法', [paths])` / `callPlugin` 转发，插件侧 `registerMethod` 接收
+
+### getThemeColor — 获取当前主题种子色
+
+返回当前启动器主题的种子色 hex 值，供插件根据主题色调整自身 UI。
+
+```js
+const hex = await __PLUGIN_API__.call('getThemeColor')
+// hex: '#3b82f6' 或 null（未设置主题色时）
+```
+- 权限：`config:read`
+- 返回：`string | null`（`#rrggbb` 格式，或 `null`）
+- 逻辑：优先取外观设置中的静态 hex 色值；若为 Monet 动态模式（`background`），取当前 `--primary` CSS 变量转换为 hex
+
+### applyThemeOverride — 应用主题覆盖
+
+动态覆盖启动器 UI 的 CSS 变量（颜色主题），实现插件驱动的全局换肤。
+
+```js
+await __PLUGIN_API__.call('applyThemeOverride', {
+  'background': '240 23% 9%',
+  'foreground': '220 20% 93%',
+  'primary': '142 71% 48%',
+  'accent.foreground': '220 20% 93%'
+})
+```
+- 权限：`config:write`
+- 参数：`(vars: Record<string, string>)` — 键为语义 token（支持点分或横杠命名），值为 `H S% L%` 格式字符串
+- 安全限制：
+- **token 白名单**：仅允许 `background`、`foreground`、`primary`、`accent`、`border` 等 30 个预定义语义 token
+- **HSL 格式校验**：值必须严格匹配 `^\d{1,3} \d{1,3}% \d{1,3}%$`，拒绝任意 CSS 注入
+- 实现：注入 `<style id="qomicex-plugin-theme-override">` 到 `document.head`，选择器 `:root:root` 保证高优先级
+- 重复调用会覆盖前一次的 override 样式
+- 插件停用时**不会**自动清除，需手动调用 `clearThemeOverride`
+
+### clearThemeOverride — 清除主题覆盖
+
+移除由 `applyThemeOverride` 注入的覆盖样式，恢复到原主题。
+
+```js
+await __PLUGIN_API__.call('clearThemeOverride')
+```
+- 权限：`config:write`
+- 移除 `id="qomicex-plugin-theme-override"` 的 `<style>` 元素
+- 建议在插件停用钩子或用户取消自定义主题时调用
+
+### overlay.create — 创建悬浮窗
+
+创建一个可拖拽的独立悬浮窗，返回悬浮窗 id。
+
+```js
+const overlayId = await __PLUGIN_API__.call('overlay.create', {
+  title: '我的悬浮窗',
+  html: '<div class="p-card">你好</div>',
+  x: 120, y: 80,
+  width: 320, height: 240,
+  minimizable: true,
+  resizable: true
+})
+```
+- 权限：`ui:sub_window`
+- 返回：悬浮窗 id（string）
+- 详细见 [悬浮窗开发](/plugins/overlay)
+
+### overlay.show / hide / destroy — 悬浮窗控制
+
+```js
+await __PLUGIN_API__.call('overlay.show', overlayId)    // 显示（含最小化恢复）
+await __PLUGIN_API__.call('overlay.hide', overlayId)    // 隐藏（最小化）
+await __PLUGIN_API__.call('overlay.destroy', overlayId) // 销毁
+```
+- 权限：`ui:sub_window`
+
+### overlay.setHtml — 更新悬浮窗内容
+
+```js
+await __PLUGIN_API__.call('overlay.setHtml', overlayId, '<p>新内容</p>')
+```
+- 权限：`ui:sub_window`
+
+### overlay.setPosition — 移动悬浮窗
+
+```js
+await __PLUGIN_API__.call('overlay.setPosition', overlayId, 300, 200)
+```
+- 权限：`ui:sub_window`
+
+### addMenuItem — 动态注册侧边栏菜单项
+
+运行时动态向侧边栏添加菜单项，无需修改 manifest。
+
+```js
+__PLUGIN_API__.addMenuItem({
+  path: '/plugins/p/xxx',
+  label: '动态菜单',
+  icon: '🤖',
+  action: 'page'
+})
+```
+- 权限：无（无需在 manifest 声明）
+- 参数：`PluginMenuItem`（同 `contributes.menuItems` 元素）
+- 插件停用时自动移除动态注册的菜单项
+
+## 下载与安装
+
+### download.addTask — 创建下载任务
+
+创建下载任务，任务自动出现在启动器「下载中心」，进度由 SSE 推送驱动，可取消。
+
+```js
+// 方式一：指定绝对目标路径
+const { taskId } = await __PLUGIN_API__.call('download.addTask', {
+  url: 'https://example.com/asset.zip',
+  targetPath: 'C:/games/instances/foo/mods/asset.zip',
+  extract: true,                 // 可选：zip 下载后自动解压并删除原包
+  headers: { 'X-Token': 'abc' }, // 可选：自定义请求头
+  name: '我的资源'                // 可选：下载中心显示名（默认 fileName）
+})
+
+// 方式二：实例 + 类别（自动解析隔离目录）
+await __PLUGIN_API__.call('download.addTask', {
+  url: 'https://.../mod.jar',
+  instanceId: 'inst-uuid',
+  category: 'mods',   // mods / resourcepacks / shaderpacks / datapacks / saves / screenshots
+  fileName: 'mod.jar'
+})
+```
+- 权限：`download:manage`
+- 返回：`{ taskId, status, targetPath }`
+- 后端复用 `DownloadSessionManager`（type `"resource"`），与 mod 下载同一条线
+
+### download.progress — 查询下载进度
+
+```js
+const snap = await __PLUGIN_API__.call('download.progress', taskId)
+// { sessionId, status, stage, progress, speed, currentFile, totalFiles, completedFiles, failedFiles, error, isPaused, instanceId }
+```
+- 权限：`download:manage`
+- `taskId` 不存在返回 `null`
+
+### download.list — 列出全部下载会话
+
+```js
+const list = await __PLUGIN_API__.call('download.list')
+```
+- 权限：`download:manage`
+- 返回：`download.progress` 同结构的快照数组
+
+### download.cancel — 取消下载
+
+```js
+await __PLUGIN_API__.call('download.cancel', taskId)
+```
+- 权限：`download:manage`
+
+### download.registerInstall — 在下载中心登记安装任务
+
+仅在前端下载中心登记一个「游戏安装」任务（type `'game'`），不创建真实下载。适合插件发起安装后让用户能在下载中心看到进度。
+
+```js
+await __PLUGIN_API__.call('download.registerInstall', {
+  instanceId: 'inst-uuid',
+  name: '我的整合包',
+  gameVersion: '1.20.1',
+  loader: 'forge',
+  loaderVersion: '47.1.0'
+})
+```
+- 权限：`instance:write`
+
+### modpack.install — 一键安装整合包
+
+直接安装整合包，走启动器**正常整合包安装流程**（与前端「整合包」页同一管线）：解析来源 → 创建实例 → 下载安装。
+
+```js
+// 方式一：本地整合包文件（.zip / .mrpack）
+const { instanceId } = await __PLUGIN_API__.call('modpack.install', {
+  id: 'MyPack',                   // 实例名（必填）
+  path: 'C:/packs/pack.zip',      // 本地整合包路径
+  gameDir: 'C:/games/instances',  // 实例根目录（必填）
+  maxMemory: 8192,                // 可选：默认 4096
+  versionIsolation: true          // 可选：版本隔离，默认 false
+})
+
+// 方式二：在线整合包（Modrinth / CurseForge / FTB）
+await __PLUGIN_API__.call('modpack.install', {
+  id: 'MyPack',
+  type: 'mr',          // mr | cf | ftb（也接受 modrinth/curseforge）
+  projectId: 'abc',    // 项目 id
+  fileId: '123',       // 版本 id
+  gameDir: 'C:/games/instances'
+})
+```
+- 权限：`instance:write`
+- 走 `POST /api/modpack/install-direct`，复用 `ModpackService`（`ParseFileAsync`/`ResolveOnlineAsync`/`InstallAsync`）与 `InstallTracker`
+- 返回：`{ instanceId }`，安装异步进行（进度在下载中心 / SSE 查看）
+- 错误码：`MODPACK_NAME_REQUIRED`、`MODPACK_GAME_DIR_REQUIRED`、`MODPACK_FILE_NOT_FOUND`、`MODPACK_SOURCE_REQUIRED`、`MODPACK_SOURCE_INVALID`
+- 需要下载中心显示安装进度时，可配合 `download.registerInstall` 登记
+
+## 错误处理
+
+所有 API 调用失败会 reject，错误信息形如：
+
+```js
+try {
+  await __PLUGIN_API__.call('getSettings')
+} catch (e) {
+  console.error(e.message)
+}
+```
+
+常见错误：
+- `Permission denied: requires xxx` — manifest 权限未包含
+- `Backend error: 404` — `callBackend` 端点不存在
+- `Proxy failed: 400` — `proxyFetch` 参数错误（含 SSRF 拦截）
+- `插件 xxx 未提供方法 yyy（可能未安装或未激活）` — `callPlugin` 目标不可用

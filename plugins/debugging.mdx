@@ -1,0 +1,129 @@
+---
+title: "调试与热重载"
+---
+## 调试与热重载
+
+插件调试 harness 让你**无需启动 Tauri、无需启动 Rust 后端**，在纯浏览器（Chromium）里调试插件逻辑。
+
+## 快速开始
+
+**推荐：直接用 `qomicex dev`**（仓库内插件自动走 harness 模式）：
+
+```bash
+qomicex dev    # 在插件仓库内运行，自动检测并启动 harness
+```
+
+或直接调 harness 脚本：
+
+```bash
+# 前置：插件依赖已装好、plugin-ui 已构建
+pnpm --filter @qomicex/plugin-ui build
+
+# 跑 hello-plugin 调试（headless）
+pnpm run harness -- hello-plugin
+
+# 有头模式（看得见浏览器，配合 DevTools 断点）
+pnpm run harness -- hello-plugin --headed
+```
+
+> `pnpm run harness -- hello-plugin` 的 `--` 是 pnpm 参数转发；也可以直接 `node scripts/harness/run.mjs hello-plugin`。
+
+Playwright 未安装时提示：
+
+```bash
+pnpm add -D playwright
+pnpm exec playwright install chromium
+```
+
+## 架构
+
+```text
+Node 脚本 scripts/harness/run.mjs（主控）
+  · 起 stub mock server（子进程，默认 :5100）
+  · 起 Vite dev（若未在跑，默认 :1420）
+  · Playwright 开 Chromium，addInitScript 注入 Tauri mock
+  · page.route 把 127.0.0.1:5000/api/** → 转发到 stub :5100
+  · fs.watch 插件 src → 重建 → page.reload
+```
+
+## 组件
+
+| 文件 | 职责 |
+|---|---|
+| `scripts/harness/run.mjs` | 主控：起服务、注入 mock、路由转发、热重载 |
+| `scripts/harness/stub.mjs` | 纯 node:http mock server（:5100），模拟后端接口 + 服务插件静态文件 |
+
+## Stub 接口一览
+
+| 接口 | 返回 |
+|---|---|
+| `GET /api/health`、`/api/ping` | 健康检查（SplashScreen 轮询通过） |
+| `GET /api/plugins` | 插件列表（`state: active`，自动扫描 `plugins-dev/{id}/manifest.json`） |
+| `GET /api/plugins/{id}/files/{path}` | 服务插件 dist 静态文件（路径限定在插件目录内，防越界） |
+| `GET/POST /api/plugins/settings/{id}` | 内存读写配置（支持 `{key,value}`） |
+| `GET/POST /api/plugins/cache/{id}` | 缓存假数据 |
+| `POST /api/plugins/proxy` | 固定假响应（`stream:true` 时返回 SSE 模拟流式） |
+| `GET/POST /api/plugins/download/*` | 假下载任务 |
+| `GET /api/systeminfo`、`POST /api/system/open-url` | 假系统信息/打开 URL |
+| `POST /api/modpack/install-direct` | 假整合包安装 |
+| `POST /api/plugins/shell/{id}` | 假命令执行（stdout 假数据） |
+| `POST /api/plugins/files/{id}/read\|write\|delete\|authorize` | 假文件读写 |
+| `GET /api/plugins/wasm`、`POST /api/plugins/wasm/{id}/invoke` | WASM 列表空 / 400 |
+| `POST /api/plugins/upload` | 400 `HARNESS_READONLY`（**harness 禁止真实上传**） |
+
+### 自定义 mock 数据
+
+```bash
+pnpm run harness -- hello-plugin --mock mock-hello.json
+```
+
+```json
+{
+  "settings": { "greeting": "自定义假配置", "foo": 1 },
+  "systemInfo": { "os": "Linux", "arch": "x86_64" },
+  "execCommand": { "exitCode": 0, "stdout": "mock echo 输出", "stderr": "" }
+}
+```
+
+支持覆盖的键：`settings`、`systemInfo`、`proxyResponse`、`modpackInstall`、`downloadStart`、`downloadProgress`、`fileRead`、`execCommand`、`wasmList`、`pluginStates`（`{ "插件id": "active" }`）。
+
+## 断点调试
+
+- `pnpm run harness -- hello-plugin --headed`（有头模式）
+- 浏览器里 F12 打开 DevTools
+- 插件渲染在 iframe 内（沙箱 `sandbox="allow-scripts"`，opaque origin）——在 DevTools 元素面板选中 iframe 后，**Console 上下文下拉里切换到该 iframe 的 document**，即可直接调 `__PLUGIN_API__.call('getSettings')` 验证桥与 stub 返回值
+- Sources 面板给 `src/plugins/sandbox.ts` 的 `handleApiCall` 打断点，可单步跟踪 `__PLUGIN_API__` postMessage → `executePluginMethod` → `createPluginBridge` 全链路
+
+Playwright Inspector（录制/步进，可选）：
+
+```bash
+pnpm exec playwright codegen http://127.0.0.1:1420/plugins/p/hello-plugin
+```
+
+> codegen 不会注入 Tauri mock，纯看页面渲染 / 走 UI 交互可用；要验证桥 API 请走 harness。
+
+## 热重载
+
+- 监听 `plugins-dev/{pluginId}/` 下的 `src/`、`index.html`、`theme.css`、`overlay.html`、`vite.config.ts`
+- 变更 → 400ms 防抖 → 在插件目录执行构建命令（默认 `pnpm run build`，可用 `--build-cmd` 覆盖）→ 构建成功 → `page.reload()` 整页刷新重新挂载插件 iframe
+- 构建失败不刷新页面，stderr 输出到终端，方便边改边看
+
+```bash
+pnpm run harness -- hello-plugin --build-cmd "pnpm run build"
+```
+
+## CLI 集成
+
+`qomicex dev` 在仓库内时自动检测并调用 harness（见 [qomicex CLI 工具参考](/plugins/cli)）：
+
+```bash
+qomicex dev    # 自动启动 harness 模式，监听 plugins-dev/{id} 源码
+```
+
+## 限制与注意事项
+
+- **Chromium ≠ WebView2**：渲染/复合行为可能有差异（如 backdrop-filter），Web 调试结论需在真实 Tauri/WebView2 复核
+- **harness 是只读沙箱**：stub 对真实写数据 / 启动实例 / 真实下载全部返回假数据或 400；不要在插件里触发真实业务动作
+- **退出清理**：Ctrl+C 后 run.mjs 会 kill 自己 spawn 的 stub 和 Vite；如果你自己先起了 Vite(:1420)（`pnpm run dev`），harness 直接复用、退出时**不会**杀掉你那个进程
+- **iframe 沙箱**：`sandbox="allow-scripts"` 无 `allow-same-origin`，iframe 内同步 `while(true)` 仍可能阻塞共享渲染进程（与真实 WebView2 一致）
+- 插件依赖 `@qomicex/plugin-ui`，构建需要其 `dist/` 已生成（`pnpm --filter @qomicex/plugin-ui build`）

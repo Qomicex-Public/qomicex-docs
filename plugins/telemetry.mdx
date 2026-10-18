@@ -1,0 +1,66 @@
+---
+title: "灰度遥测"
+---
+## 灰度遥测
+
+插件错误**匿名遥测**（opt-in，默认关闭）驱动商店的**灰度自动暂停**：某个插件版本 24h 内错误上报超阈值时，商店自动停止向用户下发该版本，防止坏版本扩散。
+
+## 隐私与白名单
+
+- **opt-in 默认关**：设置项 `telemetryEnabled`，默认 `false`。关闭时前端不触发、不上报。
+- **上报字段白名单（仅此四项）**：
+
+| 字段 | 说明 |
+|------|------|
+| `pluginId` | 插件 id |
+| `pluginVersion` | 插件版本 |
+| `errorType` | 错误类别，仅限 `launch_crash` / `plugin_load_failed` / `plugin_runtime_error` |
+| `launcherVersion` | 启动器版本（**后端注入**，前端不可伪造） |
+
+- **绝不包含**：文件路径、堆栈、设备信息、用户名、IP 等任何隐私数据。
+- 白名单在前后端双重校验：后端 `endpoints/telemetry.rs` 校验非空 + 错误类别，store 端 zod schema 再校验一次。
+
+## 上报流程
+
+```text
+插件运行期错误
+  → 前端 lib/telemetry.ts reportPluginError()
+       ├─ 开关关闭 → 直接返回（不触发）
+       └─ 60s 内存去重（同 pluginId@version@errorType 只报一次）
+  → POST /api/telemetry/plugin-error      （前端 api/telemetry.ts，失败静默 catch）
+  → 后端 endpoints/telemetry.rs
+       ├─ 校验非空 + 错误类别白名单
+       └─ 注入 launcherVersion → 转发 store
+  → store POST /api/v1/telemetry/plugin-error   （src/telemetry.ts）
+  → 写入 D1 表 plugin_error_reports（migration 0008）
+```
+
+**当前接入的上报点**（以代码为准）：
+
+| 类别 | 触发时机 |
+|------|---------|
+| `plugin_load_failed` | 插件激活失败（`activatePlugin` catch）；iframe / inline 渲染资源加载失败（`sandbox.ts`） |
+| `plugin_runtime_error` | 沙箱运行期错误（经 iframe postMessage 错误事件上报） |
+| `launch_crash` | 白名单保留类别，当前启动器侧尚未接入上报调用（以代码为准） |
+
+**静默设计**：开关关闭不触发；上报失败静默吞掉（`catch(() => {})`）；遥测任何环节都不应影响插件与主流程。
+
+## 商店自动暂停逻辑
+
+商店 `POST /plugins/check-updates`（批量更新检查）时，对每个候选的最新 published 版本做 24h 错误计数：
+
+- **匹配规则**：`plugin_id IN (p.id, p.slug) OR plugin_id LIKE '%.{slug}'`（兼容插件以反向域名 manifest.id 上报，如 `dev.xxx`）+ `version` 精确匹配 + `created_at` 在 24 小时内。
+- **阈值**：`PLUGIN_ERROR_PAUSE_THRESHOLD`（环境变量可覆盖，默认 **10**）。计数 `> 阈值` 即暂停。
+- **暂停效果**：该版本**不再出现在 updates 列表中**（不会作为升级建议下发）。
+
+自动暂停只影响「**不再把该版本作为更新建议下发**」。已安装该版本的用户不受影响；插件本身仍保持 published 状态。这是灰度保护机制，不是审核/封禁。
+
+## 开发者影响
+
+- **版本可能被自动暂停**：如果你发布的某个版本在 24h 内错误上报数超过阈值（默认 10），商店会停止向用户推荐该版本——这是生态对用户的保护，也是给你的信号。
+- **如何避免**：
+- 发布前充分本地测试（上传 → 启用 → 重启 → 各功能验证）
+- `qomicex verify` 过 0 error（长循环、权限最小化等静态检查）
+- 上线后观察版本错误率，小步迭代，避免一次性大改
+- **被暂停后**：计数无开发者自助清除入口（以代码为准）。修复问题 → 发布**新版本号**，新版本重新走统计周期；旧版本在 24h 窗口滑动后自动解除暂停（前提是新版本不再触阈值）。
+- **注意**：错误去重（60s 窗口）在客户端进行，上报的是**去重后的错误类别计数**，不代表真实崩溃次数，只用于灰度异常侦测。

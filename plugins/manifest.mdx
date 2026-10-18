@@ -1,0 +1,234 @@
+---
+title: "manifest 清单详解"
+---
+## manifest 清单详解
+
+`manifest.json` 是插件的身份文件，位于 `.qplugin` 包根目录。它描述插件的元信息、权限、入口和扩展点。
+
+推荐用 `qomicex create <id>` 生成合法 manifest 骨架（自动配好 id / layers / permissions / entry），再用 `qomicex verify` 校验合法性。本页讲解全部字段，方便按需调整。
+
+## 完整结构
+
+```json
+{
+  "id": "top.qomicex.assistant",
+  "name": "AI 助手",
+  "version": "1.2.0",
+  "minLauncherVersion": "0.1.0",
+  "layers": ["l3"],
+  "render": "iframe",
+  "permissions": ["ui:toast", "config:read", "config:write", "network:cors_proxy"],
+  "dependencies": [
+    { "id": "top.qomicex.markdown", "version": ">=1.0.0" }
+  ],
+  "entry": {
+    "frontend": "dist/index.html",
+    "theme": "dist/theme.css"
+  },
+  "contributes": {
+    "menuItems": [
+      { "path": "/plugins/p/top.qomicex.assistant", "label": "AI 助手", "icon": "A", "action": "overlay" }
+    ],
+    "overlay": {
+      "file": "dist/overlay.html",
+      "title": "AI 助手",
+      "width": 380,
+      "height": 500,
+      "minimizable": false,
+      "resizable": true
+    }
+  }
+}
+```
+
+## 字段总表
+
+| 字段 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| `id` | string | ✅ | — | 插件唯一 ID，用作安装目录名 `plugins/{id}/`。一经发布不要更改 |
+| `name` | string | ✅ | — | 插件显示名 |
+| `version` | string | ✅ | — | 插件版本（用于依赖匹配）。见 [版本语法](#版本范围语法) |
+| `minLauncherVersion` | string | ❌ | `""` | 最低启动器版本。⚠️ 当前版本**仅存储、未实际校验** |
+| `layers` | string[] | ❌ | `[]` | 图层声明。值：`l0`/`l1`/`l2`/`l3`/`l4`，可多个。详见 [layers 图层定义](#layers-图层定义) |
+| `render` | string | ❌ | `"iframe"` | 渲染方式：`"inline"` / `"iframe"` / `"webview"`。**默认 `"iframe"`（沙箱）**；仅显式声明 `"render": "inline"` 才走内联渲染；`"webview"` 或 `layers` 含 `l4` 走独立窗口渲染。详见 [layers 图层定义](#layers-图层定义) |
+| `permissions` | string[] | ❌ | `[]` | 权限声明。⚠️ 后端仅存储，**由前端运行时校验**（缺失则 API 调用报错） |
+| `dependencies` | PluginDependency[] | ❌ | `[]` | 前置插件依赖。见 [插件依赖与互调用](/plugins/dependencies) |
+| `entry` | object | ❌ | `{}` | 入口声明 |
+| `contributes` | object | ❌ | `null` | 扩展点 |
+
+### entry 对象
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `frontend` | string | 插件页面入口（`.qplugin` 内相对路径）。**声明了 frontend 的插件才会被激活**并渲染到 `/plugins/p/:id` |
+| `theme` | string | 主题 CSS 文件路径，激活时注入 `<style data-plugin-theme>` |
+| `backend` | string | 保留字段，当前未使用 |
+
+若省略 `entry.frontend`，插件**不会被激活**（`activatePlugin` 只在 `entry.frontend` 存在时渲染并标记 `active`），因此无法注册方法或提供 UI。即使纯功能插件也建议提供一个空页面入口。
+
+### contributes 对象
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `menuItems` | PluginMenuItem[] | 侧边栏底部入口列表 |
+| `overlay` | PluginOverlayConfig | 悬浮窗配置 |
+| `slots` | PluginSlotContribution[] | 主界面槽位注入：`header:right`（标题栏右侧）/ `dashboard:widgets`（主页小组件网格）。详见 [主页小组件](/plugins/dashboard-widget) |
+| `downloadSources` | string[] | 保留，当前未使用 |
+| `commands` | string[] | 保留，当前未使用 |
+| `settingsPages` | string[] | 插件设置页：包内 HTML 相对路径列表（如 `"dist/settings.html"`），在「设置 → 插件 → 插件设置」为每个路径生成一个纵向 tab。详见 [settingsPages 数组](#settingspages-数组) |
+| `iconTheme` | string | 图标主题：`.qtheme` 包内 `icon-theme.json` 的相对路径（如 `"dist/icon-theme.json"`），激活时经主题管理器注册。详见 [主题系统](/plugins/theme#图标主题icon-themejson) |
+| `fontLinks` | string[] | 字体/连字贡献：字体 CSS/CDN URL 列表，激活时自动注入 `<link rel="stylesheet">`，停用时移除。详见 [字体/连字贡献](/plugins/theme#字体连字贡献) |
+| `hooks` | PluginHookDecl[] | 声明可被本插件 hook 的启动器方法。需同时声明 `hook:register` 权限。详见 [Hook 系统](/plugins/hooks) |
+
+### hooks 数组元素
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `method` | string | 启动器可 hook 的方法名（如 `"scanVersions"`、`"launchInstance"`） |
+| `priority` | number | 执行顺序优先级，数字越小越先执行（默认 100）。同优先级按注册先后 |
+
+声明用于文档化与权限预检；实际处理函数在运行时用 `__PLUGIN_API__.registerHook` 注册。
+
+```json
+{
+  "permissions": ["hook:register"],
+  "contributes": {
+    "hooks": [
+      { "method": "scanVersions", "priority": 10 }
+    ]
+  }
+}
+```
+
+### menuItems 数组元素
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `path` | string | 入口目标路径（页面路由，如 `/plugins/p/:id`） |
+| `label` | string | 入口显示文字 |
+| `icon` | string | 入口图标。支持三种写法：① emoji / 纯文本（如 `"🛠"`、`"A"`）；② 绝对 URL（如 `"https://example.com/icon.png"`）；③ 包内相对路径（如 `"dist/icon.svg"`，启动器会自动解析为文件地址） |
+| `action` | string | `"page"`（默认，跳转页面）或 `"overlay"`（打开悬浮窗，需配合 `overlay` 配置） |
+
+### settingsPages 数组
+
+把插件的设置界面统一收进启动器，避免设置入口散落在各处。
+
+```json
+{
+  "contributes": {
+    "settingsPages": ["dist/settings.html"]
+  }
+}
+```
+
+- 每个路径是 `.qplugin` 包内 HTML 文件的相对路径；插件停用后对应 tab 自动消失
+- 启动器在「设置 → 插件 → 插件设置」为每个路径渲染一个 tab（左侧纵向 tab 逐插件列出，右侧 iframe 沙箱，与插件页相同的 `__PLUGIN_API__` 桥）
+- 完整开发指南（设置 HTML 写法、getSettings/setSettings 用法、openPluginSettings 跳转、生命周期规则）见 [插件设置页](/plugins/settings-page)
+
+### icon 写法示例
+
+```json
+// ① emoji / 纯文本
+{ "path": "/plugins/p/xxx", "label": "AI 助手", "icon": "🤖" }
+
+// ② 绝对 URL
+{ "path": "/plugins/p/xxx", "label": "AI 助手", "icon": "https://example.com/icon.png" }
+
+// ③ 包内相对路径（推荐）
+// 文件放在插件包 dist/icon.png，manifest 写相对路径
+{ "path": "/plugins/p/xxx", "label": "AI 助手", "icon": "dist/icon.png" }
+```
+
+包内相对路径会被启动器自动解析为 `http://localhost:5000/api/plugins/{id}/files/dist/icon.png`，无需插件侧额外处理。
+
+### 顶层 icon（库插件图标）
+
+`icon` 除了写在 `menuItems[].icon`，也支持写在 manifest **顶层**，供没有 `contributes.menuItems` 的库插件在**插件管理/列表**里显示图标：
+
+```json
+{
+  "id": "top.qomicex.markdown",
+  "name": "MarkdownLib",
+  "icon": "fa-solid fa-file-lines",
+  "layers": ["l3"],
+  "entry": { "frontend": "dist/index.html" }
+}
+```
+
+- 支持写法与 `menuItems[].icon` 一致（emoji / 绝对 URL / 包内相对路径 / **FontAwesome 类名**）
+- 插件管理卡片读取顺序：`contributes.menuItems[0].icon ?? manifest.icon`
+- **库插件建议用顶层 `icon`**，不要声明 `contributes.menuItems`（会创建侧边栏入口）
+- 图标尽量用 FontAwesome 类名（如 `fa-solid fa-file-lines`、`fa-brands fa-markdown`，需在启动器 `BuiltinIcons.tsx` 预置列表内）：SVG 路径经 `<img>` 渲染固定黑色不随主题，FA 类名随明暗主题
+
+
+### overlay 对象
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `file` | string | — | 悬浮窗 HTML 文件路径（`.qplugin` 内相对路径） |
+| `title` | string | menuItem.label | 悬浮窗标题 |
+| `width` | number | 380 | 宽度（px） |
+| `height` | number | 500 | 高度（px） |
+| `minimizable` | bool | true | 是否显示最小化按钮 |
+| `resizable` | bool | false | 是否允许右下角拖拽缩放（最小 200×120） |
+
+## layers 图层定义
+
+`layers` 按**复杂度分层**，从纯声明到可执行逻辑，决定插件的能力与运行方式：
+
+| 层级 | 技术 | 适用场景 | 说明 |
+|------|------|---------|------|
+| **L0** 静态 | `theme.json` + CSS | 主题、颜色方案 | 纯声明，无执行能力 |
+| **L1** 声明式 | 配置文件声明 | 新增下载源、新增镜像、API 端点 | 纯声明，无执行能力 |
+| **L2** 脚本 | JS（前端沙箱内运行） | UI 扩展、菜单注入、面板 | 经 postMessage 网关权限检查 |
+| **L3** WASM | WASM（后端 Wasmtime 沙箱） | Agent、协议解析器、复杂逻辑 | Host API 权限门控 |
+| **L4** 远程 WebView | 独立 Tauri WebviewWindow（独立 renderer 进程） | 重 UI、不受控、需进程级隔离的插件 | 跨窗口事件桥，主窗口执行 API 与权限校验 |
+
+**声明方式：** `layers` 是一个数组，可同时声明多个层级：
+
+```json
+{ "layers": ["l2", "l3"] }
+```
+
+**当前实现状态（重要）：**
+
+- **iframe 沙箱为默认渲染**：带 `entry.frontend` 的插件**默认走 iframe 沙箱**（`<iframe sandbox="allow-scripts">` + postMessage 桥），与主界面 DOM/CSS 隔离（opaque origin，防 CSS 泄漏与同源窃取）。仅 manifest 显式声明 `"render": "inline"` 才走内联渲染（与主界面同上下文，兼容旧插件）。
+- iframe 沙箱内同样支持全部 `__PLUGIN_API__` 方法、`.p-*` 组件样式、`registerMethod`/`callPlugin`（跨窗口中转）
+- 沙箱插件脚本随 `srcdoc` 解析自动执行，无需进入页面
+- **插件激活条件**：插件安装后初始状态为 `installed`，实际激活取决于两点：① `entry.frontend` 存在（`activatePlugin` 仅在 `entry.frontend` 存在时才渲染并标记 `active`）；② 用户在插件列表中启用。与 `layers` 声明无关——纯 `["l3"]` 插件若有 `entry.frontend` 照样会激活（默认走 iframe 沙箱）。
+- **iframe 沙箱与内联渲染的差异**：
+  | 维度 | iframe 沙箱（默认） | 内联渲染（`"render":"inline"`） |
+  |------|----------------|---------|
+  | 隔离性 | 与主界面完全隔离（独立 window，opaque origin） | 与主界面同 window |
+  | 脚本执行 | srcdoc 解析即执行 | 激活加载时立即执行 |
+  | 依赖注入 | `registerMethod` 通知主窗口中转 | 直接调用主窗口注册表 |
+  | 适用 | 需要隔离、独立的插件（默认推荐） | 轻量 UI、需访问主界面 DOM 的插件 |
+- L0/L1 当前为**声明性预留层级**，暂无独立运行机制；**L3 WASM 已实现**：声明 `l3` 且包内含 `plugin.wasm` 的插件，由启动器 Rust 层（wasmtime）加载并执行（见 [WASM 插件](/plugins/wasm-plugin)）
+- **L4 远程 WebView 已实现**：声明 `render:"webview"` 或 `layers` 含 `"l4"` 的插件，激活时由主窗口 `createRemoteWebview` 打开独立 Tauri WebviewWindow（与主界面进程级隔离），插件 UI 渲染在该窗口内，API 调用经 Tauri 事件转发到主窗口执行（见 [l4 远程 WebView](/plugins/webview-l4)）
+
+- 需要隔离环境或常驻脚本的插件（如 AI 助手、工具面板）→ 使用默认 iframe 沙箱
+- 纯 UI/主题类或依赖主界面 DOM 的轻量插件 → 显式声明 `"render": "inline"`
+- 若插件后续要接入 WASM 后端逻辑，可再叠加 `"l3"`
+- **重 UI / 不受控 / 需进程级隔离的插件**（如复杂编辑器、游戏 UI 增强）→ 声明 `"render": "webview"` 或 `layers` 含 `"l4"`（独立窗口，busy-loop 不影响主界面）
+
+## 版本范围语法
+
+`dependencies[].version` 支持以下写法：
+
+| 写法 | 含义 | 示例 |
+|------|------|------|
+| 空 / 缺省 | 任意版本 | — |
+| `>=X` | ≥ X | `>=1.0.0` |
+| `<=X` | ≤ X | `<=2.0.0` |
+| `>X` | > X | `>1.0` |
+| `<X` | < X | `<2.0` |
+| `=X` | 精确等于 | `=1.2.0` |
+| `X` | 精确等于（裸版本） | `1.2.0` |
+| 空格分隔 | 多个约束同时满足 | `">=1.0 <2.0"` |
+
+**比较规则：**
+- 按 `.` 分段、逐段数值比较；忽略 `-`（预发布）和 `+`（构建号）后缀
+- 缺段视为 0（如 `1.0` 等于 `1.0.0`）
+- **不支持** `^`、`~`、`*`、通配 `x`、`||`、逗号
+
+`minLauncherVersion` 字段当前未校验，但**建议填写**以兼容未来版本。若后续启动器启用校验，低于该版本的启动器将拒绝安装。

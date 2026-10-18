@@ -1,0 +1,134 @@
+---
+title: "主页小组件（dashboard:widgets）"
+---
+## 主页小组件（dashboard:widgets）
+
+主页是一个**可编辑的小组件网格**（类似手机桌面）：内置的水印、账户、公告、实例启动栏都是网格中的组件，插件也可以把自己的 UI 作为组件加入网格，与内置组件一样由用户拖动排列、调整大小、添加和移除。
+
+## 快速开始
+
+在 `manifest.json` 的 `contributes.slots` 中声明 `dashboard:widgets` 槽位：
+
+```json
+{
+  "id": "top.qomicex.weather",
+  "name": "天气",
+  "version": "1.0.0",
+  "minLauncherVersion": "0.1.0",
+  "layers": ["l2"],
+  "entry": { "frontend": "dist/index.html" },
+  "contributes": {
+    "slots": [
+      { "slot": "dashboard:widgets", "file": "dist/widget.html" }
+    ]
+  }
+}
+```
+
+`widget.html` 是一个独立 HTML 页面（与 `entry.frontend` 同样的沙箱环境，拥有完整 `__PLUGIN_API__` 桥），安装并启用插件后：
+
+- 插件激活时启动器将 `widget.html` 挂载为 iframe 沙箱，注册进主页组件注册表；
+- 主页网格自动把该组件**追加到网格末尾**（默认 **2 × 1** 格），无需用户手动注册；
+- 用户可在编辑模式下移动、缩放它，与其他组件一致。
+
+一个插件可以声明多个 `dashboard:widgets` 槽位（多个 widget.html），每个都会成为独立组件。
+
+## 网格模型
+
+主页网格为 **4 列 × N 行**，每个组件占据整数格位：
+
+- **自由放置**：拖动组件到任意空位，不会自动向上吸附（类似关闭了"自动排列图标"的 Windows 桌面），拖走后原位留空。
+- **缩放**：拖动组件右下角 / 右侧 / 下侧边缘的手柄，按格对齐，最小可缩到 **1 × 1**。
+- **行高动态**：行高随窗口大小伸缩（约 64–84px），组件物理尺寸跟随视口变化。
+- **布局持久化**：用户调整后的布局保存在启动器本地（localStorage），升级启动器不会丢失。
+
+组件内容渲染在 iframe 中，iframe 会被网格**拉伸到整个格位大小**。因此插件页面的根元素应当使用相对尺寸铺满容器：
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    /* 启动器注入的 .p-* 基础样式已把 body/#root 设为 100% 高度 */
+    body { margin: 0; }
+    .widget {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* 垂直居中，矮格位也好看 */
+      padding: 12px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget" id="root">
+    <strong>天气</strong>
+    <span id="temp">--°C</span>
+  </div>
+  <script src="./widget.js"></script>
+</body>
+</html>
+```
+
+`contributes.slots[]` 支持 `width` / `height` 固定 iframe 像素尺寸（用于 `header:right` 等固定槽位）。**在 `dashboard:widgets` 上不要设置**——固定尺寸会阻止 iframe 跟随格位拉伸，导致缩放后内容溢出或留白。
+
+## 尺寸自适应
+
+组件可能被用户缩放到 1×1（约 250 × 70px）到 4×4（约 1050 × 560px）之间的任意大小。推荐"小尺寸显示简略信息、大尺寸显示详细信息"：
+
+```js
+// widget.js
+const root = document.getElementById('root')
+
+const ro = new ResizeObserver(([entry]) => {
+  const { width, height } = entry.contentRect
+  // iframe 的 viewport 即容器大小，直接按物理尺寸分档
+  root.classList.toggle('widget--compact', height < 120)
+  root.classList.toggle('widget--large', width > 500)
+})
+ro.observe(document.body)
+```
+
+```css
+/* 简略模式：只显示标题和关键数值 */
+.widget--compact .detail { display: none; }
+
+/* 大尺寸：追加摘要、图表等 */
+.widget .extra { display: none; }
+.widget--large .extra { display: block; }
+```
+
+`ResizeObserver` 的回调在用户**松开缩放手柄后**触发（缩放过程中不逐帧更新），无需自己节流。
+
+## 用户如何添加与编辑
+
+用户在主页右上角点击 **编辑布局** 进入编辑模式：
+
+| 操作 | 方式 |
+|------|------|
+| 移动组件 | 直接拖动组件 |
+| 调整大小 | 拖动右下 / 右侧 / 下侧边缘手柄 |
+| 移除组件 | 鼠标悬停组件，点击右上角 ✕ |
+| 恢复已移除组件 | 工具条上的 👁 图标（每个隐藏组件一个） |
+| 添加组件 | 工具条上的 ➕，面板中列出所有已隐藏组件 |
+| 恢复默认布局 | 工具条上的 ↺ 按钮 |
+| 保存并退出 | 工具条上的 **完成** 按钮 |
+
+点击 **编辑布局** 旁无工具条时（非编辑模式），组件恢复静态展示，网格上的按钮、链接正常可点击。
+
+## 生命周期
+
+| 事件 | 行为 |
+|------|------|
+| 插件启用 | 组件自动追加到网格末尾（保持用户已保存的其他组件位置不变） |
+| 插件停用 / 卸载 | 组件自动从网格移除；其布局记录保留，重新启用后原位恢复 |
+| 槽位文件加载失败 | 该组件不出现，不影响其他组件 |
+
+## 约束与注意事项
+
+- **沙箱环境**：widget.html 运行在 `allow-scripts` iframe 沙箱中，与 `entry.frontend` 页面能力一致（postMessage 桥、`.p-*` 样式、`registerMethod` 等），详见 [插件 API 完整参考](/plugins/plugin-api)。
+- **无启动器上下文**：组件无法感知自己在网格中的位置/大小元数据（如"我占几格"），只能通过 `ResizeObserver` 感知物理像素尺寸。
+- **组件标识**：组件 id 由启动器按 `plugin:{插件id}:{序号}` 生成，插件无法自定义；同一插件声明多个槽位时按 manifest 中的声明顺序编号。
+- **深浅主题**：iframe 自动注入主题 CSS 变量，用 `var(--foreground)`、`var(--card)` 等取色即可跟随明暗主题，不要硬编码颜色。
+- **溢出裁剪**：外层卡片是 `overflow: hidden` + 圆角，内容超出格位会被裁剪，请确保布局自适应。

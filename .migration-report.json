@@ -1,0 +1,830 @@
+[
+  {
+    "rel": "guide/index.md",
+    "title": "使用指南",
+    "anchors": [
+      "使用指南",
+      "内容"
+    ]
+  },
+  {
+    "rel": "guide/getting-started.md",
+    "title": "快速上手",
+    "anchors": [
+      "快速上手",
+      "安装",
+      "快速开始",
+      "环境要求",
+      "下一步"
+    ]
+  },
+  {
+    "rel": "guide/first-start.md",
+    "title": "初次启动",
+    "anchors": [
+      "初次启动",
+      "两种模式",
+      "向导步骤",
+      "常见启动问题"
+    ]
+  },
+  {
+    "rel": "guide/dashboard-widget.md",
+    "title": "主页小组件",
+    "anchors": [
+      "主页小组件",
+      "认识主页",
+      "编辑布局",
+      "组件会自己适应大小",
+      "布局保存在哪",
+      "插件组件"
+    ]
+  },
+  {
+    "rel": "guide/installing-games.md",
+    "title": "安装游戏",
+    "anchors": [
+      "安装游戏",
+      "通过下载",
+      "安装整合包",
+      "从资源中心安装",
+      "从本地文件安装",
+      "迁移已有游戏",
+      "补全文件"
+    ]
+  },
+  {
+    "rel": "guide/instances.md",
+    "title": "实例管理",
+    "anchors": [
+      "实例管理",
+      "实例列表",
+      "安装新游戏",
+      "实例详情",
+      "版本隔离",
+      "删除实例"
+    ]
+  },
+  {
+    "rel": "guide/modpack-support.md",
+    "title": "整合包支持",
+    "anchors": [
+      "整合包支持",
+      "安装整合包",
+      "安装后",
+      "mod-管理",
+      "更新整合包",
+      "导出整合包"
+    ]
+  },
+  {
+    "rel": "guide/resource-center.md",
+    "title": "资源中心",
+    "anchors": [
+      "资源中心",
+      "搜索资源",
+      "安装到实例",
+      "整合包"
+    ]
+  },
+  {
+    "rel": "guide/downloads.md",
+    "title": "下载中心",
+    "anchors": [
+      "下载中心",
+      "界面",
+      "下载加速",
+      "资源文件命名"
+    ]
+  },
+  {
+    "rel": "guide/accounts.md",
+    "title": "账户管理",
+    "anchors": [
+      "账户管理",
+      "添加账户",
+      "设为默认",
+      "皮肤与披风",
+      "常见问题"
+    ]
+  },
+  {
+    "rel": "guide/connect.md",
+    "title": "多人联机",
+    "anchors": [
+      "多人联机",
+      "快速开始",
+      "房主建房间的人",
+      "玩家加入的人",
+      "mod-一致性检查",
+      "房主管理",
+      "连接失败排查"
+    ]
+  },
+  {
+    "rel": "guide/running.md",
+    "title": "运行中",
+    "anchors": [
+      "运行中",
+      "实例运行状态",
+      "实时日志窗口",
+      "崩溃处理"
+    ]
+  },
+  {
+    "rel": "guide/log-analysis.md",
+    "title": "日志分析",
+    "anchors": [
+      "日志分析",
+      "两个入口",
+      "手动分析",
+      "崩溃报告分析",
+      "实时日志"
+    ]
+  },
+  {
+    "rel": "guide/plugins.md",
+    "title": "插件系统",
+    "anchors": [
+      "插件系统",
+      "安装插件",
+      "插件能做什么",
+      "权限说明",
+      "管理插件",
+      "自己开发"
+    ]
+  },
+  {
+    "rel": "guide/deep-link.md",
+    "title": "外部唤起（qomicex-launcher://）",
+    "anchors": [
+      "外部唤起qomicex-launcher",
+      "动作总览",
+      "语法规则",
+      "启动实例",
+      "写目录实例名的注意事项",
+      "打开页面",
+      "加入联机房间",
+      "安装插件",
+      "从插件商店安装推荐给网站作者",
+      "从直链安装",
+      "安装整合包",
+      "安全须知",
+      "排障",
+      "点了链接没反应",
+      "弹窗问此请求来自-xxx",
+      "手动测试链接",
+      "平台注册机制",
+      "单实例行为",
+      "限制",
+      "给第三方开发者"
+    ]
+  },
+  {
+    "rel": "guide/settings.md",
+    "title": "设置详解",
+    "anchors": [
+      "设置详解",
+      "启动器设置基础",
+      "启动设置",
+      "下载设置",
+      "储存与缓存",
+      "网络设置",
+      "java-运行时",
+      "外观",
+      "工具箱",
+      "关于"
+    ]
+  },
+  {
+    "rel": "guide/mirror.md",
+    "title": "下载镜像",
+    "anchors": [
+      "下载镜像",
+      "可用镜像",
+      "使用方法",
+      "modrinth",
+      "forge-curseforge",
+      "支持替换的源域名",
+      "强制-proxy-模式可选"
+    ]
+  },
+  {
+    "rel": "guide/glossary.md",
+    "title": "常见名词一览",
+    "anchors": [
+      "常见名词一览",
+      "游戏与实例",
+      "加载器与整合包",
+      "账户与认证",
+      "联机",
+      "诊断"
+    ]
+  },
+  {
+    "rel": "guide/faq.md",
+    "title": "常见问题",
+    "anchors": [
+      "常见问题",
+      "启动与-java",
+      "账户",
+      "下载与资源",
+      "联机",
+      "界面"
+    ]
+  },
+  {
+    "rel": "guide/report-issue.md",
+    "title": "问题反馈",
+    "anchors": [
+      "问题反馈",
+      "反馈渠道",
+      "提交前",
+      "附上这些信息",
+      "提交规范"
+    ]
+  },
+  {
+    "rel": "guide/optimize.md",
+    "title": "优化配置",
+    "anchors": [
+      "优化配置",
+      "选对-java",
+      "内存分配",
+      "启动参数",
+      "下载与网络",
+      "界面流畅度",
+      "数据与缓存"
+    ]
+  },
+  {
+    "rel": "guide/legal.md",
+    "title": "版权与隐私",
+    "anchors": [
+      "版权与隐私",
+      "版权声明",
+      "用户协议",
+      "隐私政策",
+      "一法律声明",
+      "二数据收集范围",
+      "三数据用途",
+      "四数据存储与保留",
+      "五数据安全",
+      "六第三方服务",
+      "七cookie-与本地存储",
+      "八数据跨境传输",
+      "九您的权利",
+      "十未成年人保护",
+      "十一政策更新",
+      "十二联系我们",
+      "开源许可",
+      "后端依赖",
+      "前端依赖",
+      "服务致谢",
+      "参考项目"
+    ]
+  },
+  {
+    "rel": "plugins/index.md",
+    "title": "插件开发指南",
+    "anchors": [
+      "插件开发指南",
+      "插件是什么",
+      "插件能力",
+      "前置插件libraries",
+      "目录"
+    ]
+  },
+  {
+    "rel": "plugins/creating-plugin.md",
+    "title": "从零开始开发第一个插件",
+    "anchors": [
+      "从零开始开发第一个插件",
+      "前置条件",
+      "一用-cli-生成项目推荐",
+      "二编写插件页面",
+      "三打包插件",
+      "用-cli-打包推荐",
+      "不用-cli-的手动打包替代方案",
+      "四安装测试",
+      "五常见问题速查",
+      "下一步"
+    ]
+  },
+  {
+    "rel": "plugins/react-plugin.md",
+    "title": "React + Vite 插件开发教程",
+    "anchors": [
+      "react-vite-插件开发教程",
+      "一为什么用-vite",
+      "二用-cli-生成工程推荐",
+      "不用-cli-的手动初始化替代方案",
+      "packagejson",
+      "viteconfigts-关键相对-base",
+      "tailwindconfigjs-引用-preset",
+      "postcssconfigjs",
+      "tsconfigjson",
+      "srcindexcss",
+      "三插件-api-的类型化封装",
+      "四编写插件页面",
+      "五悬浮窗与主题文件",
+      "六打包-qplugin",
+      "用-cli-打包推荐",
+      "不用-cli-的手动打包替代方案",
+      "打包脚本scriptsbuildsh",
+      "打包后的包结构",
+      "七安装测试",
+      "常见问题",
+      "下一步"
+    ]
+  },
+  {
+    "rel": "plugins/manifest.md",
+    "title": "manifest 清单详解",
+    "anchors": [
+      "manifest-清单详解",
+      "完整结构",
+      "字段总表",
+      "entry-对象",
+      "contributes-对象",
+      "hooks-数组元素",
+      "menuitems-数组元素",
+      "settingspages-数组",
+      "icon-写法示例",
+      "顶层-icon库插件图标",
+      "overlay-对象",
+      "layers-图层定义",
+      "版本范围语法"
+    ]
+  },
+  {
+    "rel": "plugins/plugin-api.md",
+    "title": "插件 API 完整参考",
+    "anchors": [
+      "插件-api-完整参考",
+      "全局变量",
+      "pluginapibase-插件文件地址前缀",
+      "调用方式",
+      "权限机制",
+      "完整权限表",
+      "方法参考",
+      "getsettings-读取插件配置",
+      "setsettings-写入插件配置",
+      "setcache-getcache-插件缓存",
+      "callbackend-调用启动器后端-api",
+      "proxyfetch-cors-代理请求",
+      "proxyfetchstream-流式代理请求",
+      "registermethod-注册插件方法",
+      "callplugin-调用其他插件方法",
+      "registerhook-注册启动器方法-hook",
+      "callwasm-调用-wasm-插件导出函数",
+      "listwasmplugins-列出已加载的-wasm-插件",
+      "readtext-读取文本文件授权制",
+      "readbytes-读取二进制文件授权制",
+      "writetext-写入文本文件授权制",
+      "writebytes-写入二进制文件授权制",
+      "deletefile-删除文件授权制",
+      "execcommand-执行-shell-命令",
+      "openurl-打开外部链接",
+      "getsysteminfo-读取系统与启动器信息",
+      "listplugins-读取已安装插件列表",
+      "uploadplugin-安装插件",
+      "navigate-跳转页面",
+      "openpluginsettings-打开插件设置页",
+      "showtoast-应用内通知",
+      "文件拖放事件file-drop",
+      "getthemecolor-获取当前主题种子色",
+      "applythemeoverride-应用主题覆盖",
+      "clearthemeoverride-清除主题覆盖",
+      "overlaycreate-创建悬浮窗",
+      "overlayshow-hide-destroy-悬浮窗控制",
+      "overlaysethtml-更新悬浮窗内容",
+      "overlaysetposition-移动悬浮窗",
+      "addmenuitem-动态注册侧边栏菜单项",
+      "下载与安装",
+      "downloadaddtask-创建下载任务",
+      "downloadprogress-查询下载进度",
+      "downloadlist-列出全部下载会话",
+      "downloadcancel-取消下载",
+      "downloadregisterinstall-在下载中心登记安装任务",
+      "modpackinstall-一键安装整合包",
+      "错误处理"
+    ]
+  },
+  {
+    "rel": "plugins/plugin-ui.md",
+    "title": "UI 组件库（.p-* 样式）",
+    "anchors": [
+      "ui-组件库p--样式",
+      "主题变量",
+      "主题跟随机制",
+      "组件清单",
+      "卡片-card",
+      "按钮-button",
+      "输入-input-textarea",
+      "徽章-badge",
+      "标签页-tabs",
+      "开关-switch",
+      "复选-checkbox",
+      "进度条-progress",
+      "加载-spinner",
+      "空状态",
+      "提示-alert",
+      "表格-table",
+      "下拉-select",
+      "菜单-menu",
+      "tooltip",
+      "取色器",
+      "布局与工具类",
+      "使用示例"
+    ]
+  },
+  {
+    "rel": "plugins/dependencies.md",
+    "title": "插件依赖与互调用",
+    "anchors": [
+      "插件依赖与互调用",
+      "一声明依赖",
+      "二必装前置optional-false",
+      "三可选前置optional-true",
+      "四库插件惯例被依赖方",
+      "五提供方注册方法",
+      "六调用方调用方法",
+      "七激活顺序",
+      "八错误处理",
+      "完整流程"
+    ]
+  },
+  {
+    "rel": "plugins/wasm-plugin.md",
+    "title": "WASM 插件（L3）",
+    "anchors": [
+      "wasm-插件l3",
+      "一工作原理",
+      "二插件结构",
+      "三插件导出函数wasm-启动器",
+      "四host-api启动器-wasm",
+      "五多语言编写示例",
+      "公共约定所有语言",
+      "1-rust已验证",
+      "2-c-c可行",
+      "3-assemblyscript可行",
+      "4-zig可行",
+      "5-go受限wasi-模式",
+      "6-c-python不可用",
+      "六从插件前端调用",
+      "七后端代理端点",
+      "八注意事项"
+    ]
+  },
+  {
+    "rel": "plugins/webview-l4.md",
+    "title": "L4 远程 WebView",
+    "anchors": [
+      "l4-远程-webview",
+      "manifest-声明",
+      "跨窗口桥原理",
+      "非-tauri-降级",
+      "与-iframel2-wasml3-的取舍",
+      "已知边界以代码为准"
+    ]
+  },
+  {
+    "rel": "plugins/overlay.md",
+    "title": "悬浮窗开发",
+    "anchors": [
+      "悬浮窗开发",
+      "一声明悬浮窗",
+      "二编写悬浮窗-html",
+      "悬浮窗环境特性",
+      "悬浮窗内的开关控制面板",
+      "三动态创建悬浮窗",
+      "overlay-方法一览",
+      "四打包发布",
+      "五注意事项"
+    ]
+  },
+  {
+    "rel": "plugins/dashboard-widget.md",
+    "title": "主页小组件（dashboard:widgets）",
+    "anchors": [
+      "主页小组件dashboardwidgets",
+      "快速开始",
+      "网格模型",
+      "尺寸自适应",
+      "用户如何添加与编辑",
+      "生命周期",
+      "约束与注意事项"
+    ]
+  },
+  {
+    "rel": "plugins/settings-page.md",
+    "title": "插件设置页（settingsPages）",
+    "anchors": [
+      "插件设置页settingspages",
+      "快速开始",
+      "运行环境",
+      "一键跳转到设置页",
+      "规则与生命周期"
+    ]
+  },
+  {
+    "rel": "plugins/hooks.md",
+    "title": "Hook 系统 — 拦截与增强启动器方法",
+    "anchors": [
+      "hook-系统-拦截与增强启动器方法",
+      "执行模型koa-式洋葱管道",
+      "权限与声明",
+      "权限",
+      "manifest-声明可选",
+      "registerhook-注册-hook",
+      "context-对象",
+      "可-hook-的方法",
+      "典型示例",
+      "阻止特定实例启动",
+      "完全替换实现",
+      "修改启动参数注入-jvm-参数",
+      "执行位置与架构",
+      "已知限制"
+    ]
+  },
+  {
+    "rel": "plugins/theme.md",
+    "title": "主题系统",
+    "anchors": [
+      "主题系统",
+      "三级语义模型",
+      "语义-token-命名",
+      "色板-token标准组件级集合-plugin-ui-消费全集",
+      "非色-token",
+      "qtheme-包格式",
+      "themejson-schema-v1",
+      "主题管理器",
+      "主题贡献contributes",
+      "图标主题icon-themejson",
+      "格式",
+      "字段说明",
+      "图标定义对象",
+      "渲染优先级",
+      "注册方式",
+      "字体连字贡献",
+      "manifest-声明",
+      "连字作用域约定",
+      "与-plugin-ui-的关系",
+      "预设主题",
+      "插件驱动主题覆盖",
+      "优先级层级",
+      "api",
+      "使用示例",
+      "安全限制",
+      "生命周期"
+    ]
+  },
+  {
+    "rel": "plugins/cli.md",
+    "title": "qomicex CLI 工具参考",
+    "anchors": [
+      "qomicex-cli-工具参考",
+      "安装",
+      "全局参数",
+      "环境变量",
+      "命令总览",
+      "create",
+      "dev",
+      "pack",
+      "verify",
+      "lint",
+      "bump",
+      "login-logout",
+      "publish",
+      "doctor",
+      "debug",
+      "签名密钥",
+      "ai-辅助开发",
+      "设计说明"
+    ]
+  },
+  {
+    "rel": "plugins/debugging.md",
+    "title": "调试与热重载",
+    "anchors": [
+      "调试与热重载",
+      "快速开始",
+      "架构",
+      "组件",
+      "stub-接口一览",
+      "自定义-mock-数据",
+      "断点调试",
+      "热重载",
+      "cli-集成",
+      "限制与注意事项"
+    ]
+  },
+  {
+    "rel": "plugins/ai-development.md",
+    "title": "AI 辅助开发",
+    "anchors": [
+      "ai-辅助开发",
+      "技能包仓库",
+      "安装技能包",
+      "方式一复制安装-prompt-给-ai推荐",
+      "方式二手动运行安装脚本",
+      "手动放置",
+      "卸载",
+      "起步提示词",
+      "cli-全流程ai-端到端开发",
+      "硬性规则摘要技能包-refspitfalls",
+      "ai-生成后的校验"
+    ]
+  },
+  {
+    "rel": "plugins/publishing.md",
+    "title": "发布规范",
+    "anchors": [
+      "发布规范",
+      "一打包格式",
+      "wasm-插件l3打包",
+      "主题内容可选发布物",
+      "二命名规范",
+      "三权限与安全规范",
+      "四插件签名ed25519-三级信任链",
+      "签名工具",
+      "五安装方式",
+      "六更新升级与回滚",
+      "七发布渠道",
+      "1-dev-本地安装开发自测",
+      "2-商店发布正式渠道",
+      "3-自建镜像-私有注册表开放注册表协议",
+      "八数据与目录",
+      "九发布检查清单",
+      "十版本兼容建议"
+    ]
+  },
+  {
+    "rel": "plugins/telemetry.md",
+    "title": "灰度遥测",
+    "anchors": [
+      "灰度遥测",
+      "隐私与白名单",
+      "上报流程",
+      "商店自动暂停逻辑",
+      "开发者影响"
+    ]
+  },
+  {
+    "rel": "plugins/pitfalls.md",
+    "title": "开发要点与避坑指南",
+    "anchors": [
+      "开发要点与避坑指南",
+      "渲染机制与脚本执行",
+      "内联渲染如何工作",
+      "l2-iframe-沙箱",
+      "内联渲染",
+      "脚本内的-document-访问",
+      "api-调用注意事项",
+      "函数不能经-postmessage-传输",
+      "proxyfetchstream-的完成判定",
+      "相对路径-vs-绝对-url",
+      "依赖与激活",
+      "库插件必须声明-entryfrontend",
+      "激活取决于-entryfrontend而非-layers",
+      "激活顺序已自动处理",
+      "状态切换需重启",
+      "manifest-注意事项",
+      "后端行为",
+      "调试建议",
+      "环境与构建避坑实战",
+      "tauriwebview2-框架环境与普通浏览器不同",
+      "csp-资源放行对照表当前启动器默认值",
+      "资源被拦截的排查方法",
+      "tauriwebview2-的-blobdataworker-加载",
+      "release-包里插件页面完全无样式白板",
+      "目录源registry避免走-github-raw",
+      "内联-bundle-注入-html-前的危险序列",
+      "字符串模板注入别用-stringreplace",
+      "插件管理列表图标库插件用顶层-manifesticon",
+      "文件拖放拿不到本地路径",
+      "文件读取-api-是-readtext-readbytes不是-readfile"
+    ]
+  },
+  {
+    "rel": "libraries/index.md",
+    "title": "前置插件文档",
+    "anchors": [
+      "前置插件文档",
+      "前置插件列表"
+    ]
+  },
+  {
+    "rel": "libraries/markdownlib.md",
+    "title": "MarkdownLib 前置插件",
+    "anchors": [
+      "markdownlib-前置插件",
+      "为什么需要它",
+      "安装",
+      "接口",
+      "rendermarkdownmd",
+      "rendermarkdowninlinemd",
+      "striphtmlhtml",
+      "调用方法",
+      "例子",
+      "基础渲染",
+      "行内渲染-去标签",
+      "在悬浮窗overlay中使用",
+      "处理依赖缺失",
+      "实现思路",
+      "提供方注册方法",
+      "调用方调用方法",
+      "为什么内嵌而非-cdn",
+      "定义原理",
+      "插件依赖机制",
+      "方法注册与调用原理",
+      "错误处理",
+      "修订记录"
+    ]
+  },
+  {
+    "rel": "libraries/markitdown.md",
+    "title": "MarkItDown",
+    "anchors": [
+      "markitdown",
+      "能力",
+      "注册方法",
+      "依赖与配置",
+      "可选附加"
+    ]
+  },
+  {
+    "rel": "store/index.md",
+    "title": "插件商店 API",
+    "anchors": [
+      "插件商店-api",
+      "通用约定",
+      "认证方式",
+      "注册表元数据-registry",
+      "错误码速查",
+      "认证-auth",
+      "注册与登录",
+      "账户中心-",
+      "api-key-管理-",
+      "github-oauth",
+      "改绑邮箱与开发者认证",
+      "设备流登录启动器cli",
+      "插件-plugins",
+      "公开读",
+      "开发者写-",
+      "评价-",
+      "组织-orgs",
+      "管理员-admin"
+    ]
+  },
+  {
+    "rel": "store/publish.md",
+    "title": "插件发布与打包指南",
+    "anchors": [
+      "插件发布与打包指南",
+      "qplugin-是什么",
+      "manifestjson-最小模板",
+      "-windows-用户必读反斜杠-问题",
+      "原因",
+      "解决",
+      "方法一powershell-一键打包脚本推荐",
+      "方法二其他常用方式",
+      "7-zip图形界面",
+      "powershell-7",
+      "命令行校验包内路径",
+      "上传发布",
+      "方式一qomicex-publish一键推荐",
+      "方式二网页手动上传"
+    ]
+  },
+  {
+    "rel": "store/registry-spec.md",
+    "title": "开放注册表协议（Open Registry Protocol）",
+    "anchors": [
+      "开放注册表协议open-registry-protocol",
+      "1-核心概念",
+      "2-端点子集",
+      "21-核心端点镜像必须实现",
+      "22-可选端点镜像可不实现",
+      "23-公共约定",
+      "3-注册表元数据-get-registry",
+      "4-客户端发现机制",
+      "41-配置方式",
+      "42-启动流程",
+      "43-回退策略",
+      "5-下载双通道与-sha-256-校验",
+      "51-双通道语义",
+      "52-校验强制规则",
+      "53-镜像包体要求",
+      "6-签名链要求adr-050",
+      "61-包内签名链结构",
+      "7-自建镜像指南",
+      "71-方案-acloudflare-worker-复制共享负载",
+      "72-方案-b纯静态托管只读镜像",
+      "73-方案-c自建完整注册表独立源",
+      "74-验证镜像兼容性",
+      "8-启动器集成方案todo"
+    ]
+  }
+]

@@ -1,0 +1,187 @@
+---
+title: "插件商店 API"
+---
+## 插件商店 API
+
+Qomicex Launcher 插件商店（`plugins.qomicex.top`）后端 API 规格，供插件开发者与启动器集成方使用。
+
+## 通用约定
+
+- **Base URL**：`https://plugins.qomicex.top/api/v1`
+- **请求/响应**：JSON（版本上传为 multipart/form-data），字段命名 camelCase；时间为 ISO 8601
+- **错误格式**：统一 `{ "error": { "code": "...", "message": "..." } }`，HTTP 状态码语义化
+- **CORS**：GET/HEAD 全放行；写操作仅允许 `ALLOWED_ORIGINS`（含 `*.qomicex.top` 通配）
+- **分页**：`page`（从 1 起）、`pageSize`（默认 20，上限 50）
+- **缓存**：插件列表 15s、插件详情 300s
+- **限流**：登录/注册 10 次/min/IP；下载信息 60 次/min/IP（超限返回 `429 rate_limited`）
+
+### 认证方式
+
+| 方式 | 请求头 | 说明 |
+| :--- | :--- | :--- |
+| Access Token | `Authorization: Bearer <jwt>` | 登录签发，15 分钟有效；配 refresh token 30 天 |
+| API Key | `X-API-Key: qk_<64hex>` | 个人中心创建，明文仅创建时返回一次 |
+| Admin Token | `Authorization: Bearer <ADMIN_TOKEN>` | 仅 `/admin/*`；也可用 role=admin 的用户 JWT |
+
+下文标记 🔒 = 需要认证。
+
+### 注册表元数据 `/registry`
+
+| 方法 | 路径 | 说明 |
+| :--- | :--- | :--- |
+| GET | `/registry` | 开放注册表元数据 → `{apiVersion:"1.0", baseUrl, pluginCount, capabilities[], mirrors?}`。启动器多源发现用（详见[开放注册表协议](/store/registry-spec)），缓存 60s |
+
+### 错误码速查
+
+| HTTP | code | 场景 |
+| :--- | :--- | :--- |
+| 400 | `bad_request` / `bad_json` | 参数缺失 / body 非合法 JSON |
+| 401 | `unauthorized` / `invalid_credentials` / `invalid_api_key` / `invalid_refresh_token` | 未认证或凭证无效 |
+| 403 | `forbidden` / `account_disabled` / `email_unverified` / `not_org_member` / `membership_pending` / `need_org_admin` | 无权限 |
+| 404 | `not_found` / `invalid_invite` | 资源不存在 |
+| 409 | `slug_taken` / `account_exists` / `version_exists` / `cannot_delete_latest` / `no_published_version` / `already_member` / `invite_exhausted` / `github_already_bound` / `github_org_taken` 等 | 冲突 |
+| 410 | `invite_expired` | 邀请链接过期 |
+| 413 | `too_large` | 包体超 50MB |
+| 422 | `validation_error` / `invalid_package` / `unsafe_package` / `version_mismatch` / `missing_dependency` / `signature_invalid` | 校验失败 |
+| 429 | `rate_limited` | 触发限流 |
+| 500 | `internal` / `mail_send_failed` | 服务器内部 / 邮件发送失败 |
+
+## 认证 `/auth`
+
+### 注册与登录
+
+| 方法 | 路径 | 认证 | 说明 |
+| :--- | :--- | :--- | :--- |
+| POST | `/auth/register` | - | 注册。Body `{username(3-32, 字母数字_-), email, password(≥8), captchaToken?}`。配置邮件服务时发验证邮件、未验证不可登录（返回 `{checkEmail:true}`）；否则直接返回 `{user, accessToken, refreshToken, expiresIn}` |
+| POST | `/auth/login` | - | 登录。Body `{account(username 或 email), password, captchaToken?}` → `{user{id,username,email,displayName?,role,developerLevel,avatarUrl?}, accessToken, refreshToken, expiresIn}`。错误：`invalid_credentials` / `account_disabled` / `email_unverified` / `rate_limited` |
+| POST | `/auth/resend-verification` | - | 重发验证邮件 `{email?, captchaToken?}` → `{ok:true}`（不泄露账号存在性） |
+| POST | `/auth/verify-email` | - | 邮件链接落地 `{token}` → `{ok, type:'register_verify'\|'change_email'}`；400 `invalid_token` |
+| POST | `/auth/refresh` | - | 刷新 `{refreshToken}` → 新 token 对；旧 refresh token 立即吊销（旋转） |
+| POST | `/auth/forgot-password` | - | 发重置邮件 `{email, captchaToken?}` → `{ok:true}`（人机验证防轰炸） |
+| POST | `/auth/reset-password` | - | 重置密码 `{token, newPassword(≥8)}` → `{ok}`；同时视为邮箱已验证并吊销全部会话 |
+
+### 账户中心 🔒
+
+| 方法 | 路径 | 说明 |
+| :--- | :--- | :--- |
+| GET | `/auth/me` | 当前用户信息 `{user{..., emailVerified, pendingEmail?}}` |
+| POST | `/auth/become-developer` | 升级为开发者 → `{ok, role:'developer'}`；409 `not_eligible` |
+| DELETE | `/auth/account` | 注销账户 `{password?}`（GitHub 注册无密账号免验密）；级联删除名下插件/版本/包文件 |
+
+### API Key 管理 🔒
+
+| 方法 | 路径 | 说明 |
+| :--- | :--- | :--- |
+| POST | `/auth/api-keys` | 创建 `{name?}` → 201 `{id, name, key:'qk_<64hex>'}`，明文仅此一次 |
+| GET | `/auth/api-keys` | 列表 → `{keys[{id,name,scopes[],expiresAt?,lastUsedAt?,createdAt}]}` |
+| DELETE | `/auth/api-keys/:id` | 删除 → `{ok:true}` |
+
+### GitHub OAuth
+
+| 方法 | 路径 | 认证 | 说明 |
+| :--- | :--- | :--- | :--- |
+| GET | `/auth/github/callback` | - | GitHub 回调中转，302 到 SPA `/auth/github?code=...` |
+| POST | `/auth/github` | - | 用授权 code 换商店 JWT `{code}` → `{user, accessToken, refreshToken, expiresIn}`；按 github_id 关联，首次自动建号 |
+| POST | `/auth/github/bind` | 🔒 | 绑定 GitHub 到当前账户 `{code}` → `{ok, avatarUrl?}`；409 `github_already_bound` |
+
+### 改绑邮箱与开发者认证
+
+| 方法 | 路径 | 认证 | 说明 |
+| :--- | :--- | :--- | :--- |
+| POST | `/auth/change-email-request` | 🔒 | 改绑邮箱 `{newEmail, password}` → 验密后新邮箱收确认邮件生效 |
+| POST | `/auth/verification-request` | 🔒 | 申请组织/官方认证 `{targetLevel:'organization'\|'official'}` → 201 `{ok, status:'pending'}`；前置：须已是开发者、当前为个人认证、无进行中的申请（409 `not_developer` / `already_verified` / `pending_exists`） |
+| GET | `/auth/verification-request/mine` | 🔒 | 查询申请状态 → `{developerLevel, pending}`（pending: 0 无 / 1 组织 / 2 官方） |
+
+### 设备流登录（启动器/CLI）
+
+RFC 8628 简化版，免 WebView 认证：
+
+| 方法 | 路径 | 说明 |
+| :--- | :--- | :--- |
+| POST | `/auth/device/code` | 发起：→ 201 `{deviceCode, userCode:"XXXX-XXXX", verificationUri, verificationUriComplete, expiresIn:600, interval:5}`；IP 限速 |
+| POST | `/device/token` | 轮询 `{deviceCode}` → pending 时 `{"status":"pending"}`；批准后 `{"status":"ok", user, accessToken, refreshToken, expiresIn}`（与登录同构，会话一次性消费）；400 `expired_token` 需重新发起 |
+| POST | `/auth/device/approve` | 🔒 网页确认 `{userCode}`（8 位，忽略连字符/大小写）→ `{ok}`；404 `invalid_user_code`。确认页：`https://plugins.qomicex.top/auth/device?code=...` |
+
+## 插件 `/plugins`
+
+### 公开读
+
+| 方法 | 路径 | 说明 |
+| :--- | :--- | :--- |
+| GET | `/plugins?q&category&tags&sort&page&pageSize&minLauncherVersion` | 插件市场列表（仅已发布）。`q` 模糊搜名称/描述/slug；`category` ∈ `tool\|launcher\|theme\|integration`；`tags` 单标签过滤；`sort=downloads` 按下载量（默认最新）；`minLauncherVersion` 过滤不兼容插件。→ `{total, page, pageSize, items[Plugin]}` |
+| GET | `/plugins/:slug` | 插件详情 → Plugin + `versions[]`（仅已发布：`{id, version, changelog?, minLauncherVersion, layers[], permissions[], sha256, sizeBytes, downloadCount, createdAt}`）。404 未发布或不存在 |
+| GET | `/plugins/:slug/reviews?page&pageSize` | 评价列表 → `{items[{id, rating, content, createdAt, updatedAt?, username, developerLevel, avatarUrl?}]}` |
+| POST | `/plugins/check-updates` | **启动器核心端点**：批量更新检查。Body `{launcherVersion:'x.y.z', installed:[{slug, version}] ≤200}` → `{updates[{slug, currentVersion, latestVersion, changelog?, sha256, permissions[], layers[], download:{url, mirrorUrl?}, rolloutPercent?}]}`。`rolloutPercent` 为灰度放量百分比（缺省/100=全量，`<100` 由客户端按随机值决定是否放量）。已最新或不兼容当前启动器版本的不返回 |
+| GET | `/plugins/:slug/versions/:version/download` | 双通道下载信息。`:version` 可为 `latest` → `{url, mirrorUrl?, sha256, size}`；客户端竞速下载 + SHA-256 校验。限流 60/min/IP |
+
+Plugin 对象公共字段：`{id, slug, developerId, name, description, category, tags[], iconUrl?, status, latestVersion?, downloadsCount, ratingAverage?, ratingCount, developerName?, developerLevel?, orgId?/orgSlug?/orgName?, officialComment?, officialCommentAt?, createdAt, publishedAt?}`。
+
+### 开发者写 🔒
+
+权限模型：原上传者 = 完整控制；组织 owner/admin = 完整控制；组织 member = 可上传新版。
+
+| 方法 | 路径 | 权限 | 说明 |
+| :--- | :--- | :--- | :--- |
+| GET | `/plugins/mine` | 登录 | 我参与（个人+组织）的插件及全部版本状态、最近审核意见与驳回理由 → `{items[]}` |
+| POST | `/plugins/` | 登录 | 创建插件 `{orgId?, slug(3-64 小写字母数字连字符), name(≤64), description?(≤2000), category?, tags?(≤10), iconUrl?}` → 201 `{plugin}`；初始待审核；409 `slug_taken` |
+| PUT | `/plugins/:id` | full | 更新元信息（同创建字段，均可选）→ `{plugin}` |
+| DELETE | `/plugins/:id` | full | 删除插件（软删）→ `{ok:true}` |
+| POST | `/plugins/:id/versions` | full / member | 上传新版本，multipart/form-data：`file`(.qplugin ≤50MB 必填)、`changelog?`(≤4000)、`version?`(须与 manifest 一致)。校验链：zip 结构 → 根级 manifest.json → zip-slip → **签名验证（Ed25519，缺签名或验签失败 → 422 `signature_invalid`）** → 依赖存在性 → 版本去重。纯 L3 且无 danger 权限自动发布，否则人工审核。→ 201 `{id, version, sha256, size, reviewStatus:'published'\|'pending'}` |
+| DELETE | `/plugins/:id/versions/:versionId` | full / member | 撤回版本（同时删包文件）→ `{ok}`；409 `cannot_delete_latest`（最新发布版不可删，先发新版） |
+| PATCH | `/plugins/:id/transfer` | full | 归属转让 Body `{orgId}` 或 `{orgId:null}` 转回个人；转入组织需目标组织 admin+ → `{ok, orgId}` |
+| GET | `/plugins/:id/stats` | full / member | 统计面板 → `{totalDownloads, ratingAverage?, ratingCount, reviewsCount, series[{date,count}] 近30天, versions[]}` |
+
+上传失败错误码：`too_large` / `unsafe_package` / `invalid_package` / `version_mismatch` / `missing_dependency` / `version_exists` / `signature_invalid`。
+
+### 评价 🔒
+
+| 方法 | 路径 | 说明 |
+| :--- | :--- | :--- |
+| POST | `/plugins/:slug/reviews` | 发/改自己的评价（每人每插件一条 upsert）`{rating:1-5, content?(≤2000), captchaToken?}` → 201 |
+| DELETE | `/plugins/:slug/reviews/mine` | 删除自己的评价 → `{ok}`；404 从未评价 |
+
+## 组织 `/orgs`
+
+角色层级：member < admin < owner。
+
+| 方法 | 路径 | 认证 | 说明 |
+| :--- | :--- | :--- | :--- |
+| POST | `/orgs/` | 🔒 | 创建组织 `{slug(3-48), name(≤64), description?(≤1000), iconUrl?}` → 201 `{id, slug}`；创建者成为 owner；409 `slug_taken` |
+| GET | `/orgs/mine` | 🔒 | 我加入的组织 → `{items[{...Org, myRole, memberCount, pluginCount}]}` |
+| GET | `/orgs/join?code=` | - | 邀请码预览 → `{orgName, role}`；404 `invalid_invite` |
+| POST | `/orgs/join` | 🔒 | 凭邀请码加入 `{code}` → 201 `{ok, role}`；错误：`invalid_invite` / `invite_expired`(410) / `invite_exhausted`(409) / `already_member`(409) |
+| GET | `/orgs/:slug` | - | 组织公开主页 → Org + `{memberCount, pluginCount}` |
+| GET | `/orgs/:slug/plugins` | - | 组织名下公开插件 → `{items[]}` |
+| GET | `/orgs/:slug/members` | 🔒 member | 成员列表（按角色排序）→ `{items[{userId, role, username, avatarUrl?, joinedAt}]}` |
+| GET | `/orgs/:slug/invites` | 🔒 admin | 邀请码列表 → `{items[{code, role, maxUses?, uses, expiresAt?, revoked, createdAt}]}` |
+| POST | `/orgs/:slug/invites` | 🔒 admin | 创建邀请码 `{role?:'admin'\|'member', maxUses?(1-1000), expiresInDays?(1-365)}` → 201 `{code, joinUrl:'/orgs/join?code=...', role}` |
+| DELETE | `/orgs/:slug/invites/:code` | 🔒 admin | 撤销邀请码 → `{ok}` |
+| PATCH | `/orgs/:slug/members/:userId` | 🔒 owner | 调整成员角色 `{role:'admin'\|'member'}`；不能改 owner 角色 |
+| DELETE | `/orgs/:slug/members/:userId` | 🔒 member | 移除成员；不能移除 owner 及同级或更高级成员；owner 不能退出自己创建的组织 |
+| POST | `/orgs/:slug/verify-github/init` | 🔒 admin | GitHub 组织验证（GitHub App 安装流）第一步：`{githubOrg?}`（不传用已存值）→ `{installUrl, githubOrg}`。组织 owner 在 GitHub 完成 App 安装后回跳确认页 |
+| POST | `/orgs/verify-github/complete` | 🔒 admin | 第二步：App 安装回调确认 `{state, installationId?}` → `{ok, orgSlug, githubOrg}`；403 `not_installed`（尚未安装 App）。错误：`github_org_taken` / `bad_state`(会话过期) / `state_user_mismatch` / `org_mismatch` / `github_org_conflict` |
+| PATCH | `/orgs/:slug` | 🔒 admin | 更新资料 `{name?, description?, iconUrl?}` 至少一项 → `{ok}` |
+| DELETE | `/orgs/:slug` | 🔒 owner | 解散组织；名下插件回归原开发者 → `{ok}` |
+
+## 管理员 `/admin`
+
+认证：`Authorization: Bearer <ADMIN_TOKEN>` 或 role=admin 用户 JWT。
+
+| 方法 | 路径 | 说明 |
+| :--- | :--- | :--- |
+| GET | `/admin/pending` | 待审核队列 → `{pending:[{kind:'plugin'\|'version', id, slug, ...}]}` |
+| POST | `/admin/review/:targetId` | 审核 `{action:'approve'\|'reject'\|'suspend', reason?(≤1000)}`。targetId 自动识别插件或版本。写入审核日志 → `{ok, targetType, targetId, action}` |
+| GET | `/admin/stats` | 总览 → `{plugins, versions, users, downloads, downloadsSeries[{date,count}] 近30天}` |
+| GET | `/admin/plugins?q&status&page&pageSize` | 全量插件管理列表 → `{total, items[]}` |
+| GET | `/admin/plugins/:id/detail` | 插件元信息详情 |
+| GET | `/admin/plugins/:id/versions` | 全部版本明细（任意状态）→ `{items[{id, version, status, downloads, sha256, sizeBytes, createdAt}]}` |
+| PATCH | `/admin/plugins/:id` | 强制改状态 `{status:'pending'\|'published'\|'rejected'\|'suspended'}`；置 published 需有已发布版本，否则 409 `no_published_version` |
+| PUT | `/admin/plugins/:id/official-comment` | 官方点评 upsert `{content(1-2000)}` → `{ok, officialComment, officialCommentAt}` |
+| DELETE | `/admin/plugins/:id/official-comment` | 删除官方点评 → `{ok}` |
+| GET | `/admin/orgs` | 组织列表（含 owner 名/成员数/插件数/GitHub 验证态） |
+| DELETE | `/admin/orgs/:slug` | 强制解散组织 → `{ok}` |
+| GET | `/admin/users?q&pending=1&page&pageSize` | 用户列表；`pending=1` 只看待认证申请 → `{total, items[]}` |
+| PATCH | `/admin/users/:id` | 用户管理 `{role?:'user'\|'developer'\|'admin', status?:'active'\|'disabled', developerLevel?:'individual'\|'organization'\|'official', verificationPending?:false}` → `{ok}` |
+| DELETE | `/admin/users/:id` | 删除账户（级联删名下插件/版本/包文件，不可逆）→ `{ok}` |
+| DELETE | `/admin/reviews/:id` | 删除违规评价并重算评分 → `{ok}` |
+| GET | `/admin/review-logs?page&pageSize` | 审核日志 → `{items[{id, targetType, targetId, action, reason?, reviewer, createdAt}]}` |
