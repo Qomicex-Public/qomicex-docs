@@ -1,8 +1,13 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "QML Docs",
-  "description": "QML 用户手册与插件开发指南",
+  "name": "Qomicex Docs - QML启动器",
+  "description": "Qomicex Docs - QML启动器用户手册与插件开发指南",
+  "seo": {
+    "metatags": {
+      "og:locale": "zh_CN"
+    }
+  },
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
@@ -10,7 +15,11 @@
   },
   "favicon": "/favicon.svg",
   "navigation": {
-    "pages": [
+    "languages": [
+      {
+        "language": "zh-CN",
+        "default": true,
+        "pages": [
       {
         "group": "开始",
         "pages": ["index", "guide/index", "guide/getting-started", "guide/first-start"]
@@ -80,6 +89,8 @@
       {
         "group": "插件商店",
         "pages": ["store/publish", "store/index", "store/registry-spec"]
+      }
+        ]
       }
     ]
   },
