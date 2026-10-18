@@ -1,0 +1,190 @@
+---
+title: "Publishing guidelines"
+---
+## Publishing guidelines
+
+This page covers the plugin package format, signing, distribution channels, updates, and the publishing checklist.
+
+We recommend running the whole package → sign → publish flow with the `qomicex` CLI: `qomicex pack` to build the package, `qomicex verify --package` to check the signature, and `qomicex publish` to publish in one step. See the [CLI reference](/en/plugins/cli) for the full command set.
+
+## 1. Package format
+
+A `.qplugin` is really a **ZIP archive**, and `manifest.json` must sit at the **root**.
+
+```text
+my-plugin.qplugin（即 zip）
+├── manifest.json          # 必须在根目录
+├── signature.json         # 签名（上传商店必须，见 §四）
+├── signature.cert.json    # 开发者证书（商店发布时附带）
+└── dist/
+    ├── index.html
+    ├── app.js
+    └── theme.css
+```
+
+- If `manifest.json` is not at the root → installation fails (`Invalid plugin package`)
+- The backend does not validate the file extension, so any valid zip passes the upload endpoint; still, **please always use `.qplugin`** so packages are recognizable
+- Avoid `../` relative paths inside the package (zip-slip risk, and files may be written outside the intended location)
+- Entry paths inside the package must use forward slashes `/` (a `\` produced by older Windows tools is rejected by the security checks)
+
+### Packaging a WASM plugin (L3)
+
+Plugins with L3 capabilities must ship `plugin.wasm` (a wasmtime core module) inside the package:
+
+```text
+my-wasm-plugin.qplugin（即 zip）
+├── manifest.json          # 必须在根目录，layers 含 "l3"
+└── plugin.wasm            # wasm 编译产物（wasm32-unknown-unknown）
+```
+
+- Build: `rustup target add wasm32-unknown-unknown && cargo build --release --target wasm32-unknown-unknown`
+- Rename the build artifact to `plugin.wasm` and put it in the package root (the gateway loads the fixed file name `plugin.wasm`, so you do not declare a path in the manifest)
+- The manifest `layers` must include `"l3"`, and `permissions` must include `"wasm:execute"`
+- See [WASM plugins (L3)](/en/plugins/wasm-plugin) for details
+
+### Theme content (optional publishable assets)
+
+Themes, icons, and fonts are **optional** publishable content. Declare them through `contributes`; they do not need a separate package format:
+
+| Content | Where to declare | Notes |
+|------|---------|------|
+| Theme CSS | `entry.theme` | Injected as `<style data-plugin-theme>` on activation |
+| Icon theme | `contributes.iconTheme` | Path to `icon-theme.json` inside the `.qtheme` package |
+| Fonts / ligatures | `contributes.fontLinks` | Font CSS/CDN URL, injected as `<link>` on activation |
+
+All three ship as resources inside the `.qplugin` package, so there is nothing extra to package. See [Theme system](/en/plugins/theme) for details.
+
+## 2. Naming conventions
+
+| Item | Convention |
+|------|------|
+| Plugin id | Reverse-domain style (for example `top.qomicex.assistant`, `dev.example.helloworld`): lowercase, dot-separated. Once a plugin is published **never change its `id`** (it is the install directory name and the key other plugins reference in dependencies) |
+| Plugin name | Short and readable, for example "AI Assistant" |
+| Version | Semantic version `x.y.z`, used for dependency matching (see [Version syntax](/en/plugins/manifest#version-range-syntax)) |
+| Package file name | `{plugin-id}.qplugin` or `{plugin-name}-{version}.qplugin` |
+
+## 3. Permission and security guidelines
+
+- **Principle of least privilege**: declare only the permissions you actually use. The install details page groups them by risk (dangerous permissions such as `shell:execute`, `filesystem:write`, and `plugin:install` are highlighted)
+- Never hard-code secrets or credentials inside a plugin
+- Reach the internet through `proxyFetch` (built-in SSRF protection) instead of making direct intranet requests
+- Plugin scripts run in an iframe sandbox (opaque origin) by default, so **do not rely on globals to share state across plugins**
+- Move heavy computation off the UI main thread (Web Worker / WASM / backend proxy). `qomicex verify` warns statically about `while(true)` and unbounded `setInterval` loops
+
+## 4. Plugin signing (Ed25519 three-level trust chain)
+
+The store and the launcher use an **Ed25519 three-level trust chain** (ADR-050) to prevent supply-chain poisoning:
+
+```text
+商店根钥 → 签发开发者公钥证书 → 开发者密钥签每个 release
+```
+
+- **Trust chain**: the store root key issues the developer public key (`signature.cert.json`, which contains the developer public key plus the root key signature) → the developer signs the package with the private key (`signature.json`). The launcher ships the store root public key, so it can **verify signatures fully offline**.
+- **Signature format**: `signature.json` (in the package root):
+
+```json
+{
+  "alg": "Ed25519",
+  "signedHash": "<sha256 hex>",
+  "signerKeyId": "<key id>",
+  "signature": "<base64 ed25519 sig>"
+}
+```
+
+- `signedHash` is the **SHA-256 of the canonicalized manifest plus file list**: `SHA-256(canonical JSON of { manifest: sha256(raw bytes of manifest.json), files: [{path, sha256}] })`. Canonicalization means keys sorted recursively with no whitespace in the JSON, which keeps the hash reproducible.
+- **Where verification is enforced**: new versions uploaded to the store and `.qplugin` files manually uploaded to the launcher are **always verified** (a missing signature or failed verification returns 422 `signature_invalid` / rejects the install). Store installs and local development directory installs are not enforced (older versions stay compatible and the development path is allowed through).
+- **Backward compatibility**: older releases without signatures can still be installed and do not have to be re-signed. If a private key is rotated or leaked, generate a new key pair and upload the new public key; old certificates stop working automatically.
+- **Rotating the root key**: after the store changes its signing root key, the embedded root public key must be updated everywhere (`STORE_ROOT_PUBLIC_KEY_B64` in the CLI's `signature.ts`, `ROOT_PUBLIC_KEY_B64` in the launcher's `plugin_signature.rs`, and the CLI docs in `signing.md`). Packages signed under old certificates then fail verification and must be republished with `qomicex publish` to get a new certificate.
+
+### Signing tools
+
+- Generate a key pair: `openssl genpkey -algorithm Ed25519 -out dev-key.pem`, or `node scripts/plugin-keygen.mjs generate` (script in the repository)
+- Sign: `qomicex pack --key ./dev-key.pem` (builds a signed `.qplugin`), or `qomicex publish` to run the whole chain (device-flow login → upload the public key and get a certificate → sign → upload)
+- Verify: `qomicex verify --package ./release/xxx.qplugin`
+
+## 5. Installation methods
+
+- **Upload a .qplugin file**: Settings → Plugins → Install plugin, then pick a `.qplugin` / `.zip` file (**signature verification is enforced**; a missing signature or a failed check is rejected)
+- **Install from the store**: plugin store page → Install (verified when signed; older unsigned versions are allowed through)
+- **Directory install** (developer debugging): backend `POST /api/plugins/install` with body `{"sourceDir": "/path/to/dir"}` pointing straight at a directory containing `manifest.json` (signature not enforced; the `plugins-dev/` development path)
+
+- The upload endpoint does **not** check dependencies; dependency checks run only for directory install (install) and the store install endpoint. Before publishing, make sure dependent plugins are documented along with the plugin.
+- Enabling or disabling a plugin (**state changes**) takes effect only after you **restart the launcher**.
+
+## 6. Updates, upgrades, and rollback
+
+- **Update checks**: after startup the launcher silently polls the store `POST /plugins/check-updates` (with the launcher version and installed plugin list) and shows an upgrade button on the plugin management page when an update exists.
+- **Staged rollout**: the store returns `rolloutPercent` (0-100; missing or 100 means everyone). When it is `<100`, the launcher decides whether the user sees the upgrade prompt with `hash(slug@latestVersion) % 100 < rolloutPercent`, so the result is stable for a given user.
+- **Automatic telemetry pause**: the store applies **staged-rollout protection** per version based on 24h error report counts — once a version exceeds the threshold (default 10) in 24h, the store stops offering it as an update (installed users are unaffected). See [Staged rollout telemetry](/en/plugins/telemetry) for details.
+- **Upgrade flow**: click the upgrade button → confirm → the store install pipeline runs (download → SHA-256 check → signature verification → overwrite install).
+- **Rollback snapshot**: before overwriting, the old directory is renamed to the snapshot `plugins/{id}.bak-{version}`. If a plugin misbehaves after upgrading, click **Rollback** to restore it (`POST /api/plugins/{id}/rollback`). `PluginInfo.hasRollback` indicates whether a usable snapshot exists.
+- **Uninstall**: Settings → Plugins → delete button (removes the whole `plugins/{id}/` directory).
+
+## 7. Distribution channels
+
+**The early "GitHub repository + PR" distribution model has been replaced by the online store.** Official publishing always goes through [plugins.qomicex.top](https://plugins.qomicex.top).
+
+### 1. Local dev install (self-testing)
+
+While developing, upload the `.qplugin` to the launcher to verify it, or use `qomicex dev` with the debug harness (see [Debugging and hot reload](/en/plugins/debugging)).
+
+### 2. Store publishing (official channel)
+
+| Method | Flow |
+|------|------|
+| **`qomicex publish`** (recommended) | RFC 8628 device-flow login → upload the developer public key to get a certificate → sign the package → multipart upload. One command, no browser interaction |
+| **Manual web upload** | Log in to the store → upgrade to developer → create a plugin → upload a new version (sign first with `qomicex pack --key <private-key>`; the store **always verifies the signature**) |
+
+- **Automatic publishing**: packages that are pure L3 with no dangerous permissions are **published automatically** after upload, with no manual review.
+- **Manual review**: everything else (anything with a UI layer or dangerous permissions) goes into the review queue; see the version list for results.
+- To update a plugin, **upload a new version under the same slug**; the store deduplicates versions (409 `version_exists`).
+
+### 3. Self-hosted mirror / private registry (Open Registry Protocol)
+
+If you want a private plugin source for yourself or your team, the **Open Registry Protocol** (see [Open Registry Protocol in the store sidebar](/en/store/registry-spec)) lets third parties implement compatible mirrors:
+
+- **Core endpoints**: implement just `GET /registry`, `GET /plugins`, `GET /plugins/:slug`, and `GET /plugins/:slug/versions/:version/download` and the launcher recognizes your source
+- **Two download channels**: when a mirror re-serves packages it must preserve `signature.json` and `signature.cert.json` byte for byte; do not repackage
+- **Discovery**: the launcher's `registryUrl` setting accepts a list of sources and falls back automatically when the primary source is unreachable
+- **Deployment options**: copy a Cloudflare Worker (shared load), pure static hosting (read-only), or a full self-built registry (independent source)
+
+See [Open Registry Protocol](/en/store/registry-spec) for the full implementation guide.
+
+## 8. Data and directories
+
+Plugins can read and write their own data (isolated per plugin id):
+
+```text
+{数据目录}/plugins/{插件id}/
+├── manifest.json      # 你的插件文件（安装时解包）
+├── settings.json      # getSettings/setSettings 读写
+└── cache.json         # setCache/getCache 读写
+```
+
+Data directory locations:
+- Windows: `%LOCALAPPDATA%\qomicex-launcher`
+- Linux: `$XDG_DATA_HOME` or `~/.local/share`
+- macOS: `~/Library/Application Support`
+- The `QOMICEX_HOME` environment variable overrides all of them (portable mode)
+
+## 9. Publishing checklist
+
+- [ ] `manifest.json` is in the package root and the JSON is valid
+- [ ] `id` is unique and will not change, and `version` increases semantically (use `qomicex bump patch|minor|major`)
+- [ ] `permissions` contains only what is needed (check minimality with `qomicex verify`)
+- [ ] `dependencies` on other plugins is declared correctly (required/optional, version range)
+- [ ] `entry.frontend` is declared (otherwise the plugin is never activated)
+- [ ] Page and overlay scripts do not use globals for cross-plugin communication
+- [ ] No `while(true)` or unbounded `setInterval` on the main thread (both are `qomicex verify` warnings)
+- [ ] **The package is signed with `qomicex pack --key`** and `signature.json` is in the package root
+- [ ] Local install test passes (upload → enable → restart → verify features)
+- [ ] `qomicex verify --package` passes
+- [ ] If you call other plugins, your docs name the required library plugin and its version
+- [ ] If you contribute icon or font themes, they are declared in `contributes.iconTheme` / `contributes.fontLinks` (see [Theme system](/en/plugins/theme))
+- [ ] Watch the error rate after publishing (the telemetry pause threshold defaults to 10/24h, see [Staged rollout telemetry](/en/plugins/telemetry))
+
+## 10. Version compatibility guidance
+
+- Filling in `minLauncherVersion` is recommended, even though the current version does not enforce it
+- The plugin API may evolve, so state the supported launcher version range when you publish
+- For major changes (method signatures, permission changes), bump the major version

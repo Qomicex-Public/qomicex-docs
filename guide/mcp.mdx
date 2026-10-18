@@ -1,0 +1,151 @@
+---
+title: "在 AI 客户端中使用 MCP"
+description: "把 Qomicex Docs 接入支持 MCP 的 AI 客户端，直接检索本站在线提问。"
+---
+
+本站由 Mintlify 托管，会自动暴露一个 **MCP（Model Context Protocol）** 端点。任何支持 MCP 的 AI 客户端都能连上它，直接检索本站内容并回答你的问题，无需你手动复制粘贴文档。
+
+## 端点地址
+
+```text
+https://qomicex.mintlify.site/mcp
+```
+
+传输方式为 **HTTP**（JSON-RPC 2.0，`text/event-stream` 响应）。这是只读端点：它不能修改任何内容，也不能访问本站以外的数据。
+
+## 两个工具
+
+连接后可通过 `tools/list` 查询到两个工具。**注意：工具名包含站点名，会随站点改名而变化**，请以 `tools/list` 的实际返回为准，不要在配置里硬编码旧名。
+
+| 工具 | 作用 | 参数 |
+| :--- | :--- | :--- |
+| `search_qomicex_docs_qml启动器` | 跨本站检索文档、代码示例、API 参考与指南，返回带标题和直链的片段 | `query`（字符串，必填） |
+| `query_docs_filesystem_qomicex_docs_qml启动器` | 在一个只读的虚拟文件系统里执行类 shell 命令，用于读取整页或精确匹配 | `command`（字符串，必填） |
+
+### 读取整页内容
+
+虚拟文件系统里的路径就是页面 URL 路径加 `.mdx`。例如页面 `https://qomicex.mintlify.site/guide/instances` 对应 `/guide/instances.mdx`：
+
+```text
+# 看目录结构
+tree / -L 2
+
+# 读取某一页的前 80 行
+head -80 /guide/instances.mdx
+
+# 精确检索关键词出现在哪些页面
+rg -il "version isolation" /
+```
+
+支持的命令包括 `rg`、`grep`、`find`、`tree`、`ls`、`cat`、`head`、`tail`、`stat`、`wc`、`sort`、`uniq`、`cut`、`sed`、`awk`、`jq` 等。每次调用都是**无状态**的：工作目录始终重置为 `/`，需要用绝对路径或在一次调用里用 `&&` 串联命令。
+
+### 反馈文档问题
+
+| 工具 | 作用 | 参数 |
+| :--- | :--- | :--- |
+| `submit_feedback` | 报告某页内容有误、过时或缺失，转交给文档维护者 | `path`（页面路径，不含 `.mdx`）、`feedback`（问题描述），均必填 |
+
+## 在客户端中配置
+
+多数客户端通过 JSON 配置添加远程 MCP 服务。下面给出常见客户端的写法：
+
+<CodeGroup>
+```json Cursor
+{
+  "mcpServers": {
+    "qomicex-docs": {
+      "url": "https://qomicex.mintlify.site/mcp"
+    }
+  }
+}
+```
+
+```json Claude Code
+{
+  "mcpServers": {
+    "qomicex-docs": {
+      "type": "http",
+      "url": "https://qomicex.mintlify.site/mcp"
+    }
+  }
+}
+```
+
+```json VS Code
+{
+  "servers": {
+    "qomicex-docs": {
+      "type": "http",
+      "url": "https://qomicex.mintlify.site/mcp"
+    }
+  }
+}
+```
+</CodeGroup>
+
+其余客户端的配置方式以其官方文档为准；关键是填入上面的 `url`，并把传输类型设为 HTTP。
+
+## 手动验证端点是否可用
+
+不接客户端也能验：先用 `initialize` 握手，再发 `notifications/initialized`，之后才能调用工具。
+
+<CodeGroup>
+```bash curl
+# 1) 握手
+curl -s https://qomicex.mintlify.site/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"1.0"}}}'
+
+# 2) 发送 initialized 通知
+curl -s https://qomicex.mintlify.site/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+
+# 3) 查询真实工具名
+curl -s https://qomicex.mintlify.site/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+```
+
+```powershell PowerShell
+# 1) 握手
+$body = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"1.0"}}}'
+Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $body `
+  -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } | Select-Object -Expand Content
+
+# 2) 发送 initialized 通知
+$init = '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $init `
+  -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } | Out-Null
+
+# 3) 查询真实工具名
+$list = '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $list `
+  -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } | Select-Object -Expand Content
+```
+</CodeGroup>
+
+<Warning>
+**跳过 `notifications/initialized` 会调用失败。** 如果只发 `initialize` 就直接 `tools/call`，端点会返回 `-32602 Tool ... not found`。这不是工具不存在，而是会话尚未就绪。
+</Warning>
+
+## 常见问题
+
+**问：工具名为什么和我看到的不一样？**
+
+工具名由站点名派生。本站改过站点名（现为 `Qomicex Docs - QML启动器`），所以实际名称是 `search_qomicex_docs_qml启动器` 这类带中文的名字。请始终用 `tools/list` 的结果。
+
+**问：能通过 MCP 让 AI 修改文档吗？**
+
+不能。端点是只读的，唯一的写操作是 `submit_feedback`，它只是把问题反馈给维护者。
+
+**问：内容是中文还是英文？**
+
+检索结果取决于具体页面。本站同时提供中文与英文页面：中文在站点根路径（如 `/guide/instances`），英文在 `/en` 下（如 `/en/guide/instances`）。提问时说明偏好语言，或直接在 `query` 里带上语言关键词，能得到更准的结果。
+
+**问：需要 API Key 吗？**
+
+不需要。端点公开、免鉴权，但只能访问已发布的公开文档。

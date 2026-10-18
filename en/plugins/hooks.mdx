@@ -1,0 +1,139 @@
+---
+title: "Hook system — Intercept and extend launcher methods"
+---
+## Hook system — Intercept and extend launcher methods
+
+Through the Hook system（Hook 系统）a plugin can inject logic **before and after a launcher method runs**: modify arguments, modify the return value, block execution, or replace the implementation entirely. This suits feature enhancements, performance tuning, and logic reworking (for example: injecting custom JVM arguments at launch, adding virtual versions to version scanning, intercepting downloads).
+
+## Execution model: a Koa-style onion pipeline
+
+Each hook is a middleware function `(ctx, next) => Promise<void>`, executed as an **onion model**:
+
+```text
+插件A hook ─► 插件B hook ─► 默认实现(impl) ─► 插件B hook ─► 插件A hook
+   before                before                        after         after
+```
+
+- **before**: code before `await next()`, may modify `ctx.args` (arguments)
+- **after**: code after `await next()`, may modify `ctx.result` (return value)
+- **Block**: call `ctx.prevent()` to skip the default implementation and all later hooks
+- **Replace**: `ctx.prevent()` plus a `ctx.result` value replaces the implementation entirely
+- **Nesting**: multiple plugins run as an onion in registration order, **the first registered sits outermost**
+
+## Permissions and declarations
+
+### Permission
+
+`hook:register` (**danger** level). The manifest `permissions` must include it, otherwise registration is rejected.
+
+### manifest declaration (optional)
+
+```json
+{
+  "permissions": ["hook:register"],
+  "contributes": {
+    "hooks": [
+      { "method": "scanVersions", "priority": 10 }
+    ]
+  }
+}
+```
+
+The declaration documents intent and supports permission pre-checks; the actual handler is registered at runtime with `registerHook`.
+
+## registerHook — register a hook
+
+```js
+__PLUGIN_API__.registerHook('scanVersions', async (ctx, next) => {
+  // before：next() 前修改参数
+  ctx.args[0] = ctx.args[0] + '/custom'
+
+  // 继续默认实现（impl 使用修改后的 args）
+  await next()
+
+  // after：next() 后修改返回值
+  ctx.result = [...ctx.result, {
+    name: 'virtual-1.20.1',
+    gameVersion: '1.20.1',
+    state: 'Available'
+  }]
+})
+```
+
+- Permission: `hook:register`
+- Signature: `(method: string, handler: (ctx, next) => Promise<void>)`
+- `method` is the name of a launcher method that can be hooked (see the table below)
+- Disabling a plugin unregisters all of its hooks automatically
+
+### The Context object
+
+| Field | Description |
+|------|------|
+| `ctx.method` | Method name |
+| `ctx.pluginId` | The current plugin ID |
+| `ctx.args` | Argument array (modifiable in the before phase) |
+| `ctx.result` | Return value (modifiable in the after phase) |
+| `ctx.prevented` | Whether execution has already been blocked |
+| `ctx.prevent()` | Block the default implementation and all later hooks |
+
+## Hookable methods
+
+| Method name | Location | Signature | Typical use |
+|--------|------|------|---------|
+| `launchInstanceFlow` | Frontend launch orchestration (RunningContext) | `(id, name, javaInfo?, quickJoin?)` | Intercept launching, inject arguments, block launching |
+| `launchInstance` | Launch API | `(id, options?)` | Inject joinServer/accountUuid, modify the launch request |
+| `syncScan` | Instance sync API | `(gameDir, versions)` | Modify scan results, filter or enrich the instance list |
+| `scanVersions` | Version scan API | `(gameDir)` | Virtual versions, filter versions, custom loader detection |
+
+## Typical examples
+
+### Block launching a specific instance
+
+```js
+__PLUGIN_API__.registerHook('launchInstance', async (ctx) => {
+  const [id] = ctx.args
+  if (id === 'blocked-instance') {
+    ctx.prevent()
+    ctx.result = { success: false, error: '被插件阻止启动' }
+  }
+})
+```
+
+### Replace the implementation entirely
+
+```js
+__PLUGIN_API__.registerHook('scanVersions', async (ctx) => {
+  ctx.prevent()
+  ctx.result = [
+    { name: 'custom', gameVersion: '1.20.1', state: 'Available', loaders: [{ type: 'Fabric', version: '0.14.0' }] }
+  ]
+})
+```
+
+### Modify launch arguments (inject JVM arguments)
+
+```js
+__PLUGIN_API__.registerHook('launchInstanceFlow', async (ctx, next) => {
+  // 前端编排阶段在 javaInfo 上附加参数（具体字段取决于启动器版本）
+  await next()
+})
+```
+
+## Execution location and architecture
+
+Plugin hook functions run inside the **plugin iframe sandbox**, while the default implementation (impl) runs in the main window. The two communicate over a two-phase bridge (before → impl → after), which preserves onion semantics across windows:
+
+```text
+主窗口 hookable 调用
+  └─ HookRegistry.run(method, args, impl)
+       ├─ hook(iframe): __plugin_hook_invoke → 改 args → before_done
+       ├─ impl(...args) → ctx.result
+       ├─ __plugin_hook_continue(result) → 恢复 hook after → 改 result → after_done
+       └─ 返回最终 result
+```
+
+## Known limitations
+
+- Only the frontend method layer is covered (methods exposed through the `hookable()` wrapper); hooks inside the Rust backend process are planned.
+- Hooks of inline-rendered plugins (`render: "inline"`) run directly in the main window context (they share the same registry).
+- L4 WebView plugins do not yet support cross-window registerHook.

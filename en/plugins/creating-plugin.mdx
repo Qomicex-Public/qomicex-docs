@@ -1,0 +1,127 @@
+---
+title: "Build your first plugin from scratch"
+---
+## Build your first plugin from scratch
+
+This tutorial walks you through creating a minimal working Qomicex plugin from scratch. **Starting from the `qomicex` CLI scaffold（脚手架）is recommended** (it generates a valid project structure automatically). You can also write everything by hand; see the alternative below.
+
+## Prerequisites
+
+- Qomicex Launcher（启动器）is installed (for testing)
+- [qomicex CLI](/en/plugins/cli) (Node.js ≥ 20):
+
+```bash
+pnpm --filter @qomicex/cli build
+pnpm --filter @qomicex/cli link   # 链接到 PATH，之后可直接用 qomicex
+```
+
+Before your first use, run `qomicex doctor` to check whether Node / pnpm / the plugin project environment are ready (read-only, it modifies no files).
+
+## 1. Generate a project with the CLI (recommended)
+
+```bash
+qomicex create dev.example.helloworld
+cd dev.example.helloworld
+pnpm install
+qomicex verify     # 立即校验，确认 0 error
+```
+
+The generated project uses a Vite + React 19 + TS + Tailwind project-based setup (see [React + Vite plugin development](/en/plugins/react-plugin)), with `manifest.json` already in place:
+
+```json
+{
+  "id": "dev.example.helloworld",
+  "name": "Hello World",
+  "version": "0.1.0",
+  "minLauncherVersion": "0.1.0",
+  "layers": ["l2"],
+  "permissions": ["config:read", "ui:toast", "network:cors_proxy"],
+  "entry": { "frontend": "dist/index.html" }
+}
+```
+
+Key fields:
+- `id`: The unique plugin ID, which is also the install directory name (`plugins/{id}/`). **Never change it once published**
+- `layers`: Layer declarations. Plugins with script pages should use `["l2", "l3"]` (**iframe sandbox rendering by default**; for inline rendering you must explicitly declare `"render": "inline"` in the manifest. Activation depends on whether `entry.frontend` exists; see [layers layer definitions](/en/plugins/manifest#layers-layer-definitions))
+- `permissions`: The permissions your plugin needs (see [Complete plugin API reference](/en/plugins/plugin-api))
+- `entry.frontend`: The plugin page entry, a relative path inside the `.qplugin` package
+
+## 2. Write the plugin page
+
+Create `src/App.tsx` (React) or modify it as needed. For plain HTML, write directly in `index.html`:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+</head>
+<body>
+  <div class="p-card">
+    <div class="p-card-title">Hello, Qomicex!</div>
+    <div class="p-card-desc">这是我的第一个插件。</div>
+    <button id="btn" class="p-btn p-btn--primary">点我</button>
+  </div>
+
+  <script>
+    document.getElementById('btn').addEventListener('click', async function () {
+      const settings = await window.__PLUGIN_API__.call('getSettings')
+      window.__PLUGIN_API__.call('showToast', '设置项数量: ' + Object.keys(settings).length, 'success')
+    })
+  </script>
+</body>
+</html>
+```
+
+- Style with the `.p-*` component classes provided by the launcher (such as `.p-card` and `.p-btn`); they follow the light and dark themes automatically. See [UI component library](/en/plugins/plugin-ui) for the full list.
+- Plugin scripts talk to the launcher through the global `window.__PLUGIN_API__` object. Note that the script runs as soon as the plugin is activated (inline or in the L2 sandbox), without visiting the plugin page. See [Rendering model](/en/plugins/pitfalls).
+- Project-based plugins use the `@qomicex/plugin-ui` React components plus Tailwind; see [React + Vite plugin development](/en/plugins/react-plugin).
+
+## 3. Package the plugin
+
+### Package with the CLI (recommended)
+
+```bash
+qomicex pack                # tsc && vite build → release/<id>-<version>.qplugin
+qomicex pack --key ./dev-key.pem    # 附签名（离线可验）
+```
+
+A `.qplugin` file is a zip with `manifest.json` at the root plus `dist/**`. If `entry.theme` or `contributes.overlay.file` reference files under `dist/` while the source sits in the root directory, `pack` copies them in automatically.
+
+`manifest.json` must be in the **root directory** of the archive. Putting it in a subdirectory makes installation fail.
+
+### Manual packaging without the CLI (alternative)
+
+- Put `manifest.json` and the asset directory into one folder
+- Compress it with any ZIP tool, making sure `manifest.json` is at the **ZIP root**
+- Rename the extension to `.qplugin`
+
+```text
+my-plugin.qplugin          # 即 zip，manifest.json 在根
+```
+
+## 4. Install and test
+
+- Open Qomicex Launcher → Settings → Plugins
+- Click **Install plugin（安装插件）** and select your `.qplugin` file
+- After a successful install, the card appears in the plugin list; toggle it on to enable it (a launcher restart is required for it to take effect)
+- After the restart, a "Hello" entry appears in the sidebar; click it to open the plugin page
+
+During development, run `qomicex dev` to use the debug harness (no Tauri/backend needed, hot reload in the browser). See [Debugging and hot reload](/en/plugins/debugging).
+
+## 5. FAQ at a glance
+
+| Symptom | Cause |
+|------|------|
+| Installation fails with `Invalid plugin package` | `manifest.json` is not at the package root, or JSON parsing failed |
+| The plugin appears in the list but there is no sidebar entry | `contributes.menuItems` is not declared, or the plugin is not enabled |
+| Blank page / script does not run | The plugin is not activated, or there is an activation timing problem (see [Pitfalls guide](/en/plugins/pitfalls)) |
+| An API call fails with `Permission denied` | `permissions` in the manifest does not include the required permission |
+| `qomicex pack` reports an error | Run `qomicex verify` / `qomicex lint` first to locate the problem |
+
+## Next steps
+
+- Learn every manifest field: [Manifest reference](/en/plugins/manifest)
+- Learn every callable API: [Complete plugin API reference](/en/plugins/plugin-api)
+- Project-based development: [React + Vite plugin development](/en/plugins/react-plugin)
+- Full CLI commands: [CLI reference](/en/plugins/cli)

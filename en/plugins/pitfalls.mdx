@@ -1,0 +1,237 @@
+---
+title: "Development notes and pitfalls"
+---
+## Development notes and pitfalls
+
+A collection of the most common traps in plugin development, so third-party developers can avoid repeating them.
+
+## Rendering and script execution
+
+### How inline rendering works
+
+Plugins have two rendering modes, decided by the manifest's `render` field (**iframe by default**):
+
+| Mode | Trigger | How it renders | When scripts execute |
+|------|------|---------|-------------|
+| **iframe sandbox (default)** | Missing, or `"render": "iframe"` | `<iframe sandbox="allow-scripts">` + `srcdoc` | Automatically while `srcdoc` is parsed |
+| **Inline rendering** | Explicit `"render": "inline"` | Unwrapped and injected into the main UI container | Immediately when the plugin is activation-loaded |
+
+### L2 iframe sandbox
+
+- Fully isolated from the main UI (its own window), and scripts run automatically with `srcdoc`
+- Supports every `__PLUGIN_API__` method, `.p-*` styles, and `registerMethod`/`callPlugin` (relayed through the main window)
+- Plugin scripts cannot touch the main UI DOM directly (security isolation); `document.getElementById('root')` is the plugin's own content
+
+### Inline rendering
+
+The launcher strips `<!DOCTYPE>/<html>/<head>/<body>` from the plugin HTML, injects the rest into a container in the main UI, and appends the plugin API bridge script.
+
+**Key takeaways:**
+
+- **Scripts run immediately when the plugin is activation-loaded**. Setting `container.innerHTML = ...` does not execute `<script>` by itself, so the launcher temporarily mounts the container on a hidden host node (to make sure it is connected to the document) and then re-parses each script node with `replaceWith` to trigger execution. As a result:
+- **Library plugins (such as MarkdownLib) can `registerMethod` as soon as they activate**, without the user opening the plugin page
+- Dependent plugins can `callPlugin` into an already activated library plugin as soon as they start
+- **`sourceMap` ownership follows the last loaded inline plugin**: multiple inline plugins share the main window, and `sourceMap` associates the last activated plugin id with the window, which can attribute calls to the wrong plugin. When several plugins call the API at the same time, double-check the plugin id.
+
+### Accessing document from scripts
+
+Plugins run in an **iframe sandbox** (opaque origin, separate document) by default; only an explicit `"render": "inline"` switches to inline rendering. In inline mode the plugin script shares the **same window context** as the main UI, and `PluginPage` temporarily hijacks `document.getElementById('root')` to return the plugin container. Therefore:
+- Do not query main UI elements through the global `document`
+- Use `document.getElementById('root')` to get your own container (this works in inline mode with the current implementation)
+- If you depend on the main UI DOM, declare `"render": "inline"` explicitly; otherwise keep the iframe isolation
+
+Need an isolated environment or a long-running script (AI assistant, tool panel)? Use the default iframe sandbox. A lightweight plugin that is pure UI or depends on the main UI DOM? Declare `"render": "inline"` explicitly.
+
+## API call notes
+
+### Functions cannot be passed through postMessage
+
+Plugin API calls across windows use `postMessage` (structured clone), and **functions are not cloneable**. Therefore:
+- Pass only serializable data (strings, numbers, objects, arrays)
+- The `fn` given to `registerMethod` stays local to the plugin's window; only the method name travels in the message
+- `req.signal` (an AbortSignal) on `proxyFetchStream` is stripped automatically before sending and routed through a dedicated abort message, so **do not rely on passing an AbortSignal inside `req`**
+
+### Determining when proxyFetchStream is done
+
+```js
+await __PLUGIN_API__.proxyFetchStream(req, {
+  onChunk(c) { /* 处理 SSE data 行 */ },
+  onError(e) { /* 流中断 */ }
+})
+```
+- The returned Promise resolves when the stream ends, but **chunk callbacks may still fire after it resolves**
+- Check for the SSE `[DONE]` marker or your own end-of-stream flag inside the chunk callback instead of relying on the Promise alone
+
+### Relative paths vs absolute URLs
+
+- Relative resource paths in plugin files (HTML/JS/CSS) are rewritten to `{API_BASE}/plugins/{id}/files/...`, so **do not hard-code `/api/plugins/...` relative paths** (there is no Vite proxy after packaging)
+- External CDN resources are limited by CSP: **images and fonts** can use full `https://` URLs, but **CSS/JS are blocked** and must ship with the package (see [CSP allowlist reference](#csp-allowlist-reference-current-launcher-defaults))
+
+## Dependencies and activation
+
+### Library plugins must declare entry.frontend
+
+`activatePlugin` activates a plugin only when `entry.frontend` exists (it renders, registers methods, and marks the plugin active). **A plugin without `frontend` is never activated**, so its methods cannot be registered. A library plugin needs a page, even an empty one, even if it has no UI.
+
+### Activation depends on entry.frontend, not on layers
+
+After installation a plugin starts in the `installed` state, and actual activation depends on two things: ① `entry.frontend` exists (`activatePlugin` only renders and marks a plugin `active` when `entry.frontend` exists); ② the user enables it in the plugin list. The `layers` declaration is irrelevant: a plugin with `["l3"]` only is still activated if it has `entry.frontend` (in the default iframe sandbox; only `"render":"inline"` goes inline).
+
+### Activation order is handled automatically
+
+The launcher uses a topological sort so depended-on plugins activate first; you do not need to care about manifest declaration order.
+
+### State changes need a restart
+
+Toggling a plugin on or off **takes effect after you restart the launcher** (`PUT /api/plugins/{id}/state`); there is no hot activation while it runs. Tell users about this when they test a new plugin.
+
+## Manifest notes
+
+- `minLauncherVersion` is **not validated** at the moment, but fill it in for future compatibility
+- The backend only stores `permissions` and does not validate them; the **frontend enforces them at runtime** against the `METHOD_PERMISSIONS` table, so a missing permission produces a `Permission denied` API error
+- `contributes.commands` registers keyboard shortcuts (such as `devtools:toggle`), see `PluginEventBridge.tsx`; `downloadSources` is **not used** yet, so do not depend on it; `settingsPages` is implemented (Settings → Plugins → Plugin settings, see [manifest](/en/plugins/manifest#settingspages-array))
+- The upload endpoint does not check dependencies; only directory install (install) checks required dependencies
+
+## Backend behavior
+
+- `POST /api/plugins/upload` expects the file field to be named `plugin` (multipart)
+- `proxyFetch` has SSRF protection and blocks intranet and reserved addresses. Keep this in mind when proxying during local debugging (`localhost` is blocked)
+- Plugin settings and cache are isolated per plugin id, under `{data dir}/plugins/{id}/`
+- Overwrite installs **delete the old directory first** (`plugins/{id}/`) and then copy
+
+## Debugging tips
+
+- Plugin page script errors show up in the launcher DevTools console (Ctrl+Shift+I), with logs prefixed `[plugin:inline]` / `[sandbox]`
+- Failed API calls are logged to the console (prefixed `[API]`) with the status code and error code
+- To check whether a plugin is actually active, look at its state in the plugin list; an active plugin has `state === 'active'`
+- To check dependencies, note that `sortByDependencies` skips missing dependencies with a warning log
+
+## Environment and build pitfalls (in practice)
+
+### Tauri/WebView2 framework environment (different from a normal browser)
+
+Plugins run inside Tauri (WebView2, Chromium), **not a normal browser**, and that difference directly determines "which resources work":
+
+| Dimension | Normal browser | Launcher plugin environment |
+|------|-----------|---------------|
+| Page origin | `https://...` | `tauri://localhost` (release) / `http://localhost:1420` (dev) |
+| Backend API / plugin assets | — | `http://localhost:5000` (both plugin files and APIs come from here) |
+| External network | Unrestricted | Through the plugin API `proxyFetch` (backend proxy with SSRF protection) |
+| Local files | Restricted | Use the plugin file API (`readText`/`readBytes` and so on) |
+| CSP | Site-defined | **Tauri injects a fixed CSP in release**; none in dev |
+
+**Key dev vs release differences (the most common source of breakage):**
+
+- `npm run tauri dev` / a plain browser preview: **no CSP**, so CSS/JS from external CDNs loads freely → many problems cannot be reproduced in dev
+- **Release build**: Tauri injects the CSP, so external resources are blocked by it → the classic "works in dev, blank page / missing styles / missing icons / broken worker in release" is almost always this
+
+### CSP allowlist reference (current launcher defaults)
+
+| Directive | Allowed content | Effect on plugins |
+|------|---------|-------------|
+| `script-src` | `'self' 'unsafe-inline' 'wasm-unsafe-eval' http://localhost:5000 blob: data:` | Backend JS, inline `<script>`, blob/data workers, and wasm work; **external CDN `<script src="https://...">` is blocked** |
+| `worker-src` | `'self' blob: data:` | Web Workers (pdf.js and others) work |
+| `connect-src` | `'self' http://localhost:5000 ws://localhost:5000 https://api.github.com blob: data:` | Backend API, GitHub API, and fetch of blob/data work |
+| `img-src` | `'self' blob: asset: http://localhost:5000 data: https:` | Backend images and CDN images (https:) work |
+| `style-src` | `'self' 'unsafe-inline' http://localhost:5000` | Inline `<style>` and backend CSS work; **external CDN `<link rel="stylesheet">` (https:) is blocked** |
+| `font-src` | `'self' data: https:` | Inline base64 and CDN fonts (https:) work |
+| `frame-src` | `'self' blob:` | Overlay windows (blob URLs) work; **external web pages in an `<iframe>` (https:) are blocked** |
+| `media-src` | `'self' asset:` | Local media assets |
+
+**What this means for plugin development:**
+
+- **A plugin's own CSS/JS must ship with the package** and load from the backend at `http://localhost:5000/api/plugins/{id}/files/...`; **do not use** CDN `<link rel="stylesheet">` or `<script src="https://...">`, because release builds block them
+- External CDNs are only usable for **images** (`img-src` includes `https:`) and **fonts** (`font-src` includes `https:`)
+- If an icon font comes from a CDN `<link>`, its CSS is blocked by `style-src`; instead **inline the font CSS** (`@font-face` + base64) or ship the font files to the backend
+- Embedding an external web page in an iframe → blocked by `frame-src`; fetch the content with `proxyFetch` and render it yourself, or use an overlay window (blob URL)
+- Depending on an external script (a CDN library, for example) → download it, ship it in the package, and load it from the backend
+- Always call remote APIs through `proxyFetch` (the backend proxy) instead of a direct cross-origin `fetch` (which fails CORS and is caught by SSRF protection anyway)
+
+### Diagnosing blocked resources
+
+- Launcher DevTools (Ctrl+Shift+I) console: search for `Refused to load` / `violates ... Content Security Policy`
+- Open `http://localhost:5000/api/plugins/{id}/files/{path}` directly to confirm the resource is reachable: a 404 means a path problem; a 200 that still does not display usually means CSP blocked it
+- **Works in dev but breaks in release → suspect CSP first** (dev has no CSP)
+- Plugin page blank with no JS errors in the console → check whether `#root` has content; empty means the JS did not load (`script-src`), content but no styles means CSS was blocked (`style-src`)
+
+### Loading blob:/data:/workers in Tauri/WebView2
+
+The launcher (Tauri + WebView2) CSP **already allows** `blob:`, `data:`, and `'wasm-unsafe-eval'` by default (`script-src` / `worker-src` / `connect-src`), so `new Worker(blobUrl)`, `import(blobUrl)`, and pdf.js (module worker) work out of the box.
+
+If you replace the launcher CSP yourself, **none of the following may be dropped**, or plugins break in release builds:
+- `script-src` must include `'unsafe-inline' http://localhost:5000 blob: data: 'wasm-unsafe-eval'`
+- `worker-src` must include `blob: data:`
+- `connect-src` must include `http://localhost:5000 ws://localhost:5000 blob: data:`
+- `style-src` must include `http://localhost:5000` (missing → plugin pages have **no styles at all**, see the next section)
+- `font-src` must include `https:` (CDN icon fonts)
+- `frame-src` must include `blob:` (overlays use blob URLs)
+
+Background: older CSPs did not allow `blob:`/`data:`, so `new Worker(blobUrl)` and `import(blobUrl)` failed (`Cannot load script at: blob:...`) and libraries that rely on Web Workers (such as pdf.js v4) were unusable. If you really cannot allow them, the fallback is to inline the worker code into the main bundle and use `data:text/javascript;base64,...` as `workerSrc` at runtime (pdf.js also needs the classic worker build).
+
+### Plugin pages with no styles at all in release builds (blank page)
+
+**Symptom**: plugin styles look fine under `npm run tauri dev`, but once packaged as a release build the plugin page becomes blank or unstyled, with stacked text and no card backgrounds.
+
+**Root cause**: Tauri injects a CSP into the WebView in release builds (it does **not** in dev, which is why dev looks fine). If the CSP `style-src` does not allow the backend address that serves plugin resources (`http://localhost:5000`), the plugin's `<link rel="stylesheet" href=".../files/assets/index.css">` is blocked. The console reports `Refused to load the stylesheet ... violates ... "style-src"`. JS is usually unaffected (`script-src` already includes 5000), so the page has "layout but no styles".
+
+**Fix**: the launcher CSP `style-src` must include the backend address; the current launcher already includes `http://localhost:5000` by default. Nothing needs to change on the plugin side.
+
+**Diagnosis**: works in dev + blank in release → suspect CSP first; open the launcher DevTools (Ctrl+Shift+I) console and look for `Refused to load the stylesheet`.
+
+### Avoid GitHub raw for the registry source
+
+**Symptom**: the plugin store list is empty or reports `HTTP 499`.
+
+**Root cause**: the registry source uses `raw.githubusercontent.com`, which is blocked or extremely slow in some regions, so the backend `proxyFetch` times out after 15s and returns 499 (`TaskCanceledException`).
+
+**Fix**: switch the registry source to the **GitHub contents API** (`api.github.com`, reachable):
+
+```text
+https://api.github.com/repos/{owner}/{repo}/contents/{path}?ref={branch}
+```
+
+The response body is `{ "content": "<base64>", "encoding": "base64" }`, so base64-decode it (browser `atob` + `TextDecoder`) before parsing the JSON.
+
+- The store plugin (`top.qomicex.market`) uses the GitHub API by default since v1.0.1
+- Mind the unauthenticated GitHub API rate limit (60 requests per hour); do not poll the registry too often
+
+### Dangerous sequences before inlining a bundle into HTML
+
+When you inline a built JS bundle into `<script>...</script>`, any `<!--`, `-->`, `<script`, or `</script>` inside the JS can push the HTML parser into the **script escaped / double-escaped state**, which may end the `<script>` early or swallow what follows, truncating the JS and leaving methods unregistered.
+
+Escape them before injecting (unicode escapes are restored at runtime, so the semantics do not change):
+
+```js
+const js = bundle
+  .replace(/<!--/g, '<\\u0021--')
+  .replace(/-->/g, '--\\u003e')
+  .replace(/<script/gi, '\\u003cscript')
+  .replace(/<\/script>/g, '<\\/script>')
+```
+
+### Do not use String.replace for template injection
+
+`tpl.replace('<!--占位符-->', '<script>' + js + '</script>')` expands **`$` patterns** (`$&`, `$'`, `` $` ``, `$1`, and so on) in the replacement, corrupting the injected JS. A typical accident: the `"0$&"` inside an xlsx library in the bundle gets expanded into the placeholder text, the whole bundle breaks, and `registerMethod` is never registered.
+
+Use `split().join()` instead, which performs no replacement expansion:
+
+```js
+const html = tpl.split('<!--占位符-->').join('<script>' + js + '</script>')
+```
+
+### Plugin management/list icons: library plugins use top-level `manifest.icon`
+
+- The icon on a plugin management card is read as `contributes.menuItems[0].icon ?? manifest.icon`
+- **For a library plugin to show an icon, use the top-level manifest field `"icon": "fa-solid fa-file-lines"`** and do not declare `contributes.menuItems` (that creates a sidebar entry and may render the plugin page as well)
+- Prefer **FontAwesome class names** (`fa-solid fa-xxx`; see `BuiltinIcons.tsx` for the launcher's built-in list): SVG paths rendered through `<img>` are fixed black and ignore the light/dark theme, while FA class names rendered through `<FontAwesomeIcon>` follow the theme
+- To use a new FA icon, add an entry to `byClass` in the launcher's `BuiltinIcons.tsx` (including `fa-brands` icons such as `fa-markdown`)
+
+### File drag and drop cannot get local paths
+
+- Tauri's default `dragDropEnabled` intercepts system file drops, so the native frontend `drop` event **does not expose `.path` on the `File` object** (and often does not fire at all)
+- You need a Rust-side listener using `window.on_window_event`, matching `WindowEvent::DragDrop::Drop { paths, .. }`, then `emit("file-drop", paths)` to the frontend
+- The frontend (including plugins that need this capability) receives an array of absolute paths with `listen('file-drop')` from `@tauri-apps/api/event`; a plugin iframe needs the main UI frontend to relay it through `callPlugin`
+
+### File reading APIs are readText / readBytes, not readFile
+
+The plugin bridge's file reading methods are **`readText`** (UTF-8 text, returns `{ content }`) and **`readBytes`** (binary, returns `{ contentBase64 }`), under the `filesystem:read` permission. There is no `readFile` method, and using it produces `Unknown method: readFile`. Writing uses `writeText` / `writeBytes`, and deleting uses `deleteFile`.

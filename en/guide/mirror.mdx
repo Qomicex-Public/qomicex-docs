@@ -1,0 +1,71 @@
+---
+title: "Download mirrors"
+---
+## Download mirrors
+
+Qomicex provides several download acceleration Mirrors（镜像） for mod resources. Using them is simple: **replace the domain in the original download link with a mirror domain**, leaving the path unchanged.
+
+## Available mirrors
+
+| Mirror（镜像） | Address | Supported |
+| :--- | :--- | :--- |
+| Mirror 1 | [https://mirror.qomicex.dpdns.org/](https://mirror.qomicex.dpdns.org/) | Modrinth / CurseForge / Forge |
+| Mirror 2 | [https://mirror1.qomicex.dpdns.org/](https://mirror1.qomicex.dpdns.org/) | Modrinth / CurseForge / Forge |
+| Mirror 3 | [https://mirror.lenmei233.dpdns.org/](https://mirror.lenmei233.dpdns.org/) | Modrinth / CurseForge / Forge |
+| Modrinth mirror 1 | [https://modrinth.lenmei233.dpdns.org/](https://modrinth.lenmei233.dpdns.org/) | Modrinth CDN |
+| Modrinth mirror 2 | [https://modrinth.qomicex.dpdns.org/](https://modrinth.qomicex.dpdns.org/) | Modrinth CDN |
+| Modrinth mirror 3 | [https://modrinth1.qomicex.dpdns.org/](https://modrinth1.qomicex.dpdns.org/) | Modrinth CDN |
+
+Failover across nodes is automatic, so pick any one; if one is unavailable, switch to another.
+
+## Usage
+
+### Modrinth
+
+Original link:
+
+```text
+https://cdn.modrinth.com/data/AANobbMI/versions/mc1.16.3-0.1.0/sodium-fabric-mc1.16.3-0.1.0.jar
+```
+
+After replacing the domain:
+
+```text
+https://mirror.qomicex.dpdns.org/data/AANobbMI/versions/mc1.16.3-0.1.0/sodium-fabric-mc1.16.3-0.1.0.jar
+```
+
+### Forge / CurseForge
+
+Original link:
+
+```text
+https://mediafilez.forgecdn.net/files/8685/162/jei-26.2-neoforge-30.24.0.176.jar
+```
+
+After replacing the domain:
+
+```text
+https://mirror.qomicex.dpdns.org/files/8685/162/jei-26.2-neoforge-30.24.0.176.jar
+```
+
+### Source domains that can be replaced
+
+- `cdn.modrinth.com`
+- `mediafilez.forgecdn.net` / `edge.forgecdn.net`
+- `files.minecraftforge.net` / `maven.minecraftforge.net`
+
+## Force proxy mode (optional)
+
+When the default route is unavailable (in some cases it may not go through the Proxy), you can force it:
+
+```text
+https://modrinth.lenmei233.dpdns.org/data/.../file.jar?qml_proxy=true
+```
+
+Or via a request header:
+
+```bash
+curl -H "X-QML-Force-Proxy: true" https://modrinth.lenmei233.dpdns.org/data/.../file.jar
+```
+
+> For learning and exchange only. Please follow the relevant terms of service.

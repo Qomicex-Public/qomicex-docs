@@ -1,0 +1,51 @@
+---
+title: "Plugin system"
+---
+## Plugin system
+
+Qomicex supports plugin extensions: install community plugins to gain new features, or build your own.
+
+## Install plugins
+
+Plugins ship as `.qplugin` files (essentially zip packages). There are three ways to install one:
+
+- **Plugin store（插件商店）** (when available): browse community plugins and install in one click
+- **Local install**: Settings → Plugins → upload a `.qplugin` file
+- **Developer mode**: during development, drop the plugin into the `plugins-dev/` folder in the launcher data directory
+
+After installing, you must **enable** the plugin for it to take effect. Disabling keeps its data; enable it again to restore everything.
+
+## What plugins can do
+
+| Capability | Example |
+| :--- | :--- |
+| Dashboard widget（主页小组件） | Weather, server status, countdown cards (see [Dashboard widget](/en/guide/dashboard-widget)) |
+| Sidebar entry | Add a plugin page or overlay window button in the sidebar |
+| Overlay window（悬浮窗） | A standalone small window on screen (music controls, quick tools) |
+| Full page | A feature page mounted at `/plugins/p/:plugin-id` |
+| Themes and icons | Custom accent colors, icon packs, fonts |
+| Prerequisite plugin library | Headless capability libraries other plugins can call (e.g. a Markdown rendering library) |
+
+## Permissions
+
+Some capabilities require authorization; the launcher asks in a dialog:
+
+- **File read/write**: when a plugin requests access to a file or directory, you approve each request
+- **Network proxy**: lets the plugin reach the internet through the launcher proxy
+- **Command execution**: runs system commands (PowerShell/Shell), 15-second timeout by default
+
+Plugins hold significant system capabilities (files, network, command execution). Confirm a plugin is trustworthy before installing one from an unknown source.
+
+## Manage plugins
+
+In **Settings → Plugins**:
+
+- Enable / disable / uninstall
+- Change plugin settings: switch to the "Plugin settings" sub-tab, pick a plugin on the left, and the panel on the right shows the settings that plugin provides
+- Review plugin permissions and dependencies
+
+Plugins with dependencies are checked automatically: installation is refused if a prerequisite is missing, and a plugin is disabled automatically when its prerequisite is disabled.
+
+## Build your own
+
+For the complete developer guide (manifest, plugin API, dashboard widget development, CLI tools), see the **[Plugin development](/en/plugins)** section.

@@ -1,0 +1,33 @@
+---
+title: "Running"
+---
+## Running
+
+After you launch the game, the **Running（运行中）** page monitors and manages the game instances that are currently active.
+
+## Instance status
+
+Click **Running** in the sidebar (you can also get there from the home page or an instance page while a game is running):
+
+- See which instances are running and how long they've been up
+- End the game process directly
+
+## Live log window
+
+Click **Test game** in the **instance details** to open the **live game log**（实时日志）window:
+
+- The log scrolls in real time, and you can pause following
+- Color-coded filtering by level: INFO / WARN / ERROR / DEBUG / FATAL
+- **Keyword search** to jump straight to an anomaly
+- Toggle network request logging (to diagnose multiplayer or download problems)
+- **Stop game**: ends the process after confirmation (unsaved world progress is lost)
+
+When the game fails to start or hangs on the loading screen, the live log usually shows the last block of output. Copy it into [Log analysis](/en/guide/log-analysis) to get a diagnosis.
+
+## Crash handling
+
+When the game crashes:
+
+- The Running page or the log window reports **the game exited unexpectedly**
+- Open Crash analysis（崩溃分析）, where the launcher parses the Crash report（崩溃报告）and gives you a diagnosis (common causes: mod conflicts, out of memory, version mismatch)
+- When you need help, generate an mclo.gs link to share (see [Log analysis](/en/guide/log-analysis))

@@ -1,0 +1,66 @@
+---
+title: "FAQ"
+---
+## FAQ
+
+The most common questions from everyday use. No answer here? See [Report an issue](/en/guide/report-issue).
+
+## Launching and Java
+
+**"No Java runtime detected"**
+
+Go to Settings → Java runtime → click **Scan（快速扫描）** to detect system Java automatically; if none is found, click **Download（下载）** to install it online. The launcher needs Java 8 / 17 / 21, and picks the right one for each game version automatically.
+
+**The game crashes right after launching**
+
+Use [Log analysis](/en/guide/log-analysis) to paste the log or analyze the crash report directly. Common causes are mod conflicts, insufficient memory, and a mismatched Java version.
+
+**Out of memory (OutOfMemoryError)**
+
+Increase Memory allocation（内存分配）: Settings → Launch settings → Memory. Large modpacks do well with 6–8GB; see [Performance tuning](/en/guide/optimize).
+
+## Accounts
+
+**Microsoft login says the token expired**
+
+Microsoft login tokens have a limited lifetime. Once expired, the launcher shows a reauthorization window; log in once more.
+
+**"Account data file is corrupted or the machine code changed"**
+
+Account data is encrypted and bound to the machine, so it cannot be decrypted after reinstalling the system or changing hardware. The data has already been cleared automatically; simply add the account again.
+
+**An offline account cannot join a server**
+
+Offline login cannot join servers that require genuine verification. For external login servers (LittleSkin / Tongyitong), log in with the corresponding method.
+
+## Downloads and resources
+
+**Downloads are slow or fail**
+
+- Make sure Settings → Download settings → **Automatic download source selection（下载源自动选择）** is on
+- Try replacing the mirror domain manually; see [Download mirrors](/en/guide/mirror)
+- If you use a proxy, check the proxy configuration in Network settings
+
+**Resource search returns nothing**
+
+Check that the filters (game version / Loader（加载器）) match what you expect. CurseForge and Modrinth do not index the same content, so try switching the source and searching again.
+
+## Multiplayer
+
+**NAT detection fails or it never connects**
+
+This is common on restricted networks (corporate or campus). Try a phone hotspot; see [Multiplayer](/en/guide/connect#troubleshooting-connection-failures) for details.
+
+**Multiplayer misbehaves after installing Radmin VPN / Hamachi**
+
+Virtual network adapter software like this competes for routes. The launcher already avoids the common problems, but if issues persist, exit them first.
+
+## Interface
+
+**The UI stutters and animations drop frames**
+
+Settings → Appearance: lower **Component material（组件材质）** (liquid glass and acrylic are the most expensive), turn off animation or make it faster, and limit the **maximum frame rate**.
+
+**How do I change the background image or accent color?**
+
+Settings → Appearance: the background supports custom images and blur; the accent color supports custom values and "follow background" (Monet color extraction).

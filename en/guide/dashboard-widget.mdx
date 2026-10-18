@@ -1,0 +1,61 @@
+---
+title: "Dashboard widgets"
+---
+## Dashboard widgets
+
+The home page is a **freely editable widget desktop**, similar to phone home-screen widgets: the watermark, account, announcements, and instance launch bar are all individual "widgets". You can move, resize, and hide them at will, and once you install a plugin that provides widgets, you can place plugin widgets on the grid too.
+
+## Understanding the home page
+
+The default layout looks like this:
+
+| Area | Widget | Purpose |
+| :--- | :--- | :--- |
+| Center | Watermark | Shows the launcher name (customize the text or turn it off in settings) |
+| Top right | Account | The current default account; click the arrow to switch accounts quickly |
+| Right | Announcements | Scrolls official announcements; click to read the full text |
+| Bottom | Instance launch bar | Shows the default instance plus a large launch button |
+
+## Editing the layout
+
+Click the **Edit layout（编辑布局）** button in the **top-right corner** of the home page (pencil icon) to enter edit mode:
+
+| Action | How |
+| :--- | :--- |
+| **Move a widget** | Press and drag the widget to where you want it |
+| **Resize a widget** | Drag the handle at the **bottom-right corner** (or the right and bottom edges) |
+| **Remove a widget** | Hover over the widget and click **✕** in its top-right corner |
+| **Add a widget** | Click **＋** on the toolbar, then click the widget you want back in the panel |
+| **Restore a hidden widget** | Click the **👁** icon on the toolbar; each hidden widget has one |
+| **Restore the default layout** | Click the **↺** button on the toolbar |
+| **Save and exit** | Click the **Done（完成）** button on the toolbar |
+
+Widgets do not snap into a stack: after you drag one away, the others **stay exactly where they are**, and you can use the freed space however you like — much like a desktop with "auto arrange icons" turned off.
+
+In edit mode, widgets only respond to dragging and resizing; buttons inside them do not react to clicks. Click **Done** to save when you finish.
+
+## Widgets adapt to their size
+
+Each widget **shows content intelligently** based on how many grid cells it occupies:
+
+- **Small sizes** (for example 1×1): only the most essential information. An account widget shrunk down shows just the avatar and name; a shrunk announcement widget shows only the title.
+- **Large sizes**: more detail. An enlarged announcement widget shows a body summary, and an enlarged instance bar shows things like the last played time.
+
+Try resizing a widget: the content switches automatically.
+
+## Where the layout is stored
+
+Your layout changes are **saved automatically** on the local machine (browser local storage). There is no manual save step, and the layout survives a launcher restart.
+
+- Restoring the default layout puts every widget back in its factory position and re-shows all widgets you had hidden.
+- Upgrading the launcher **does not lose** your layout.
+
+## Plugin widgets
+
+After you install a plugin that provides widgets (see the [Dashboard widgets（主页小组件）](/en/plugins/dashboard-widget) section of the plugin docs), plugin widgets also appear in the home grid:
+
+- They can be dragged, resized, and hidden just like built-in widgets.
+- Disabling or uninstalling the plugin removes its widgets; re-enabling it **restores them in place**.
+- Widget content is entirely up to the plugin — for example weather, server status, or a countdown.
+
+Hidden widgets do not appear in the grid. Enter edit mode and click **＋** or **👁** on the toolbar to bring them back.

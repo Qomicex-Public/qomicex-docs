@@ -1,0 +1,40 @@
+---
+title: "Log analysis"
+---
+## Log analysis
+
+When the game crashes or misbehaves, Log analysis（日志分析）helps you find the problem in a flood of log output.
+
+## Two entry points
+
+| Entry point | Location | Purpose |
+| :--- | :--- | :--- |
+| **Log analysis page** | Sidebar → Log analysis | Paste a snippet of log text and analyze it manually |
+| **Crash analysis** | Instance details / Live log window | Analyze the current crash report in one click after the game crashes |
+
+## Manual analysis
+
+- Copy the log text (from the game console, `latest.log`, or the launcher's live log window)
+- Paste it into the input box on the Log analysis page
+- Click **Analyze log**
+
+The launcher recognizes known error patterns in the log (crash stack traces, Mixin conflicts, mods with missing dependencies, out of memory, and so on), lists them by severity (Critical → Error → Warning → Info), and suggests common fixes.
+
+## Crash report analysis
+
+When the game crashes, the launcher captures the crash report automatically:
+
+- The instance details page or the live log window reports **the game exited unexpectedly**
+- Click **Analyze crash**, and the launcher parses the report and returns a diagnosis
+- You can upload the report to mclo.gs to generate a short link, which is handy when asking for help
+
+When you ask others for help, include the **mclo.gs link** from the crash analysis result plus the list of mods you recently installed or updated. That's far more effective than a screenshot saying "the game crashed".
+
+## Live log
+
+While an instance is running, go to Sidebar → **Running** (or use the live log window at launch) to watch the game output:
+
+- Filter by level (INFO / WARN / ERROR / FATAL)
+- Search by keyword
+- **Stop game** to end the process directly when something goes wrong
+- Export the full log

@@ -1,0 +1,197 @@
+---
+title: "Publishing and packaging guide"
+---
+## Publishing and packaging guide
+
+The complete flow from packaging a `.qplugin` to listing it in the store. For API details, see the [plugin store API reference](/en/store/).
+
+## What a .qplugin is
+
+A `.qplugin` is just a **zip archive**, with one hard rule: **`manifest.json` must be at the root of the archive**.
+
+```text
+my-plugin.zip          ← 重命名为 .qplugin
+├── manifest.json      ← 必须在根目录！
+├── index.html
+└── assets/
+    └── main.js
+```
+
+❌ Wrong example (zipping the whole dist folder):
+
+```text
+my-plugin.zip
+└── dist/
+    ├── manifest.json   ← 商店找不到它
+    └── index.html
+```
+
+## Minimal manifest.json template
+
+```json
+{
+  "id": "dev.example.my-plugin",
+  "name": "我的插件",
+  "version": "1.0.0",
+  "minLauncherVersion": "1.0.0",
+  "layers": ["l2"],
+  "permissions": [],
+  "entry": { "frontend": "index.html" }
+}
+```
+
+| Field | Required | Description |
+| :--- | :--- | :--- |
+| `id` | ✅ | Unique plugin identifier, reverse-domain style recommended (e.g. `dev.example.my-plugin`); never change it after publishing |
+| `name` / `version` | ✅ | `version` must be valid semver (e.g. `1.2.3`) |
+| `minLauncherVersion` | ✅ | Minimum launcher version |
+| `layers` | ✅ | Array of layer levels: `l0`~`l4` (plugins with page scripts should use `["l2"]`) |
+| `permissions` | ✅ | Permission list (may be an empty array) |
+| `entry` | ✅ | Provide at least one of `frontend`/`backend`/`theme` |
+
+## ⚠️ Must-read for Windows users: backslash `\` problems
+
+**This is the most common packaging failure on Windows**, and the error looks like this:
+
+```text
+包含不安全路径: dist\index.html
+```
+
+### Cause
+
+Some Windows tools (the old "Send to > Compressed (zipped) folder", `Compress-Archive` in PowerShell 5.1, etc.) use **`\` as the zip entry path separator**. The zip specification requires `/`. The store and the launcher reject packages containing `\` — this is a security check against zip-slip path traversal attacks and will not be relaxed.
+
+### Fix
+
+- ✅ Use the one-click PowerShell script below (it replaces separators with `/` automatically)
+- ✅ Compress with the [7-Zip](https://www.7-zip.org/) GUI
+- ✅ Use `Compress-Archive` from PowerShell 7+
+- ❌ Avoid the legacy Windows 10 right-click "Send to → Compressed (zipped) folder" and PowerShell 5.1
+
+## Method 1: one-click PowerShell packaging script (recommended)
+
+Supports picking a folder via a dialog and forces forward slashes automatically. Save it as `pack.ps1`, then right-click "Run with PowerShell" or run `.\pack.ps1 -FolderPath D:\path\to\dist` from the command line:
+
+```powershell
+param(
+    [string]$FolderPath
+)
+
+# 如果没有参数，则弹出文件夹选择对话框
+if (-not $FolderPath) {
+    Add-Type -AssemblyName System.Windows.Forms
+    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description = "请选择要打包的文件夹"
+    if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        $FolderPath = $dialog.SelectedPath
+    } else {
+        Write-Host "未选择文件夹，退出。"
+        exit
+    }
+}
+
+# 验证路径
+if (-not (Test-Path $FolderPath -PathType Container)) {
+    Write-Host "错误：无效的文件夹路径！"
+    exit 1
+}
+
+# 生成ZIP文件名（放在同级目录）
+$parent = Split-Path $FolderPath -Parent
+$folderName = Split-Path $FolderPath -Leaf
+$zipPath = Join-Path $parent "$folderName.zip"
+
+# 如果ZIP已存在，询问是否覆盖
+if (Test-Path $zipPath) {
+    $choice = Read-Host "ZIP文件已存在，是否覆盖？(y/n)"
+    if ($choice -ne 'y') { exit }
+    Remove-Item $zipPath -Force
+}
+
+# 创建ZIP
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip = [System.IO.Compression.ZipFile]::Open($zipPath, 'Create')
+
+# 遍历所有文件，添加到ZIP，并强制将路径中的 \ 替换为 /
+Get-ChildItem -Path $FolderPath -Recurse -File | ForEach-Object {
+    $relativePath = $_.FullName.Substring($FolderPath.Length + 1)
+    $entryPath = $relativePath -replace '\\', '/'   # 关键替换
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $entryPath) | Out-Null
+}
+
+$zip.Dispose()
+
+Write-Host "✅ 打包成功！ZIP文件位于：$zipPath"
+Write-Host "✅ 内部路径已全部使用正斜杠 /"
+
+# 暂停以查看结果（如果是从资源管理器双击运行）
+Read-Host "按回车键退出..."
+```
+
+The script packages **the contents of the folder you select**. Select the directory containing your build output (such as `dist`) and make sure `manifest.json` is at the root of that directory.
+
+## Method 2: other common approaches
+
+### 7-Zip (GUI)
+
+- Open the `dist` folder and **select all content files** (do not select the outer folder)
+- Right-click → 7-Zip → Add to archive
+- The resulting zip uses `/` in its internal paths by nature
+
+### PowerShell 7+
+
+```powershell
+# PS7 的 Compress-Archive 已使用正斜杠；注意要压缩的是内容而非父文件夹
+Compress-Archive -Path ./dist/* -DestinationPath my-plugin.zip
+```
+
+### Validate package paths from the command line
+
+Before uploading, check whether any zip entries still use backslashes:
+
+```powershell
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::OpenRead("$pwd\my-plugin.zip").Entries.FullName
+```
+
+The output should contain no `\`.
+
+## Upload and publish
+
+### Option 1: `qomicex publish` (one command, recommended)
+
+The CLI uses the RFC 8628 device flow, so everything happens on the command line:
+
+```bash
+export QOMICEX_SIGN_KEY=<私钥 base64/PEM>   # 或 --key ./key.pem
+qomicex publish --changelog "修复 X"
+```
+
+Flow: device flow login (prints the authorization code and verification URL, confirmed in the browser) → `POST /developer/keys` to upload the developer public key and obtain a certificate → the private key signs the package body (`signature.json` + `signature.cert.json` packed into the `.qplugin`) → find or create the plugin record → `POST /plugins/:id/versions` multipart upload. See the [qomicex CLI tool reference](/en/plugins/cli) for details.
+
+### Option 2: manual upload on the web
+
+- Log in to the [plugin store](https://plugins.qomicex.top) → upgrade to developer
+- Developer center → create a plugin (fill in slug, name, category)
+- **You must sign with the CLI before uploading** (the store **enforces signature verification**):
+
+```bash
+qomicex pack --key ./dev-key.pem    # 产出带 signature.json 的 .qplugin
+```
+
+- Plugin management page → "Upload new version" → select the signed `.qplugin` (rename the zip extension to `.qplugin`)
+- Packages that are purely L3 with no dangerous permissions are **published automatically**; the rest go to manual review, and the result appears in the version list
+
+- **Store uploads enforce signature verification**: a missing `signature.json` or a failed verification → 422 `signature_invalid`, and the upload is rejected
+- Signing = Ed25519 three-level trust chain (the store root key issues the developer public key certificate → the developer private key signs the package body); `signedHash` is the SHA-256 of the canonical manifest plus the file listing
+- Key generation: `openssl genpkey -algorithm Ed25519 -out dev-key.pem` or `node scripts/plugin-keygen.mjs generate`
+
+Quick reference for common upload errors:
+
+| Error | Cause |
+| :--- | :--- |
+| `包含不安全路径: xxx\yyy` | Windows backslash problem, see the section above |
+| `缺少根级 manifest.json` | The manifest was zipped into a subfolder |
+| `version 不是合法 semver` | The version must look like `1.2.3` |
+| `版本 x.y.z 已存在` | The same version number was uploaded twice |
+| `签名校验失败` (`signature_invalid`) | Not signed / the signature does not match the developer public key / the package body was tampered with / the store has no root public key configured. Re-sign with `qomicex pack --key` and upload again |

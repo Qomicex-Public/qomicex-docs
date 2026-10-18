@@ -1,0 +1,283 @@
+---
+title: "WASM plugin (L3)"
+---
+## WASM plugin (L3)
+
+The Launcher（启动器）runs L3 plugins as **WASM modules** inside its Rust layer (wasmtime engine) in a Sandbox（沙箱）. They suit agents, protocol parsers, and other complex logic. Unlike L2 (frontend script), L3 runs in an **independent runtime** and does not depend on a browser environment.
+
+## 1. How it works
+
+```text
+后端(C#) ──HTTP──→ 插件网关(localhost:动态端口) ──→ Tauri Rust(wasmtime) ──→ WASM 插件
+```
+
+- When the Launcher starts, the Rust gateway scans `plugins/{plugin id}/plugin.wasm` (the Manifest `layers` must include `l3`)
+- The wasmtime engine loads the module, injects host functions (the `qomicex` module), and calls the functions exported by the plugin
+- The gateway port is written to `plugins/.gateway_port`; the backend `PluginGatewayClient` reads it and proxies calls
+- The frontend calls through the backend with `__PLUGIN_API__.callWasm(...)`
+
+## 2. Plugin structure
+
+```text
+my-wasm-plugin/
+├── manifest.json        # layers 需含 "l3"
+└── plugin.wasm          # 核心 wasm 模块（编译产物）
+```
+
+Example Manifest:
+
+```json
+{
+  "id": "dev.example.wasmplugin",
+  "name": "WASM Plugin",
+  "version": "0.1.0",
+  "minLauncherVersion": "0.1.0",
+  "layers": ["l3"],
+  "permissions": ["wasm:execute"]
+}
+```
+
+The gateway always loads the fixed file name `plugin.wasm` (at `plugins/{plugin id}/plugin.wasm`), so you do **not** need to declare a path in the Manifest. `entry.backend` is a reserved field (currently unused); do not rely on it.
+
+## 3. Plugin exports (WASM → Launcher)
+
+| Export | Signature | Description |
+|------|------|------|
+| `on_load` | `() -> ()` | Called when the plugin loads |
+| `on_unload` | `() -> ()` | Called when the plugin unloads |
+| `get_manifest` | `() -> i32` | Returns the Manifest (reserved) |
+| Custom export | `() -> ()` or `() -> i32` | Callable through `callWasm(id, 'export name')` |
+
+## 4. Host API (Launcher → WASM)
+
+Plugins reach Launcher capabilities by importing functions from the `qomicex` module:
+
+```rust
+#[link(wasm_import_module = "qomicex")]
+extern "C" {
+    fn log(level: i32, msg_ptr: i32, msg_len: i32);                          // 输出日志
+    fn http_fetch(url_ptr: i32, url_len: i32, method_ptr: i32, method_len: i32,
+                  body_ptr: i32, body_len: i32, out_ptr: i32) -> i32;        // HTTP 请求（预留）
+    fn instance_list(out_ptr: i32) -> i32;                                   // 实例列表（预留）
+    fn db_set(key_ptr: i32, key_len: i32, val_ptr: i32, val_len: i32);       // 写键值
+    fn db_get(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32; // 读键值
+    fn get_plugin_id(out_ptr: i32, out_cap: i32) -> i32;                     // 获取插件 id
+}
+```
+
+- Strings are passed as `(pointer, length)`; the plugin manages its own wasm linear memory
+- `http_fetch` / `instance_list` are reserved today (they return -1). Use the frontend `callBackend` / `proxyFetch` for network and Instance access
+
+## 5. Examples in multiple languages
+
+A WASM plugin is a **bare core module** (not WASI, not a component). Feasibility by language:
+
+| Language | Feasibility | Description |
+|------|--------|------|
+| **Rust** | ✅ Verified | `wasm32-unknown-unknown`; the recommended first choice |
+| **C / C++** | ✅ Feasible | clang + wasm-ld, `--target=wasm32-unknown-unknown` |
+| **AssemblyScript** | ✅ Feasible | TS syntax, compiled with `asc`; exports `memory` by default |
+| **Zig** | ✅ Feasible | `wasm32-freestanding` target |
+| Go / TinyGo | ⚠️ Limited | Only `wasip1` (WASI mode); the host must register WASI, so not a bare module |
+| **C# (.NET)** | ❌ Not possible | NativeAOT does not support wasm; the Mono wasm output is the entire .NET runtime, not a bare module |
+| **Python** | ❌ Not possible | No wasm compilation target; Pyodide is an interpreter port, not code compilation |
+
+### Common conventions (all languages)
+
+- Export `on_load` / `on_unload` (`() -> ()`) for the gateway to call; custom exports are `() -> ()` or `() -> i32`
+- Import the host functions of the `qomicex` module (`log` / `db_set` / `db_get` / `get_plugin_id`)
+- Strings are passed as `(pointer, length)`; the pointer is a **wasm linear memory offset (i32)**, not a host pointer
+- Linear memory must be **exported** (conventionally named `memory`); the gateway reads it with `caller.get_export("memory")`
+- Function signatures must match the registered host signatures exactly, or instantiation fails
+
+### 1. Rust (verified)
+
+**Cargo.toml:**
+
+```toml
+[package]
+name = "my-wasm-plugin"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = "s"
+```
+
+**src/lib.rs:**
+
+```rust
+#[no_mangle]
+pub extern "C" fn on_load() {
+    unsafe {
+        qomicex_log(0, b"plugin loaded\0".as_ptr() as i32, 14);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn on_unload() {
+    unsafe {
+        qomicex_log(0, b"plugin unloaded\0".as_ptr() as i32, 16);
+    }
+}
+
+#[link(wasm_import_module = "qomicex")]
+extern "C" {
+    #[link_name = "log"]
+    fn qomicex_log(level: i32, msg_ptr: i32, msg_len: i32);
+    #[link_name = "db_set"]
+    fn qomicex_db_set(key_ptr: i32, key_len: i32, val_ptr: i32, val_len: i32);
+}
+```
+
+**Build:**
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo build --release --target wasm32-unknown-unknown
+# 产物：target/wasm32-unknown-unknown/release/my_wasm_plugin.wasm → 重命名 plugin.wasm
+```
+
+### 2. C / C++ (feasible)
+
+**plugin.c:**
+
+```c
+// 导入 qomicex 模块的 host 函数
+__attribute__((import_module("qomicex"), import_name("log")))
+extern void qomicex_log(int level, int ptr, int len);
+
+__attribute__((import_module("qomicex"), import_name("db_set")))
+extern void qomicex_db_set(int key_ptr, int key_len, int val_ptr, int val_len);
+
+// 导出给网关调用
+__attribute__((export_name("on_load")))
+void on_load(void) {
+    static char msg[] = "hello from C";
+    qomicex_log(0, (int)(long)msg, sizeof(msg) - 1);
+}
+
+__attribute__((export_name("on_unload")))
+void on_unload(void) {}
+```
+
+**Build (requires clang + wasm-ld, such as wasi-sdk / LLVM):**
+
+```bash
+clang --target=wasm32-unknown-unknown -O2 -nostdlib \
+  -Wl,--no-entry \
+  -Wl,--export=on_load -Wl,--export=on_unload \
+  -Wl,--export-memory \
+  -o plugin.wasm plugin.c
+```
+
+- You must use `wasm32-unknown-unknown` (not `wasm32-wasi`, which pulls in WASI imports)
+- With `-nostdlib` there is no `memcpy`/`memset`; implement them yourself if you need them
+- `-Wl,--export-memory` exports the linear memory as `memory`
+
+### 3. AssemblyScript (feasible)
+
+**entry.ts:**
+
+```ts
+// 导入 qomicex 模块的 host 函数
+@external("qomicex", "log")
+declare function log(level: i32, ptr: i32, len: i32): void;
+
+export function on_load(): void {
+  const msg = String.UTF8.encode("hi from AssemblyScript")
+  log(0, changetype<i32>(msg), msg.byteLength)
+}
+
+export function on_unload(): void {}
+```
+
+**Build (requires Node.js + assemblyscript):**
+
+```bash
+npm install -D assemblyscript
+npx asc entry.ts -o plugin.wasm -O --exportRuntime
+```
+
+AssemblyScript exports memory as `memory` by default, which matches the gateway convention. `--exportRuntime` exports memory helpers such as `__new`/`__pin`; if size matters, use `--runtime stub`.
+
+### 4. Zig (feasible)
+
+**plugin.zig:**
+
+```zig
+// 导入 qomicex 模块的 host 函数
+extern "qomicex" fn log(level: i32, ptr: i32, len: i32) void;
+
+export fn on_load() void {
+    const msg = "hello from Zig";
+    log(0, @intFromPtr(msg.ptr), @intCast(msg.len));
+}
+
+export fn on_unload() void {}
+```
+
+**Build:**
+
+```bash
+zig build-exe plugin.zig -target wasm32-freestanding -fno-entry \
+  --export=on_load --export=on_unload -O ReleaseSmall -o plugin.wasm
+```
+
+### 5. Go (limited, WASI mode)
+
+Go has only two wasm targets, `js` / `wasip1`, and **no bare core module target**. A `wasip1` build carries the Go runtime and imports WASI, so the gateway must register WASI before it can run (the current gateway does not, so it **does not work**). For reference only:
+
+```go
+//go:wasmimport qomicex log
+func log(level, ptr, len uint32)
+
+//go:wasmexport on_load
+func onLoad() {}
+
+func main() {} // wasip1 必须有 main
+```
+
+```bash
+GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o plugin.wasm .
+```
+
+### 6. C# / Python (not available)
+
+- **C# (.NET)**: NativeAOT does not support the wasm target; the Mono browser-wasm / wasi-wasm output is the entire .NET runtime (several MB, with WASI symbols) rather than a bare core module, so it cannot meet the gateway conventions.
+- **Python**: there is no wasm compilation target; approaches such as Pyodide "port the CPython interpreter to wasm" instead of compiling your code into a module.
+
+**Alternative**: write the WASM plugin logic in Rust / C / AssemblyScript, and use a language you know for the host side (frontend or backend).
+
+## 6. Calling from a plugin or the frontend
+
+```js
+// 前端页面 / 悬浮窗 / L2 脚本中
+const res = await __PLUGIN_API__.callWasm('dev.example.wasmplugin', 'on_load')
+// res = { ok: true, result: ... }
+
+const ids = await __PLUGIN_API__.listWasmPlugins()
+```
+
+Permission: `wasm:execute`
+
+## 7. Backend proxy endpoints
+
+The backend proxies the gateway capabilities as the following HTTP endpoints (the frontend API wraps them for you):
+
+| Method | Path | Description |
+|------|------|------|
+| GET | `/api/plugins/wasm` | List loaded WASM plugins |
+| GET | `/api/plugins/wasm/{id}` | Plugin info (id/name/version/permissions) |
+| POST | `/api/plugins/wasm/{id}/invoke` | Body `{"export":"on_load"}` calls an export |
+
+## 8. Notes
+
+- A plugin package must contain `plugin.wasm` and its Manifest `layers` must include `l3` before the gateway loads it
+- `plugin.wasm` is a **core wasm module** (core module), not a WASI/component module
+- The data directory matches frontend plugins (`{data dir}/plugins/{id}/`) and is determined by `QOMICEX_HOME` or the system data directory
+- Gateway logs go to the Launcher console (prefixed `[plugin]` / `[gateway]`)
+- Today `db_set`/`db_get` are a key-value store inside the gateway process and are cleared on restart; `http_fetch`/`instance_list` are reserved

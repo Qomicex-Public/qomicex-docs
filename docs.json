@@ -20,76 +20,231 @@
         "language": "zh-CN",
         "default": true,
         "pages": [
-      {
-        "group": "开始",
-        "pages": ["index", "guide/index", "guide/getting-started", "guide/first-start"]
-      },
-      {
-        "group": "功能",
-        "pages": [
-          "guide/dashboard-widget",
-          "guide/installing-games",
-          "guide/instances",
-          "guide/modpack-support",
-          "guide/resource-center",
-          "guide/downloads",
-          "guide/accounts",
-          "guide/connect",
-          "guide/running",
-          "guide/log-analysis",
-          "guide/plugins",
-          "guide/deep-link"
-        ]
-      },
-      {
-        "group": "设置与网络",
-        "pages": ["guide/settings", "guide/mirror"]
-      },
-      {
-        "group": "帮助与优化",
-        "pages": ["guide/glossary", "guide/faq", "guide/report-issue", "guide/optimize", "guide/legal"]
-      },
-      {
-        "group": "插件开发",
-        "pages": [
           {
-            "group": "入门",
-            "pages": ["plugins/index", "plugins/creating-plugin", "plugins/react-plugin"]
-          },
-          {
-            "group": "核心参考",
-            "pages": ["plugins/manifest", "plugins/plugin-api", "plugins/plugin-ui", "plugins/dependencies"]
-          },
-          {
-            "group": "进阶",
+            "group": "开始",
             "pages": [
-              "plugins/wasm-plugin",
-              "plugins/webview-l4",
-              "plugins/overlay",
-              "plugins/dashboard-widget",
-              "plugins/settings-page",
-              "plugins/hooks",
-              "plugins/theme"
+              "index",
+              "guide/index",
+              "guide/getting-started",
+              "guide/first-start",
+              "guide/mcp"
             ]
           },
           {
-            "group": "工具链与调试",
-            "pages": ["plugins/cli", "plugins/debugging", "plugins/ai-development"]
+            "group": "功能",
+            "pages": [
+              "guide/dashboard-widget",
+              "guide/installing-games",
+              "guide/instances",
+              "guide/modpack-support",
+              "guide/resource-center",
+              "guide/downloads",
+              "guide/accounts",
+              "guide/connect",
+              "guide/running",
+              "guide/log-analysis",
+              "guide/plugins",
+              "guide/deep-link"
+            ]
           },
           {
-            "group": "发布与质量",
-            "pages": ["plugins/publishing", "plugins/telemetry", "plugins/pitfalls"]
+            "group": "设置与网络",
+            "pages": [
+              "guide/settings",
+              "guide/mirror"
+            ]
+          },
+          {
+            "group": "帮助与优化",
+            "pages": [
+              "guide/glossary",
+              "guide/faq",
+              "guide/report-issue",
+              "guide/optimize",
+              "guide/legal"
+            ]
+          },
+          {
+            "group": "插件开发",
+            "pages": [
+              {
+                "group": "入门",
+                "pages": [
+                  "plugins/index",
+                  "plugins/creating-plugin",
+                  "plugins/react-plugin"
+                ]
+              },
+              {
+                "group": "核心参考",
+                "pages": [
+                  "plugins/manifest",
+                  "plugins/plugin-api",
+                  "plugins/plugin-ui",
+                  "plugins/dependencies"
+                ]
+              },
+              {
+                "group": "进阶",
+                "pages": [
+                  "plugins/wasm-plugin",
+                  "plugins/webview-l4",
+                  "plugins/overlay",
+                  "plugins/dashboard-widget",
+                  "plugins/settings-page",
+                  "plugins/hooks",
+                  "plugins/theme"
+                ]
+              },
+              {
+                "group": "工具链与调试",
+                "pages": [
+                  "plugins/cli",
+                  "plugins/debugging",
+                  "plugins/ai-development"
+                ]
+              },
+              {
+                "group": "发布与质量",
+                "pages": [
+                  "plugins/publishing",
+                  "plugins/telemetry",
+                  "plugins/pitfalls"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "前置插件文档",
+            "pages": [
+              "libraries/index",
+              "libraries/markdownlib",
+              "libraries/markitdown"
+            ]
+          },
+          {
+            "group": "插件商店",
+            "pages": [
+              "store/publish",
+              "store/index",
+              "store/registry-spec"
+            ]
           }
         ]
       },
       {
-        "group": "前置插件文档",
-        "pages": ["libraries/index", "libraries/markdownlib", "libraries/markitdown"]
-      },
-      {
-        "group": "插件商店",
-        "pages": ["store/publish", "store/index", "store/registry-spec"]
-      }
+        "language": "en",
+        "pages": [
+          {
+            "group": "Get started",
+            "pages": [
+              "en/index",
+              "en/guide/index",
+              "en/guide/getting-started",
+              "en/guide/first-start",
+              "en/guide/mcp"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "en/guide/dashboard-widget",
+              "en/guide/installing-games",
+              "en/guide/instances",
+              "en/guide/modpack-support",
+              "en/guide/resource-center",
+              "en/guide/downloads",
+              "en/guide/accounts",
+              "en/guide/connect",
+              "en/guide/running",
+              "en/guide/log-analysis",
+              "en/guide/plugins",
+              "en/guide/deep-link"
+            ]
+          },
+          {
+            "group": "Settings and network",
+            "pages": [
+              "en/guide/settings",
+              "en/guide/mirror"
+            ]
+          },
+          {
+            "group": "Help and performance",
+            "pages": [
+              "en/guide/glossary",
+              "en/guide/faq",
+              "en/guide/report-issue",
+              "en/guide/optimize",
+              "en/guide/legal"
+            ]
+          },
+          {
+            "group": "Plugin development",
+            "pages": [
+              {
+                "group": "Getting started",
+                "pages": [
+                  "en/plugins/index",
+                  "en/plugins/creating-plugin",
+                  "en/plugins/react-plugin"
+                ]
+              },
+              {
+                "group": "Core reference",
+                "pages": [
+                  "en/plugins/manifest",
+                  "en/plugins/plugin-api",
+                  "en/plugins/plugin-ui",
+                  "en/plugins/dependencies"
+                ]
+              },
+              {
+                "group": "Advanced",
+                "pages": [
+                  "en/plugins/wasm-plugin",
+                  "en/plugins/webview-l4",
+                  "en/plugins/overlay",
+                  "en/plugins/dashboard-widget",
+                  "en/plugins/settings-page",
+                  "en/plugins/hooks",
+                  "en/plugins/theme"
+                ]
+              },
+              {
+                "group": "Tooling and debugging",
+                "pages": [
+                  "en/plugins/cli",
+                  "en/plugins/debugging",
+                  "en/plugins/ai-development"
+                ]
+              },
+              {
+                "group": "Publishing and quality",
+                "pages": [
+                  "en/plugins/publishing",
+                  "en/plugins/telemetry",
+                  "en/plugins/pitfalls"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Library plugin docs",
+            "pages": [
+              "en/libraries/index",
+              "en/libraries/markdownlib",
+              "en/libraries/markitdown"
+            ]
+          },
+          {
+            "group": "Plugin store",
+            "pages": [
+              "en/store/publish",
+              "en/store/index",
+              "en/store/registry-spec"
+            ]
+          }
         ]
       }
     ]

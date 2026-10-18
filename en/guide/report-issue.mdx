@@ -1,0 +1,34 @@
+---
+title: "Report an issue"
+---
+## Report an issue
+
+Found a bug or want to suggest something? Report it as described below; including the right information gets your problem solved faster.
+
+## Channels
+
+- **GitHub Issues**: open an issue in the [Qomicex.Tauri repository](https://github.com/Qomicex-Public/Qomicex.Tauri/issues)
+- **Automatic reporting**: with Settings → Launcher settings → **Automatically report critical error logs** enabled, crash logs are reported automatically (they contain only the error type and runtime environment, no personal content)
+
+## Before you submit
+
+- Skim the [FAQ](/en/guide/faq) first — many questions already have answers
+- Try analyzing the log in [Log analysis](/en/guide/log-analysis); most crashes can be pinned down there directly
+
+## Include this information
+
+| Information | How to get it |
+| :--- | :--- |
+| Launcher version | Settings → About |
+| Operating system and architecture | Windows settings / `systeminfo`, etc. |
+| Log file | Settings → Logs → **Export all** (or export a single `.gz`) |
+| Crash report link | The **mclo.gs** short link generated during crash analysis |
+| Steps to reproduce | What you did, what you expected, what actually happened |
+
+The launcher keeps only the 10 most recent log files, and exports of very long content include only the last 2MB, so just attach the exported file.
+
+## Submission rules
+
+- One issue describes **one problem**, which keeps tracking simple
+- Write the symptom in the title, e.g. "1.20.1 Fabric instance crashes on launch" rather than "doesn't work"
+- Attach logs to bug reports; for feature requests, describe your use case

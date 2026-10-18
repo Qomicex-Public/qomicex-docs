@@ -1,0 +1,152 @@
+---
+title: "Plugin dependencies and inter-plugin calls"
+---
+## Plugin dependencies and inter-plugin calls
+
+A plugin can depend on other plugins (prerequisite plugins) and call methods across plugins. A typical case: MarkdownLib is a library plugin that provides a `renderMarkdown` method, and other plugins depend on it and call it from their pages.
+
+## 1. Declare dependencies
+
+Declare them in the `dependencies` field of the manifest:
+
+```json
+{
+  "id": "top.qomicex.assistant",
+  "dependencies": [
+    { "id": "top.qomicex.markdown", "version": ">=1.0.0" },
+    { "id": "top.qomicex.themes", "version": ">=1.0 <2.0", "optional": true }
+  ]
+}
+```
+
+| Field | Description |
+|------|------|
+| `id` | Manifest id of the depended-on plugin |
+| `version` | Version range (syntax in [manifest](/en/plugins/manifest#version-range-syntax)); omit for any version |
+| `optional` | `true` makes it an optional dependency; defaults to `false` = required dependency |
+
+## 2. Required dependency (optional: false)
+
+- **On install**: if the plugin is missing or its version does not satisfy the range, installation is refused and the backend returns `PLUGIN_MISSING_DEPENDENCY`(400); the error message lists the missing items.
+- **On startup**: if the prerequisite plugin is not installed or not enabled, this plugin **skips activation and is set to disabled**.
+- Users must install the prerequisite plugin before they can install plugins that depend on it.
+
+## 3. Optional dependency (optional: true)
+
+- Installation and activation are **not strictly checked**.
+- `callPlugin` can call its methods only when the prerequisite exists and is enabled.
+- When the prerequisite is missing, `callPlugin` errors but the plugin itself is still enabled normally.
+- Always wrap calls to optional dependency methods in **try/catch**:
+
+```js
+try {
+  const result = await __PLUGIN_API__.callPlugin('top.qomicex.themes', 'applyTheme', 'dark')
+} catch (e) {
+  // 可选前置缺失或未激活
+}
+```
+
+## 4. Library plugin conventions (the provider)
+
+**Library plugins (such as MarkdownLib) typically:**
+- **Do not declare `contributes.menuItems`** → no entry is created in the sidebar.
+- Declare only `entry.frontend` (even a blank page) plus `registerMethod` on activation.
+- Include at least `config:write` in `permissions` (required by `registerMethod`).
+
+```json
+{
+  "id": "top.qomicex.markdown",
+  "name": "MarkdownLib",
+  "version": "1.2.0",
+  "minLauncherVersion": "0.1.0",
+  "layers": ["l3"],
+  "permissions": ["config:write"],
+  "entry": { "frontend": "dist/index.html" }
+}
+```
+
+A library plugin's `layers` can be pure `["l3"]` (inline) or `["l2", "l3"]` (sandbox). Key points:
+- Activation depends on whether `entry.frontend` exists plus whether the user enabled the plugin; it is unrelated to layers.
+- `entry.frontend` is mandatory: only plugins that declare a frontend are activated (and thus run scripts and register methods). A plugin without a frontend is never activated, so its methods are never registered.
+
+See [layers](/en/plugins/manifest#layers-layer-definitions).
+
+## 5. Provider: register methods
+
+The depended-on plugin registers methods in its page script after activation:
+
+```html
+（MarkdownLib dist/index.html）
+<!DOCTYPE html>
+<html>
+<head>
+（marked 必须随包分发（CSP 会拦截外部 CDN 脚本，见「开发要点与避坑指南」））
+  <script src="marked.min.js"></script>
+</head>
+<body>
+  <div id="root">MarkdownLib 已加载</div>
+  <script>
+    __PLUGIN_API__.registerMethod('renderMarkdown', function (md) {
+      return marked.parse(md || '')
+    })
+
+    __PLUGIN_API__.registerMethod('stripHtml', function (html) {
+      const div = document.createElement('div')
+      div.innerHTML = html
+      return div.textContent || ''
+    })
+  </script>
+</body>
+</html>
+```
+
+- `registerMethod(method, fn)`: `fn` returns a value or a Promise (async methods are supported too).
+- One plugin can register multiple methods.
+- All methods are unregistered automatically when the plugin is disabled.
+- Permission: `config:write`.
+
+## 6. Consumer: call methods
+
+```html
+（AI 助手 dist/index.html）
+<!DOCTYPE html>
+<html>
+<body>
+  <div id="out"></div>
+  <script>
+    async function render() {
+      try {
+        const html = await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdown', '**加粗**')
+        document.getElementById('out').innerHTML = html
+      } catch (e) {
+        document.getElementById('out').textContent = '渲染失败: ' + e.message
+      }
+    }
+    render()
+  </script>
+</body>
+</html>
+```
+
+- Call signature: `callPlugin(插件Id, 方法名, ...参数)`
+- Permission: `network:fetch`
+- Async methods are supported (await directly when the provider returns a Promise).
+
+## 7. Activation order
+
+On startup the launcher **activates depended-on plugins first** (topological sort via `sortByDependencies`), so prerequisites are ready and have registered their methods by the time dependents activate. You do not need to care about declaration order in the manifest.
+
+## 8. Error handling
+
+| Scenario | Error message |
+|------|---------|
+| Target plugin not installed / not active / method not registered | `插件 xxx 未提供方法 yyy（可能未安装或未激活）` |
+| Optional dependency missing | Same as above, but the plugin itself is enabled normally |
+| Error thrown inside the method | `插件 xxx 方法 yyy 执行失败: <具体错误>` |
+
+## Full flow
+
+- The user installs MarkdownLib → succeeds (no dependencies).
+- The user installs the AI assistant → the backend checks dependencies: markdown is installed and `1.2.0 >= 1.0.0` → succeeds.
+- The launcher starts → activates MarkdownLib first (registers `renderMarkdown`) → then activates the AI assistant.
+- The AI assistant calls `callPlugin('top.qomicex.markdown', 'renderMarkdown', md)` → the main window relays it through `__pluginRegistry` → the rendered result is returned.

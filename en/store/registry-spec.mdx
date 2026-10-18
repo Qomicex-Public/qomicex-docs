@@ -1,0 +1,267 @@
+---
+title: "Open Registry Protocol"
+---
+## Open Registry Protocol
+
+**Version**: 1.0
+
+The Qomicex plugin store's API protocol has been abstracted into an open standard, allowing third parties to implement compatible registries (mirrors / private repositories / intranet custom sources). The launcher talks to any compatible implementation through **multi-source discovery**.
+
+---
+
+## 1. Core concepts
+
+A **registry** is an HTTP API endpoint that provides plugin metadata queries and distribution. A registry has two roles:
+
+| Role | Description |
+| :--- | :--- |
+| **Primary** | The official store `plugins.qomicex.top`, which fully implements every endpoint (including authentication/review/organization management) |
+| **Mirror** | A third-party compatible implementation; implementing at least the core endpoints is enough for the launcher to recognize it as a usable source |
+
+The launcher configures its source list in `settings.registryUrl` and tries them in priority order.
+
+---
+
+## 2. Endpoint subset
+
+### 2.1 Core endpoints (mirrors must implement)
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `GET` | `/registry` | Registry metadata (§3); mirrors report their own capabilities and count baseline |
+| `GET` | `/plugins?q&category&tags&sort&page&pageSize&minLauncherVersion` | Plugin marketplace list (published only). Returns `{total, page, pageSize, items[Plugin]}` |
+| `GET` | `/plugins/:slug` | Plugin detail → Plugin + `versions[]` (published only: `{id, version, sha256, sizeBytes, ...}`). Returns 404 if unpublished or missing |
+| `GET` | `/plugins/:slug/versions/:version/download` | Download info → `{url, mirrorUrl?, sha256, size}`. `:version` accepts the `latest` alias |
+| `POST` | `/plugins/check-updates` | Batch update check. Body `{launcherVersion, installed:[{slug, version}]}` → `{updates[...]}` |
+
+**Plugin object** (core fields): `{id, slug, name, description, category?, tags[], iconUrl?, latestVersion?, downloadsCount, ratingAverage?, ratingCount, createdAt}`.
+
+### 2.2 Optional endpoints (mirrors may skip)
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `GET` | `/plugins/:slug/reviews?page&pageSize` | Review list |
+| `POST` | `/auth/*` | User registration/login/device flow |
+| `GET` | `/orgs/*` | Organization management |
+| `GET` | `/admin/*` | Review and administrator management |
+| `GET` | `/plugins/:id/stats` | Plugin stats dashboard |
+
+The launcher **degrades gracefully** for optional endpoints: when they are unavailable, the corresponding UI features are hidden or disabled.
+
+### 2.3 Common conventions
+
+- **Base URL**: the registry API root, e.g. `https://plugins.qomicex.top/api/v1`
+- **Request/response**: JSON, fields named camelCase; times are ISO 8601
+- **Error format**: always `{ "error": { "code": "...", "message": "..." } }`, with semantic HTTP status codes
+- **Pagination**: `page` (starts at 1), `pageSize` (default 20, max 50)
+- **Caching**: 15s recommended for the plugin list, 300s for details, 60s for registry metadata
+
+---
+
+## 3. Registry metadata `GET /registry`
+
+The registry's **identity card**. Once the launcher discovers `registryUrl`, the first request it sends is to this endpoint, to confirm compatibility:
+
+```json
+{
+  "apiVersion": "1.0",
+  "baseUrl": "https://mirror.example.com/api/v1",
+  "pluginCount": 42,
+  "capabilities": ["list", "detail", "download", "check-updates"],
+  "mirrors": ["https://cdn.mirror.example.com"]
+}
+```
+
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `apiVersion` | string | ✅ | Protocol version, currently `"1.0"`; the launcher compares major versions (`>=1` is compatible) |
+| `baseUrl` | string | ✅ | Registry API root; the client builds subsequent requests from it. May differ from the real host (CDN origin pull) |
+| `pluginCount` | integer | ✅ | Total number of published plugins; the launcher uses it to assess source quality (sources with few plugins may be downweighted) |
+| `capabilities` | string[] | ✅ | Capability flags. Core: `list`, `detail`, `download`, `check-updates`; optional: `reviews`, `auth`, `stats` |
+| `mirrors` | string[] | Optional | Download mirror domains. Package distribution mirrors only, not API fallback sources |
+
+> The mirror domains in `mirrors` are used for **racing downloads**, not for **API fallback**. API fallback is controlled by the launcher's `registryUrl` multi-source list.
+
+---
+
+## 4. Client discovery
+
+### 4.1 Configuration
+
+The launcher settings support **plugin-style multi-source discovery**:
+
+```text
+registryUrl: [
+  { url: "https://plugins.qomicex.top/api/v1",    primary: true,  priority: 1, enabled: true },
+  { url: "https://mirror.example.com/api/v1",      primary: false, priority: 2, enabled: true }
+]
+```
+
+- **Primary source** (`primary: true`): the registry the launcher queries by default
+- **Backup source** (`primary: false`): used automatically when the primary is unreachable or times out (backup sources are read-only; write operations are only attempted on the primary)
+- **Priority** (`priority`): lower numbers come first
+
+### 4.2 Startup flow
+
+- The launcher sends `GET /registry` to all sources with `enabled: true` in parallel
+- A source is marked **available** when `apiVersion >= 1` and `capabilities` includes at least `list`, `detail`, and `download`
+- Sources are sorted by `priority`, and the first available one is chosen as the primary
+- It caches `pluginCount` for every source and notes the plugin source in the UI
+- After N consecutive failures on the primary, it switches automatically to a remaining available source (if none is available, polling pauses)
+
+### 4.3 Fallback strategy
+
+| Scenario | Behavior |
+| :--- | :--- |
+| Primary `GET /registry` times out / 5xx | Switch to a backup source immediately |
+| Primary `GET /plugins` returns 4xx | Pass the error through to the user, no automatic source switch (the request was legal but rejected) |
+| Primary times out on 3 consecutive requests | Mark it unavailable and switch to a backup source |
+| All backup sources unavailable | Disable store features and prompt the user to check their network |
+| Write operations (install/login/review) | Attempted on the primary only; backup sources never perform writes |
+
+---
+
+## 5. Dual-channel downloads and SHA-256 verification
+
+### 5.1 Dual-channel semantics
+
+`GET /plugins/:slug/versions/:version/download` returns:
+
+```json
+{
+  "url": "https://cdn.registry.example.com/plugins/my-plugin/1.0.0.qplugin",
+  "mirrorUrl": "https://mirror-cdn.example.com/plugins/my-plugin/1.0.0.qplugin",
+  "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "size": 4096
+}
+```
+
+The launcher performs a **racing download**: it requests both the primary URL and the mirror URL at the same time and keeps whichever finishes first. Whichever URL is used, integrity must be verified against `sha256`.
+
+### 5.2 Mandatory verification rules
+
+- After the download completes, compute the SHA-256 and compare it with `sha256` in the response (all-lowercase hex)
+- A mismatch → refuse to install, and do not retain the tampered package
+- The `sha256` returned by a mirror **must match the primary source exactly** — mirrors may not modify package contents
+
+### 5.3 Package requirements for mirrors
+
+When a mirror re-serves a package it must:
+
+- Keep the file structure inside the package completely unchanged (no repacking, no manifest edits, no added or removed files)
+- Preserve `signature.json` and `signature.cert.json` verbatim (**the signature chain must be passed through intact**; the receiver's verification relies on the certificate inside the package)
+- Respond with status 200 and `Content-Type: application/octet-stream` or `application/zip`
+
+---
+
+## 6. Signature chain requirements (ADR-050)
+
+The Open Registry Protocol's signing requirements concern **package integrity** only; mirrors are not required to provide their own signature verification service:
+
+| Role | Signing requirement |
+| :--- | :--- |
+| **Metadata API** (`/plugins` etc.) | Mirrors do not need to sign API responses; the launcher trusts the primary source's data |
+| **Package re-serving** | Mirrors must pass through `signature.json` + `signature.cert.json` inside the package verbatim, without omission or modification. Receivers verify entirely on their own using the in-package signature chain |
+
+### 6.1 In-package signature chain structure
+
+```text
+.qplugin 包内
+├── manifest.json            # 规范化后参与 signedHash
+├── signature.json           # Ed25519 签名
+│   ├── alg: "Ed25519"
+│   ├── signedHash: SHA-256(规范化 manifest + 文件清单)
+│   ├── signerKeyId: "<key id>"
+│   └── signature: "<base64 ed25519 sig>"
+├── signature.cert.json      # 开发者证书（根钥签发）
+│   ├── algorithm: "Ed25519"
+│   ├── keyId / publicKey
+│   ├── issuer: { keyId: "<根钥 id>" }
+│   └── signature: "<base64 root sig>"
+└── dist/…
+```
+
+- Mirrors must not repack, and must not modify `signature.json` / `signature.cert.json` or any other file in the package
+- Mirrors may add an extra checksum digest in response headers (such as `X-Checksum-SHA256`), but it cannot replace the in-package signature
+- The launcher verifies the Ed25519 signature before installing; mirror services do not need to care about verification details
+
+---
+
+## 7. Self-hosting mirror guide
+
+### 7.1 Option A: Cloudflare Worker replication (shared load)
+
+Best when the goal is to offload download traffic from the official store:
+
+- Fork / deploy the Worker code from the `qomicex-plugin-store` repository to your own Cloudflare account
+- Configure your own `CDN_BASE_URL` (R2 or external storage) and `MIRROR_BASE_URL`
+- Periodically sync plugin data from the main store into your own D1 (`wrangler d1 execute --file=sync.sql`)
+- Add `registryUrl: "https://your-domain/api/v1"` to the launcher settings as a backup source
+- Point download traffic at your own R2 / CDN
+
+### 7.2 Option B: pure static hosting (read-only mirror)
+
+If you only need a read-only cache, no Worker compute is required:
+
+- Periodically fetch the main store's `GET /plugins` list plus each detail page, and generate a static `registry.json`
+- Upload the downloaded `.qplugin` packages to your own CDN / object storage
+- Host `registry.json` and the download files under the same domain
+- Provide a static `GET /registry` metadata endpoint (returning the contents of `registry.json`)
+- A static mirror can only provide core read endpoints and does not support `check-updates` (which requires compute); declare this honestly in `capabilities`
+
+### 7.3 Option C: full self-hosted registry (independent source)
+
+Run your own review/organization/authentication flows:
+
+- Fully implement the core endpoints + `GET /registry`
+- Optionally implement endpoints such as `auth` and `reviews` (declare them honestly in `capabilities`)
+- Configure your own signing root public key (`PLUGIN_ROOT_PUBLIC_KEY`); developers upload a public key, receive a certificate, then sign and upload
+- Once clients configure `registryUrl`, it works as a complete independent source
+
+### 7.4 Verify mirror compatibility
+
+```bash
+# 1. 元数据端点
+curl https://你的镜像/api/v1/registry
+# 应返回: { apiVersion: "1.0", pluginCount: ..., capabilities: [...] }
+
+# 2. 列表
+curl https://你的镜像/api/v1/plugins?page=1&pageSize=5
+# 应返回: { total, page, pageSize, items: [...] }
+
+# 3. 详情
+curl https://你的镜像/api/v1/plugins/<slug>
+# 应返回 Plugin + versions[]
+
+# 4. 下载信息
+curl https://你的镜像/api/v1/plugins/<slug>/versions/latest/download
+# 应返回: { url, sha256, size }
+
+# 5. 包体校验
+curl -o test.qplugin <url>
+qomicex verify --package test.qplugin   # Ed25519 验签，主源镜像应同样通过
+```
+
+---
+
+## 8. Launcher integration plan (TODO)
+
+The launcher backend `services/plugin_store.rs` currently uses a fixed `QOMICEX_STORE_API_BASE` environment variable as a **single-source proxy**. The changes needed for multi-source integration:
+
+| Layer | Change | Effort |
+| :--- | :--- | :--- |
+| Backend | Change `store_api_base()` to select based on request origin; add a base_url parameter to `store_get` / `store_post` | Medium |
+| Backend | Store auth tokens keyed by source (`{registryId}-tokens.json`) | Medium |
+| Backend | The install pipeline `install` accepts a source parameter | Small |
+| Backend | Add a `GET /store/registry` pass-through endpoint (proxying the upstream `/registry`) | Small |
+| Frontend | Add a `registryUrl` configuration UI (multi-source list) to `settings` | Medium |
+| Frontend | Pass the source parameter through in `api/pluginStore.ts` | Small |
+
+**Suggested phased plan**:
+
+- Add a `GET /store/registry` pass-through in the backend (a small standalone endpoint that does not break existing semantics)
+- Parameterize the backend's `store_api_base()` to select the base URL by source
+- Add a `registryUrl` input (multiple entries allowed) to the frontend settings page
+- Install/update pull from the specified source; when unspecified, default to the official source
+
+> 🚧 The integration above is **not implemented yet**; the launcher is still a fixed single-source proxy. This specification serves as the foundation for the open ecosystem and will be implemented in detail by follow-up PHASE tasks.

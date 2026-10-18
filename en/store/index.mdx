@@ -1,0 +1,187 @@
+---
+title: "Plugin store API"
+---
+## Plugin store API
+
+Backend API specification for the Qomicex Launcher plugin store（插件商店）(`plugins.qomicex.top`), for plugin developers and launcher integrators.
+
+## Conventions
+
+- **Base URL**: `https://plugins.qomicex.top/api/v1`
+- **Request/response**: JSON (version upload uses multipart/form-data), fields named camelCase; times are ISO 8601
+- **Error format**: always `{ "error": { "code": "...", "message": "..." } }`, with semantic HTTP status codes
+- **CORS**: GET/HEAD fully open; write operations only allow `ALLOWED_ORIGINS` (including the `*.qomicex.top` wildcard)
+- **Pagination**: `page` (starts at 1), `pageSize` (default 20, max 50)
+- **Caching**: plugin list 15s, plugin detail 300s
+- **Rate limiting**: login/register 10 requests/min/IP; download info 60 requests/min/IP (over the limit returns `429 rate_limited`)
+
+### Authentication methods
+
+| Method | Request header | Description |
+| :--- | :--- | :--- |
+| Access Token | `Authorization: Bearer <jwt>` | Issued at login, valid for 15 minutes; with a refresh token, 30 days |
+| API Key | `X-API-Key: qk_<64hex>` | Created in the account center（账户中心）, plaintext returned only once at creation |
+| Admin Token | `Authorization: Bearer <ADMIN_TOKEN>` | `/admin/*` only; a user JWT with role=admin also works |
+
+🔒 below means authentication is required.
+
+### Registry metadata `/registry`
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| GET | `/registry` | Open registry metadata → `{apiVersion:"1.0", baseUrl, pluginCount, capabilities[], mirrors?}`. Used by the launcher for multi-source discovery (see [Open Registry Protocol](/en/store/registry-spec)), cached for 60s |
+
+### Error code reference
+
+| HTTP | code | Scenario |
+| :--- | :--- | :--- |
+| 400 | `bad_request` / `bad_json` | Missing parameter / body is not valid JSON |
+| 401 | `unauthorized` / `invalid_credentials` / `invalid_api_key` / `invalid_refresh_token` | Not authenticated or invalid credentials |
+| 403 | `forbidden` / `account_disabled` / `email_unverified` / `not_org_member` / `membership_pending` / `need_org_admin` | No permission |
+| 404 | `not_found` / `invalid_invite` | Resource not found |
+| 409 | `slug_taken` / `account_exists` / `version_exists` / `cannot_delete_latest` / `no_published_version` / `already_member` / `invite_exhausted` / `github_already_bound` / `github_org_taken`, etc. | Conflict |
+| 410 | `invite_expired` | Invite link expired |
+| 413 | `too_large` | Package exceeds 50MB |
+| 422 | `validation_error` / `invalid_package` / `unsafe_package` / `version_mismatch` / `missing_dependency` / `signature_invalid` | Validation failed |
+| 429 | `rate_limited` | Rate limit triggered |
+| 500 | `internal` / `mail_send_failed` | Server internal error / mail delivery failed |
+
+## Authentication `/auth`
+
+### Register and log in
+
+| Method | Path | Authentication | Description |
+| :--- | :--- | :--- | :--- |
+| POST | `/auth/register` | - | Register. Body `{username(3-32, alphanumeric_-), email, password(≥8), captchaToken?}`. When the mail service is configured, a verification email is sent and login is blocked until verified (returns `{checkEmail:true}`); otherwise returns `{user, accessToken, refreshToken, expiresIn}` directly |
+| POST | `/auth/login` | - | Log in. Body `{account(username or email), password, captchaToken?}` → `{user{id,username,email,displayName?,role,developerLevel,avatarUrl?}, accessToken, refreshToken, expiresIn}`. Errors: `invalid_credentials` / `account_disabled` / `email_unverified` / `rate_limited` |
+| POST | `/auth/resend-verification` | - | Resend the verification email `{email?, captchaToken?}` → `{ok:true}` (does not leak whether the account exists) |
+| POST | `/auth/verify-email` | - | Email link landing `{token}` → `{ok, type:'register_verify'\|'change_email'}`; 400 `invalid_token` |
+| POST | `/auth/refresh` | - | Refresh `{refreshToken}` → a new token pair; the old refresh token is revoked immediately (rotation) |
+| POST | `/auth/forgot-password` | - | Send a reset email `{email, captchaToken?}` → `{ok:true}` (captcha prevents abuse) |
+| POST | `/auth/reset-password` | - | Reset the password `{token, newPassword(≥8)}` → `{ok}`; the email is also treated as verified and all sessions are revoked |
+
+### Account center 🔒
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| GET | `/auth/me` | Current user info `{user{..., emailVerified, pendingEmail?}}` |
+| POST | `/auth/become-developer` | Upgrade to developer → `{ok, role:'developer'}`; 409 `not_eligible` |
+| DELETE | `/auth/account` | Delete the account `{password?}` (accounts registered through GitHub without a password skip password verification); cascades deletion of the plugins/versions/package files it owns |
+
+### API key management 🔒
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| POST | `/auth/api-keys` | Create `{name?}` → 201 `{id, name, key:'qk_<64hex>'}`, plaintext returned only this once |
+| GET | `/auth/api-keys` | List → `{keys[{id,name,scopes[],expiresAt?,lastUsedAt?,createdAt}]}` |
+| DELETE | `/auth/api-keys/:id` | Delete → `{ok:true}` |
+
+### GitHub OAuth
+
+| Method | Path | Authentication | Description |
+| :--- | :--- | :--- | :--- |
+| GET | `/auth/github/callback` | - | GitHub callback relay, 302 to the SPA `/auth/github?code=...` |
+| POST | `/auth/github` | - | Exchange the authorization code for a store JWT `{code}` → `{user, accessToken, refreshToken, expiresIn}`; matched by github_id, account created automatically on first use |
+| POST | `/auth/github/bind` | 🔒 | Bind GitHub to the current account `{code}` → `{ok, avatarUrl?}`; 409 `github_already_bound` |
+
+### Change email and developer verification
+
+| Method | Path | Authentication | Description |
+| :--- | :--- | :--- | :--- |
+| POST | `/auth/change-email-request` | 🔒 | Change email `{newEmail, password}` → after password verification the new address receives a confirmation email and takes effect |
+| POST | `/auth/verification-request` | 🔒 | Apply for organization/official verification `{targetLevel:'organization'\|'official'}` → 201 `{ok, status:'pending'}`; prerequisites: already a developer, currently individually verified, no application in progress (409 `not_developer` / `already_verified` / `pending_exists`) |
+| GET | `/auth/verification-request/mine` | 🔒 | Check application status → `{developerLevel, pending}` (pending: 0 none / 1 organization / 2 official) |
+
+### Device flow login（设备流登录）(launcher/CLI)
+
+Simplified RFC 8628, no WebView authentication needed:
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| POST | `/auth/device/code` | Initiate: → 201 `{deviceCode, userCode:"XXXX-XXXX", verificationUri, verificationUriComplete, expiresIn:600, interval:5}`; rate limited per IP |
+| POST | `/device/token` | Poll `{deviceCode}` → `{"status":"pending"}` while pending; after approval `{"status":"ok", user, accessToken, refreshToken, expiresIn}` (same shape as login, the session is consumed once); 400 `expired_token` means you must start over |
+| POST | `/auth/device/approve` | 🔒 Web confirmation `{userCode}` (8 characters, hyphens and case ignored) → `{ok}`; 404 `invalid_user_code`. Confirmation page: `https://plugins.qomicex.top/auth/device?code=...` |
+
+## Plugins `/plugins`
+
+### Public reads
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| GET | `/plugins?q&category&tags&sort&page&pageSize&minLauncherVersion` | Plugin marketplace list (published only). `q` fuzzy-searches name/description/slug; `category` ∈ `tool\|launcher\|theme\|integration`; `tags` filters by a single tag; `sort=downloads` sorts by download count (default is newest); `minLauncherVersion` filters out incompatible plugins. → `{total, page, pageSize, items[Plugin]}` |
+| GET | `/plugins/:slug` | Plugin detail → Plugin + `versions[]` (published only: `{id, version, changelog?, minLauncherVersion, layers[], permissions[], sha256, sizeBytes, downloadCount, createdAt}`). 404 if unpublished or missing |
+| GET | `/plugins/:slug/reviews?page&pageSize` | Review list → `{items[{id, rating, content, createdAt, updatedAt?, username, developerLevel, avatarUrl?}]}` |
+| POST | `/plugins/check-updates` | **Core launcher endpoint**: batch update check. Body `{launcherVersion:'x.y.z', installed:[{slug, version}] ≤200}` → `{updates[{slug, currentVersion, latestVersion, changelog?, sha256, permissions[], layers[], download:{url, mirrorUrl?}, rolloutPercent?}]}`. `rolloutPercent` is the staged rollout percentage (absent/100 = full rollout, `<100` means the client decides with a random value whether to roll out). Plugins already up to date or incompatible with the current launcher version are not returned |
+| GET | `/plugins/:slug/versions/:version/download` | Dual-channel download info. `:version` may be `latest` → `{url, mirrorUrl?, sha256, size}`; the client downloads from both channels in a race and verifies the SHA-256. Rate limited to 60/min/IP |
+
+Common fields of the Plugin object: `{id, slug, developerId, name, description, category, tags[], iconUrl?, status, latestVersion?, downloadsCount, ratingAverage?, ratingCount, developerName?, developerLevel?, orgId?/orgSlug?/orgName?, officialComment?, officialCommentAt?, createdAt, publishedAt?}`.
+
+### Developer writes 🔒
+
+Permission model: the original uploader = full control; organization owner/admin = full control; organization member = can upload new versions.
+
+| Method | Path | Permission | Description |
+| :--- | :--- | :--- | :--- |
+| GET | `/plugins/mine` | Signed in | Plugins I take part in (personal + organization) with all version statuses, latest review comments, and rejection reasons → `{items[]}` |
+| POST | `/plugins/` | Signed in | Create a plugin `{orgId?, slug(3-64 lowercase alphanumeric and hyphens), name(≤64), description?(≤2000), category?, tags?(≤10), iconUrl?}` → 201 `{plugin}`; initially pending review; 409 `slug_taken` |
+| PUT | `/plugins/:id` | full | Update metadata (same fields as creation, all optional) → `{plugin}` |
+| DELETE | `/plugins/:id` | full | Delete the plugin (soft delete) → `{ok:true}` |
+| POST | `/plugins/:id/versions` | full / member | Upload a new version, multipart/form-data: `file` (.qplugin ≤50MB, required), `changelog?` (≤4000), `version?` (must match the manifest). Validation chain: zip structure → root-level manifest.json → zip-slip → **signature verification (Ed25519; missing signature or failed verification → 422 `signature_invalid`)** → dependency existence → version deduplication. Packages that are purely L3 with no danger permissions are published automatically, otherwise they go to manual review. → 201 `{id, version, sha256, size, reviewStatus:'published'\|'pending'}` |
+| DELETE | `/plugins/:id/versions/:versionId` | full / member | Withdraw a version (also deletes the package file) → `{ok}`; 409 `cannot_delete_latest` (the latest published version cannot be deleted, publish a new version first) |
+| PATCH | `/plugins/:id/transfer` | full | Ownership transfer. Body `{orgId}` or `{orgId:null}` to move back to the individual; transferring into an organization requires admin+ in the target organization → `{ok, orgId}` |
+| GET | `/plugins/:id/stats` | full / member | Stats dashboard → `{totalDownloads, ratingAverage?, ratingCount, reviewsCount, series[{date,count}] last 30 days, versions[]}` |
+
+Upload failure error codes: `too_large` / `unsafe_package` / `invalid_package` / `version_mismatch` / `missing_dependency` / `version_exists` / `signature_invalid`.
+
+### Reviews 🔒
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| POST | `/plugins/:slug/reviews` | Post or edit your own review (one upsert per user per plugin) `{rating:1-5, content?(≤2000), captchaToken?}` → 201 |
+| DELETE | `/plugins/:slug/reviews/mine` | Delete your own review → `{ok}`; 404 if you never reviewed |
+
+## Organizations `/orgs`
+
+Role hierarchy: member < admin < owner.
+
+| Method | Path | Authentication | Description |
+| :--- | :--- | :--- | :--- |
+| POST | `/orgs/` | 🔒 | Create an organization `{slug(3-48), name(≤64), description?(≤1000), iconUrl?}` → 201 `{id, slug}`; the creator becomes owner; 409 `slug_taken` |
+| GET | `/orgs/mine` | 🔒 | Organizations I joined → `{items[{...Org, myRole, memberCount, pluginCount}]}` |
+| GET | `/orgs/join?code=` | - | Invite code preview → `{orgName, role}`; 404 `invalid_invite` |
+| POST | `/orgs/join` | 🔒 | Join with an invite code `{code}` → 201 `{ok, role}`; errors: `invalid_invite` / `invite_expired`(410) / `invite_exhausted`(409) / `already_member`(409) |
+| GET | `/orgs/:slug` | - | Organization public page → Org + `{memberCount, pluginCount}` |
+| GET | `/orgs/:slug/plugins` | - | Public plugins owned by the organization → `{items[]}` |
+| GET | `/orgs/:slug/members` | 🔒 member | Member list (sorted by role) → `{items[{userId, role, username, avatarUrl?, joinedAt}]}` |
+| GET | `/orgs/:slug/invites` | 🔒 admin | Invite code list → `{items[{code, role, maxUses?, uses, expiresAt?, revoked, createdAt}]}` |
+| POST | `/orgs/:slug/invites` | 🔒 admin | Create an invite code `{role?:'admin'\|'member', maxUses?(1-1000), expiresInDays?(1-365)}` → 201 `{code, joinUrl:'/orgs/join?code=...', role}` |
+| DELETE | `/orgs/:slug/invites/:code` | 🔒 admin | Revoke an invite code → `{ok}` |
+| PATCH | `/orgs/:slug/members/:userId` | 🔒 owner | Change a member role `{role:'admin'\|'member'}`; the owner role cannot be changed |
+| DELETE | `/orgs/:slug/members/:userId` | 🔒 member | Remove a member; you cannot remove the owner or members of the same or a higher level; the owner cannot leave an organization they created |
+| POST | `/orgs/:slug/verify-github/init` | 🔒 admin | GitHub organization verification (GitHub App installation flow), step one: `{githubOrg?}` (uses the stored value if omitted) → `{installUrl, githubOrg}`. The organization owner completes the App installation on GitHub and is redirected back to the confirmation page |
+| POST | `/orgs/verify-github/complete` | 🔒 admin | Step two: confirm the App installation callback `{state, installationId?}` → `{ok, orgSlug, githubOrg}`; 403 `not_installed` (the App is not installed yet). Errors: `github_org_taken` / `bad_state`(session expired) / `state_user_mismatch` / `org_mismatch` / `github_org_conflict` |
+| PATCH | `/orgs/:slug` | 🔒 admin | Update the profile `{name?, description?, iconUrl?}`, at least one field → `{ok}` |
+| DELETE | `/orgs/:slug` | 🔒 owner | Dissolve the organization; its plugins return to the original developer → `{ok}` |
+
+## Administrator `/admin`
+
+Authentication: `Authorization: Bearer <ADMIN_TOKEN>` or a user JWT with role=admin.
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| GET | `/admin/pending` | Pending review queue → `{pending:[{kind:'plugin'\|'version', id, slug, ...}]}` |
+| POST | `/admin/review/:targetId` | Review `{action:'approve'\|'reject'\|'suspend', reason?(≤1000)}`. targetId automatically resolves to a plugin or a version. Writes a review log → `{ok, targetType, targetId, action}` |
+| GET | `/admin/stats` | Overview → `{plugins, versions, users, downloads, downloadsSeries[{date,count}] last 30 days}` |
+| GET | `/admin/plugins?q&status&page&pageSize` | Full plugin management list → `{total, items[]}` |
+| GET | `/admin/plugins/:id/detail` | Plugin metadata detail |
+| GET | `/admin/plugins/:id/versions` | All version details (any status) → `{items[{id, version, status, downloads, sha256, sizeBytes, createdAt}]}` |
+| PATCH | `/admin/plugins/:id` | Force a status change `{status:'pending'\|'published'\|'rejected'\|'suspended'}`; setting published requires a published version, otherwise 409 `no_published_version` |
+| PUT | `/admin/plugins/:id/official-comment` | Official comment upsert `{content(1-2000)}` → `{ok, officialComment, officialCommentAt}` |
+| DELETE | `/admin/plugins/:id/official-comment` | Delete the official comment → `{ok}` |
+| GET | `/admin/orgs` | Organization list (including owner name/member count/plugin count/GitHub verification state) |
+| DELETE | `/admin/orgs/:slug` | Force-dissolve an organization → `{ok}` |
+| GET | `/admin/users?q&pending=1&page&pageSize` | User list; `pending=1` shows only pending verification applications → `{total, items[]}` |
+| PATCH | `/admin/users/:id` | User management `{role?:'user'\|'developer'\|'admin', status?:'active'\|'disabled', developerLevel?:'individual'\|'organization'\|'official', verificationPending?:false}` → `{ok}` |
+| DELETE | `/admin/users/:id` | Delete the account (cascades deletion of owned plugins/versions/package files, irreversible) → `{ok}` |
+| DELETE | `/admin/reviews/:id` | Delete a policy-violating review and recompute the rating → `{ok}` |
+| GET | `/admin/review-logs?page&pageSize` | Review logs → `{items[{id, targetType, targetId, action, reason?, reviewer, createdAt}]}` |

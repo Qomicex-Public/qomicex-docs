@@ -1,0 +1,323 @@
+---
+title: "qomicex CLI reference"
+---
+## qomicex CLI reference
+
+`qomicex` is the command-line tool for the Qomicex plugin ecosystem. It covers the whole plugin development lifecycle: `create` / `dev` / `pack` / `verify` / `lint` / `bump` / `publish`, plus `login` / `logout` (login session management), `doctor` (environment diagnostics), and `debug` (launcher CDP debugging).
+
+- Zero runtime dependencies (Node ≥ 20, using only the built-in `node:fs` / `node:zlib` / WebCrypto)
+- Package: `@qomicex/cli` (source in `packages/qomicex-cli/`)
+
+## Installation
+
+```bash
+pnpm install
+pnpm --filter @qomicex/cli build
+pnpm --filter @qomicex/cli link   # 链接到 PATH，之后可直接用 qomicex
+```
+
+You can also publish it straight to npm:
+
+```bash
+cd packages/qomicex-cli
+npm login
+npm version patch   # bump 版本（版本号单一来源 package.json，src 自动读取）
+npm publish
+```
+
+## Global flags
+
+| Flag | Description |
+|------|------|
+| `--help` / `-h` | Show help for all commands |
+| `--version` / `-v` | Show the CLI version |
+
+## Environment variables
+
+| Variable | Purpose |
+|------|------|
+| `QOMICEX_SIGN_KEY` | Signing private key (PKCS#8 PEM or raw base64 seed); required by `publish` |
+| `QOMICEX_API_KEY` | Plugin store（插件商店）API key (CI mode skips device-flow login and confirms uploads automatically) |
+| `QOMICEX_STORE_API` | Store API base (defaults to `https://plugins.qomicex.top/api/v1`) |
+| `QOMICEX_LAUNCHER_PATH` | Lets `debug` locate the launcher executable |
+| `QOMICEX_HOME` | Data directory for `debug` (log file location; QOMICEX_HOME → `.qomicex-bootstrap` → default directory) |
+
+## Command overview
+
+| Command | Purpose |
+|------|------|
+| `qomicex create <id> [--template <react\|html\|lib\|wasm>] [-t <...>]` | Generate a valid plugin project from a built-in template (react by default) |
+| `qomicex dev [--port <n>]` | Start a local debugging environment (harness mode inside the repo, bare Vite outside it) |
+| `qomicex pack [--out-dir <d>] [--version <v>] [--key <k>] [--skip-build]` | Build → package into a `.qplugin` (optional `--key` signing) |
+| `qomicex verify [--package <f>]` | Validate manifest / permissions / long loops / signatures |
+| `qomicex lint [--json]` | Stricter static checks: manifest / permissions / long loops / import extensions / resource references |
+| `qomicex bump <major\|minor\|patch> [--version <v>]` | Increment the `manifest.json` version |
+| `qomicex publish [--key <k>] [--slug <s>] [--changelog <c>] [--api <url>] [--org-id <id>] [--package <f>] [--skip-build] [--yes]` | Device-flow login → sign → upload to the store |
+| `qomicex login [--api <url>]` | Device-flow login and persist the session (no repeat login for 30 days) |
+| `qomicex logout` | Clear the persisted login session |
+| `qomicex doctor [--json] [--api <url>]` | Environment diagnostics (strictly read-only) |
+| `qomicex debug [--port <n>] [--launcher <p>] [--no-logs] [--no-kill]` | Start the launcher with CDP open plus live logs |
+
+## create
+
+```bash
+qomicex create com.example.demo                  # 默认 react 模板
+qomicex create com.example.html --template html   # 纯 HTML/CSS/JS（-t html 短参数也可）
+qomicex create com.example.lib -t lib             # 纯库插件（无 UI，registerMethod 供调用）
+qomicex create com.example.wasm --template wasm   # L3 WASM 插件（Rust + wasmtime）
+```
+
+Generates a valid plugin project from a built-in template, automatically substituting the id in `manifest.json` / `package.json` / `Cargo.toml` / `src/lib.rs`. Four templates:
+
+| Template | `--template`/`-t` | Structure | Build |
+|------|-------------------|------|------|
+| **react** (default) | `react` | Vite + React 19 + TS + Tailwind + `@qomicex/plugin-ui`, `layers:["l2"]` | `pnpm run build` (tsc + vite) |
+| **html** | `html` | Plain HTML/CSS/JS (no framework), `src/` + esbuild bundling → `dist/` | `pnpm run build` (esbuild) |
+| **lib** | `lib` | Library-only plugin (no UI), `src/main.js` registers methods for other plugins to call, `layers:["l3"]` | `pnpm run build` (esbuild) |
+| **wasm** | `wasm` | L3 WASM plugin (Rust cdylib + `src/lib.rs`), `layers:["l3"]`, no entry | `bash scripts/build.sh` / `pwsh scripts/build.ps1` (cargo build) |
+
+- Minimum permission set for the react template: `config:read` / `ui:toast` / `network:cors_proxy`; the html template uses `config:read` / `ui:toast`; the lib template uses `permissions:["config:write"]`; the wasm template uses `permissions:["wasm:execute"]`
+- The lib template has no `contributes.menuItems` (it creates no sidebar entry); see [MarkdownLibrary](https://github.com/Qomicex-Public/Qomicex.Plugin-MarkdownLibrary)
+- The wasm template follows [WASM plugins (L3)](/en/plugins/wasm-plugin); `src/lib.rs` imports the `qomicex` host module and exports `on_load`/`on_unload`/`get_manifest`
+- After generating, it prompts you to run `pnpm install` (for wasm, `rustup target add wasm32-unknown-unknown`)
+
+**Examples**:
+
+```bash
+# 生成一个漫画汉化小组的连字插件项目（react 默认）
+qomicex create com.acgstudio.ligatures
+cd com.acgstudio.ligatures
+pnpm install
+qomicex verify    # 立即校验，确认 0 error
+
+# 生成纯 html 插件
+qomicex create dev.example.noui --template html
+
+# 生成纯库插件（提供方法供其他插件调用）
+qomicex create top.example.markdownlib -t lib
+
+# 生成 L3 WASM 插件（Rust）
+qomicex create dev.example.wasmplugin --template wasm
+```
+
+> `pack` / `verify` / `lint` / `publish` work with all four templates: `pnpm run build` runs when there is a `package.json`, `cargo build` runs when there is a `Cargo.toml`, and purely static projects (neither file) skip the build and are packaged directly. Verify skips the JS permission scan for L3 wasm plugins (`wasm:execute` is consumed by the gateway).
+
+## dev
+
+```bash
+qomicex dev            # 默认 5173
+qomicex dev --port 3000
+```
+
+Starts a local plugin debugging environment in one of two modes:
+
+- **Inside the repo (harness mode)**: when the plugin lives at `plugins-dev/{id}` in the repo, it detects this and runs `scripts/harness/run.mjs` — Playwright starts Vite(:1420) + injects the Tauri mock + stubs a mock server(:5100) + hot reloads on source changes (full page reload after a rebuild). In this mode `--port` has no effect (the harness uses fixed ports), and exiting with `Ctrl+C` cleans up the stub and Vite together. See [Debugging and hot reload](/en/plugins/debugging).
+- **Outside the repo (bare Vite)**: when no harness is detected, it falls back to starting a Vite dev server and writing `.qomicex-dev.json` at the project root (dev-source plugin configuration: a plugin id → localhost URL mapping) for manually registering a dev source.
+
+## pack
+
+```bash
+qomicex pack                          # 有 package.json → pnpm run build；无则跳过构建直接打包
+qomicex pack --version 0.2.0          # 覆盖 manifest 版本号
+qomicex pack --key ./dev-key.pem      # 附签名（仅 signature.json；完整证书链请用 publish）
+qomicex pack --skip-build             # 跳过构建（复用现有 dist）
+qomicex pack --out-dir ./dist-releases # 指定输出目录（默认 release/）
+```
+
+A `.qplugin` is a zip with `manifest.json` at the root plus `dist/**` (or `plugin.wasm`). Build detection is automatic: if the project has a `package.json` with `scripts.build`, it runs `pnpm run build` (react/html/lib); if it has a `Cargo.toml`, it runs `scripts/build.sh` / `build.ps1` (wasm); if it has neither, the build is skipped (purely static project). Without a `dist/` it falls back to collecting the root files referenced by the manifest plus `plugin.wasm`. If `entry.theme` / `contributes.overlay.file` reference files under `dist/` while the source sits at the root, they are copied in automatically.
+
+**Examples** (packaging for day-to-day iteration):
+
+```bash
+qomicex pack                                    # 开发自测包
+qomicex pack --key ./dev-key.pem                # 带自签名的离线包（本地 verify 可验）
+qomicex pack --version 0.3.0 --skip-build       # 改版本号后直接出包（复用 dist）
+```
+
+## verify
+
+```bash
+qomicex verify                        # 目录模式：manifest + 权限 + 长循环
+qomicex verify --package ./release/x.qplugin   # 包模式：manifest + 签名验签
+```
+
+- **Manifest validity**: id (reverse domain / safe characters), name, version (semver), minLauncherVersion, layers, permissions, entry, contributes
+- **Least privilege**: compares `manifest.permissions` with the bridge methods the source actually calls (the `METHOD_PERMISSIONS` table). Both declared-but-unused and used-but-undeclared raise errors
+- **Long-loop warnings**: `while(true)`, `for(;;)`, and unbounded `setInterval` polling (it suggests moving the work to a Worker / WASM / backend) — a heuristic text scan, so false positives and misses are possible
+- **Signature check**: in package mode it verifies with the bundled store root public key (ADR-050); an unsigned package reports "unsigned" rather than being rejected
+
+**Examples** (pre-publish quick check plus re-verifying a signed package):
+
+```bash
+qomicex verify
+qomicex verify --package ./release/com.acgstudio.ligatures-0.3.0.signed.qplugin
+```
+
+## lint
+
+```bash
+qomicex lint               # manifest/权限/长循环 + 相对 import 扩展名 + 资源引用
+qomicex lint --json        # 结构化输出（{ok, errors, warnings, findings}），供 CI 消费
+```
+
+A stricter pre-publish static gate than `verify`, with two extra checks:
+
+- **Relative imports missing an extension**: `import ... from './x'` with no extension and not a directory barrel → error (a hard Vite rule)
+- **Resource reference existence**: files pointed at by `entry.frontend/theme/backend` or `contributes.overlay.file` do not exist → error (a `dist/` reference that has not been built raises a warning)
+
+**Examples** (CI gate):
+
+```bash
+# CI 脚本：lint 不过（exit 1）即阻断构建
+qomicex lint --json | jq -e '.ok'
+```
+
+## bump
+
+```bash
+qomicex bump patch     # 1.0.0 → 1.0.1
+qomicex bump minor     # 1.0.0 → 1.1.0（默认，不传参数 = minor）
+qomicex bump major     # 1.0.0 → 2.0.0
+qomicex bump --version 2.5.0   # 直接指定目标版本
+```
+
+Rewrites the `version` field of `manifest.json` directly without triggering a build. Use it to increment the version before publishing a new release, so the store does not reject a version older than the live one (409 `version_exists`). Versions support semver pre-release and build metadata (`1.2.3-beta.1` / `1.2.3+build5`).
+
+**Examples** (standardized release flow):
+
+```bash
+qomicex bump minor            # 1.0.0 → 1.1.0
+qomicex lint && qomicex pack
+qomicex publish --changelog "新增 xxx 功能"
+```
+
+## login / logout
+
+```bash
+qomicex login              # 设备流登录，会话持久化到 ~/.qomicex/auth.json（0600）
+qomicex login --api http://127.0.0.1:8787/api/v1   # 指定商店（本地 wrangler dev 调试）
+qomicex logout             # 清除本地会话
+```
+
+For 30 days after a successful login, `qomicex publish` skips re-authorization: when the access token expires after 15 minutes, the refresh token rotates it automatically through `POST /auth/refresh`. Sessions are scoped per store API base (each store keeps its own login).
+
+**Examples** (first login plus multiple-store isolation):
+
+```bash
+qomicex login                       # 生产商店登录一次
+qomicex login --api http://127.0.0.1:8787/api/v1   # 本地商店单独登录
+qomicex publish --api http://127.0.0.1:8787/api/v1 # 自动用本地商店会话，免再次授权
+```
+
+## publish
+
+```bash
+export QOMICEX_SIGN_KEY=<私钥 base64/PEM>   # 或 --key ./key.pem
+qomicex publish                            # 设备流登录 → 签名 → 上传
+qomicex publish --changelog "修复 X" --yes
+qomicex publish --api http://127.0.0.1:8787/api/v1   # 本地商店（wrangler dev）调试
+```
+
+The flow (matching the store contract; see [Publishing guidelines](/en/plugins/publishing) and ADR-050):
+
+- Authentication: skipped when `QOMICEX_API_KEY` exists (CI) or a persisted session renews successfully; otherwise device-flow login (RFC 8628) through `POST /api/v1/auth/device/code`
+- `POST /api/v1/developer/keys` uploads the Ed25519 public key → the store root key issues a developer certificate (`keyId` + `signature.cert.json`)
+- The package body is signed with the private key (canonical JSON payload → Ed25519 → `signature.json`) and packed into the `.qplugin` together with the certificate
+- It looks up or creates the plugin record (`/plugins/mine` → `POST /plugins` if missing), then uploads with a multipart `POST /plugins/:id/versions` after confirmation
+- On success the signed package is saved as `release/<id>-<version>.signed.qplugin` for re-verification
+
+**Flags**:
+
+| Flag | Description |
+|------|------|
+| `--key <k>` | Private key file (PEM / base64), or the `QOMICEX_SIGN_KEY` environment variable |
+| `--slug <s>` | Plugin slug (defaults to manifest.id) |
+| `--changelog <c>` | Release notes for this version (≤4000 characters) |
+| `--api <url>` | Store API base (defaults to `QOMICEX_STORE_API` or the production address) |
+| `--org-id <id>` | Publish under an organization (the owning organization id) |
+| `--package <f>` | Upload an existing `.qplugin` directly (skips the build but still re-signs) |
+| `--skip-build` | Skip tsc + vite build before packaging |
+| `--yes` | Skip confirmation (for CI) |
+
+**Examples** (publish plus version update):
+
+```bash
+export QOMICEX_SIGN_KEY="$(cat dev-key.pem)"
+qomicex login                                    # 首次登录
+qomicex bump patch
+qomicex publish --changelog "修复了 xxx 崩溃问题"
+# CI 免交互：QOMICEX_API_KEY=qk_xxx qomicex publish --yes
+```
+
+## doctor
+
+```bash
+qomicex doctor             # 环境诊断（纯只读，零副作用）
+qomicex doctor --json      # 结构化输出供脚本消费
+```
+
+Checks each item: Node ≥ 20, pnpm, the plugin project and manifest validity, `@qomicex/plugin-ui`, Vite, openssl + WebCrypto (Ed25519), the `:5000` backend, plugin store reachability, and that the debugging harness can be located. It prints `✔/✗` with reasons and **modifies no files**.
+
+**Examples** (troubleshooting: run it first when the plugin build or debugging environment misbehaves):
+
+```bash
+qomicex doctor
+# ✗ @qomicex/plugin-ui: 未安装（pnpm install 后使用）
+# ✗ openssl: 不可用（签名密钥生成需要）
+```
+
+## debug
+
+```bash
+qomicex debug                            # 启动启动器开放 CDP :9222 + 实时日志
+qomicex debug --port 9223 --no-logs      # 指定 CDP 端口 / 仅 CDP 不要日志
+qomicex debug --launcher ./dist/launcher.exe --no-kill
+```
+
+It locates the launcher (`--launcher` > `QOMICEX_LAUNCHER_PATH` > the repo's `src-tauri/target/{release,debug}` > the install path) and starts it with a `--debug <port>` argument.
+
+**The launcher itself supports `Qomicex Launcher.exe --debug <port>`** — third-party developers need neither the CLI nor the source; passing the flag on the command line opens CDP and pushes live logs; **release builds keep plain IPC by default and are unaffected** (it is enabled only when the flag is passed explicitly).
+
+- **Windows (WebView2)**: `--debug <port>` sets `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=<port>` to open CDP; it polls `/json/list`, prints the targets, and shows the DevTools frontend URL
+- **Linux/macOS**: sets `WEBKIT_INSPECTOR_SERVER` / `WEBKIT_INSPECTOR_HTTP_SERVER` on a best-effort basis (the app must have the inspector enabled)
+- **Two live-log channels**: ① the launcher's stderr streamed live (backend logs + launcher logs, visible directly via `stdio: inherit`); ② tailing `{BaseDir}/logs/qomicex-backend.log` (the `FileLog` writer flushes line by line to disk, including `[plugin:...]` / `[frontend:...]` trace lines) and printing them as `[trace] ...`. Neither depends on backend TCP
+- `Ctrl+C` stops it and terminates the launcher child process (keep it alive with `--no-kill`)
+
+**Examples** (Playwright connectOverCDP automation):
+
+```bash
+qomicex debug --port 9223
+# ✔ CDP 就绪: http://localhost:9223
+#   - [page] Qomicex Launcher http://tauri.localhost/
+```
+
+```js
+// Node 脚本：直连 CDP 做自动化
+const { chromium } = require('playwright')
+;(async () => {
+  const browser = await chromium.connectOverCDP('http://127.0.0.1:9223')
+  const pages = browser.contexts()[0].pages()
+  await pages[0].evaluate(() => __PLUGIN_API__.call('getSettings'))
+  await browser.close()
+})()
+```
+
+## Signing keys
+
+Generate an Ed25519 key pair (PKCS#8 PEM or a raw 32-byte seed in base64):
+
+```bash
+openssl genpkey -algorithm Ed25519 -out dev-key.pem
+# raw seed 提取（publish 也接受 PEM，通常不必）
+openssl pkey -in dev-key.pem -outform DER | tail -c 32 | base64
+```
+
+## AI-assisted development
+
+Qomicex's plugin development **AI Skill package** is maintained separately in the [qomicex-plugin-skills](https://github.com/Qomicex-Public/qomicex-plugin-skills) repository. AI agents (Claude / opencode / Cursor and so on) load it while writing plugins to get accurate, current manifest fields, the permission catalog, bridge API signatures, theme tokens, and the signing and debugging flows — so the AI does not invent fields. See [AI-assisted development](/en/plugins/ai-development).
+
+## Design notes
+
+- **Zero dependencies**: zip reading and writing (`node:zlib` plus a hand-written CRC32/directory structure), Ed25519 (WebCrypto), and argument parsing (hand-written) pull in no third-party packages
+- **Signature canonicalization** matches the store's `src/lib/signature.ts` and the launcher's `plugin_signature.rs` byte for byte (canonicalJson with ordered keys and no whitespace, `signedHash` = SHA-256 of the payload)
+- **The store upload endpoint is unchanged**: the client is implemented against the read-only reference contract

@@ -1,0 +1,36 @@
+---
+title: "Downloads"
+---
+## Downloads
+
+Every download task (game installation, mods, modpacks, updates) shows up in the Downloads（下载中心）, with parallel execution, pausing, and live progress.
+
+## Interface
+
+Click **Downloads** in the sidebar to open it:
+
+- **Live progress**: each task shows its speed, progress bar, and completed size against total size
+- **Parallel tasks**: multiple tasks download at once without blocking each other
+- **Cancel a task**: cancel directly from the task card
+
+## Download acceleration
+
+The Launcher（启动器）ships with several acceleration mechanisms (Settings → Download settings（下载设置）):
+
+| Setting | What it does |
+| :--- | :--- |
+| **Download threads** | Concurrent connections per task, 64 by default. Lower it on a poor network |
+| **File chunk threads** | Splits large files into chunks and downloads them in parallel |
+| **Download timeout** | Timeout for a single request, in seconds |
+| **HTTP/3** | Experimental; enables HTTP/3 transport for CDNs that support it |
+| **Automatic download source selection** | Automatically speed-tests and switches between official sources and QML mirrors |
+
+When downloads are slow or failing, try this first: **turn on Automatic download source selection（下载源自动选择）**, or configure a source manually by following [Download mirrors](/en/guide/mirror).
+
+## Naming resource files
+
+You can customize the naming format for downloaded resources such as mods (Settings → Download settings → File naming). Supported combinations include:
+
+- `中文名-版本` / `版本-中文名` / `中文名` / `英文原名`, and more
+
+Pick whichever matches the way you organize your mod folder.

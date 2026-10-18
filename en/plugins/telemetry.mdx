@@ -1,0 +1,66 @@
+---
+title: "Staged rollout telemetry"
+---
+## Staged rollout telemetry
+
+Anonymous plugin error **telemetry** (opt-in, off by default) drives the store's **automatic staged-rollout pause**: once a plugin version reports more errors than the threshold within 24h, the store stops offering that version to users so a bad release cannot spread.
+
+## Privacy and whitelist
+
+- **Opt-in, off by default**: the `telemetryEnabled` setting defaults to `false`. While it is off, the frontend never triggers or reports anything.
+- **Report field whitelist (these four fields only)**:
+
+| Field | Notes |
+|------|------|
+| `pluginId` | Plugin id |
+| `pluginVersion` | Plugin version |
+| `errorType` | Error category, limited to `launch_crash` / `plugin_load_failed` / `plugin_runtime_error` |
+| `launcherVersion` | Launcher version (**injected by the backend**; the frontend cannot forge it) |
+
+- **Never included**: file paths, stack traces, device information, user names, IP addresses, or any other private data.
+- The whitelist is validated on both ends: the backend (`endpoints/telemetry.rs`) checks for non-empty values and a valid error category, and the store validates again with a zod schema.
+
+## Reporting flow
+
+```text
+插件运行期错误
+  → 前端 lib/telemetry.ts reportPluginError()
+       ├─ 开关关闭 → 直接返回（不触发）
+       └─ 60s 内存去重（同 pluginId@version@errorType 只报一次）
+  → POST /api/telemetry/plugin-error      （前端 api/telemetry.ts，失败静默 catch）
+  → 后端 endpoints/telemetry.rs
+       ├─ 校验非空 + 错误类别白名单
+       └─ 注入 launcherVersion → 转发 store
+  → store POST /api/v1/telemetry/plugin-error   （src/telemetry.ts）
+  → 写入 D1 表 plugin_error_reports（migration 0008）
+```
+
+**Currently connected reporting points** (the code is the source of truth):
+
+| Category | When it fires |
+|------|---------|
+| `plugin_load_failed` | Plugin activation fails (the `activatePlugin` catch); iframe / inline rendering fails to load a resource (`sandbox.ts`) |
+| `plugin_runtime_error` | Runtime error in the sandbox (reported through the iframe postMessage error event) |
+| `launch_crash` | Reserved whitelist category; the launcher side does not call it yet (the code is the source of truth) |
+
+**Silent by design**: nothing fires while the switch is off; failed reports are swallowed silently (`catch(() => {})`); telemetry must never affect plugins or the main flow at any stage.
+
+## How the store pauses a version automatically
+
+On `POST /plugins/check-updates` (the batch update check), the store counts 24h errors for each candidate's latest published version:
+
+- **Matching rules**: `plugin_id IN (p.id, p.slug) OR plugin_id LIKE '%.{slug}'` (this supports plugins that report their reverse-domain `manifest.id`, such as `dev.xxx`) + exact `version` match + `created_at` within 24 hours.
+- **Threshold**: `PLUGIN_ERROR_PAUSE_THRESHOLD` (overridable by environment variable, default **10**). A count `>` the threshold pauses the version.
+- **Effect of the pause**: that version **no longer appears in the updates list** (it is not offered as an upgrade).
+
+An automatic pause only means "**this version is no longer offered as an update**". Users who already installed it are unaffected, and the plugin stays published. This is staged-rollout protection, not review or a ban.
+
+## What this means for developers
+
+- **A version can be paused automatically**: if a version you published reports more errors than the threshold (default 10) within 24h, the store stops recommending it — this protects users and signals a problem to you.
+- **How to avoid it**:
+- Test thoroughly locally before publishing (upload → enable → restart → check every feature)
+- Make sure `qomicex verify` passes with 0 errors (static checks such as long loops and permission minimality)
+- After release, watch the version's error rate and iterate in small steps instead of one large change
+- **After a pause**: there is no self-service way for developers to clear the counter (the code is the source of truth). Fix the problem → publish a **new version number**; the new version starts a fresh counting window, and the old version is un-paused once the 24h window slides past it (provided the new version does not cross the threshold again).
+- **Note**: error deduplication (a 60s window) happens on the client, so what gets reported is the **deduplicated error category count**. It does not represent real crash counts and is only used to detect staged-rollout anomalies.

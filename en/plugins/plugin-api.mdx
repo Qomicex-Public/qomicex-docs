@@ -1,0 +1,703 @@
+---
+title: "Plugin API reference"
+---
+## Plugin API reference
+
+Plugin scripts interact with the launcher through the global object `window.__PLUGIN_API__`. This page lists every callable method, its signature, required permissions, and examples.
+
+## Global variables
+
+### __PLUGIN_API_BASE__ — plugin file URL prefix
+
+Inside the L2 Sandbox（沙箱）, the launcher injects `window.__PLUGIN_API_BASE__` with the file access base URL of the current plugin:
+
+```text
+http://localhost:5000/api/plugins/{插件ID}/files
+```
+
+Use it to build URLs for bundled resources such as icons and images:
+
+```js
+const iconUrl = `${__PLUGIN_API_BASE__}/dist/icon.svg`
+document.getElementById('icon').src = iconUrl
+```
+
+The variable does not exist in Inline rendering（内联渲染）(no `l2`) or in Overlay windows（悬浮窗）(overlay iframe); resolve relative paths another way there.
+
+## How to call
+
+```js
+const __PLUGIN_API__ = window.__PLUGIN_API__
+
+// ① 通用 call 方式（绝大多数方法）
+const data = await __PLUGIN_API__.call('getSettings')
+
+// ② 专用快捷方式（以下 4 个）
+await __PLUGIN_API__.registerMethod('name', fn)      // 注册方法
+await __PLUGIN_API__.callPlugin('id', 'method', ...) // 调用其他插件方法
+await __PLUGIN_API__.proxyFetchStream(req, handlers) // 流式请求
+await __PLUGIN_API__.registerHook('method', handler) // 注册启动器方法 Hook
+```
+
+## Permission model
+
+Every API method maps to one permission. On each call the launcher checks whether the plugin manifest's `permissions` contains that permission; otherwise it errors:
+
+```text
+Permission denied: requires <权限id>
+```
+
+### Full permission list
+
+| Permission ID | Description | Risk |
+|---------|------|------|
+| `instance:read` | Read the instance list | Normal |
+| `instance:write` | Create, modify, or delete instances (including installing modpacks) | Warning |
+| `account:read` | Read the account list | Normal |
+| `license:read` | Read license information | Normal |
+| `config:read` | Read launcher configuration | Normal |
+| `config:write` | Modify launcher configuration | Warning |
+| `cache:access` | Read and write the plugin cache | Normal |
+| `endpoint:discover` | Discover backend API endpoints | Normal |
+| `page:list` | List pages | Normal |
+| `network:fetch` | Send HTTP requests | Warning |
+| `network:cors_proxy` | CORS proxy requests | Warning |
+| `network:websocket` | WebSocket connections | Warning |
+| `network:proxy` | Modify proxy settings | Warning |
+| `ui:inject_sidebar` | Inject sidebar menu items | Normal |
+| `ui:inject_settings` | Inject settings pages | Normal |
+| `ui:picture_in_picture` | Picture-in-picture window | Warning |
+| `ui:sub_window` | Standalone sub-window | Warning |
+| `ui:context_menu` | Inject context menu items | Normal |
+| `ui:toast` | In-app notifications | Normal |
+| `ui:navigate` | Navigate between pages | Normal |
+| `system:info` | Read system and launcher information | Normal |
+| `system:notification` | Send system notifications | Normal |
+| `clipboard:read` | Read the clipboard | Warning |
+| `clipboard:write` | Write to the clipboard | Warning |
+| `wasm:execute` | Execute WASM modules | Warning |
+| `plugin:install` | Install, uninstall, or update plugins | Dangerous |
+| `plugin:list` | List installed plugins | Normal |
+| `resource:read` | Read game resource files | Normal |
+| `resource:write` | Write game resource files | Warning |
+| `java:manage` | Manage Java runtimes | Warning |
+| `game:process` | Start and stop the game process | Warning |
+| `game:log` | Detect game logs | Normal |
+| `connector:host` | Start and stop multiplayer hosting | Warning |
+| `connector:scan` | Scan for LAN multiplayer games | Normal |
+| `shell:execute` | Run system commands | Dangerous |
+| `filesystem:read` | Read the filesystem | Warning |
+| `filesystem:write` | Write to the filesystem | Dangerous |
+| `hook:register` | Hook launcher methods (intercept or modify arguments, block execution) | Dangerous |
+| `download:manage` | Manage download tasks | Warning |
+
+The **risk** level drives the colour hint in the install details dialog: Normal = blue, Warning = yellow, Dangerous = red. Follow the **principle of least privilege** and request only the permissions you actually use.
+
+## Method reference
+
+### getSettings — Read plugin settings
+
+Read the plugin's own `settings.json`.
+
+```js
+const settings = await __PLUGIN_API__.call('getSettings')
+```
+- Permission: `config:read`
+- Returns: `Record<string, unknown>` (`{}` when the file does not exist)
+- Storage: `{数据目录}/plugins/{插件id}/settings.json`
+
+### setSettings — Write plugin settings
+
+Merge settings by key (**merge, not replace the whole file**).
+
+```js
+await __PLUGIN_API__.call('setSettings', 'theme', 'dark')
+```
+- Permission: `config:write`
+- Parameters: `(key: string, value: any)`; value can be any JSON value
+- Concurrent writes are protected by a backend lock
+
+### setCache / getCache — Plugin cache
+
+Read and write the plugin's own cache file by key, with TTL expiry.
+
+```js
+// 写缓存，TTL 1 小时（3600 秒）
+await __PLUGIN_API__.call('setCache', 'modelList', { items: [...] }, 3600)
+
+// 读缓存（不存在或过期返回 null）
+const cached = await __PLUGIN_API__.call('getCache', 'modelList')
+```
+- Permission: `cache:access`
+- Storage: `{数据目录}/plugins/{插件id}/cache.json`
+- Internal shape is `{ key: { v: 值, e: 过期时间戳|null } }`; plugins do not need to care about it
+
+### callBackend — Call the launcher backend API
+
+Call the launcher backend directly (`http://localhost:5000/api/...`), bypassing CORS restrictions.
+
+```js
+const instances = await __PLUGIN_API__.call('callBackend', '/instance')
+
+const result = await __PLUGIN_API__.call('callBackend', '/resource-download/start', {
+  instanceId: 'xxx', url: 'https://...', fileName: 'mod.jar', category: 'mods'
+})
+```
+- Permission: `network:fetch`
+- Parameters: `(endpoint: string, data?: any)`
+- With `data` → POST; without `data` → GET
+- You can pass a `_method` field in the `data` object to override the HTTP method (for example `{ _method: 'PUT', State: 'active' }`); `_method` is not sent to the backend
+- `endpoint` starts with `/` (such as `/instance`) and excludes the `/api` prefix
+- Returns: the backend JSON response; throws on non-2xx
+- For the list of endpoints, see the launcher backend OpenAPI (dev mode `/openapi/v1.json`); common ones include `/instance`, `/resources/search`, `/settings`, and so on
+
+In the L2 sandbox (`sandbox="allow-scripts"`, no `allow-popups`), `window.open(url, '_blank')` is blocked. To open external links, use the backend endpoint:
+
+```js
+await __PLUGIN_API__.call('callBackend', '/system/open-url', { url: 'https://example.com' })
+```
+
+This endpoint opens `http/https` links in the system default browser (only these two schemes are accepted; anything else returns 400).
+
+### proxyFetch — CORS proxy request
+
+Forward a request to any external URL through the launcher backend, bypassing browser CORS restrictions, with SSRF protection.
+
+```js
+const res = await __PLUGIN_API__.call('proxyFetch', {
+  url: 'https://api.example.com/data',
+  method: 'GET',
+  headers: { 'Accept': 'application/json' },
+  timeoutMs: 15000
+})
+if (res.status === 200) {
+  const data = JSON.parse(res.body)   // 文本响应
+}
+```
+- Permission: `network:cors_proxy`
+- Request `ProxyRequest`:
+```ts
+  {
+    url: string                // 必填，http/https
+    method?: string            // 默认 GET
+    headers?: Record<string, string>
+    body?: string              // POST body（字符串）
+    timeoutMs?: number         // 默认 15000，范围 1000–60000
+  }
+```
+- Response `ProxyResponse`:
+```ts
+  {
+    status: number
+    headers: Record<string, string>
+    body?: string | null       // 文本响应
+    bodyBase64?: string | null // 二进制响应
+  }
+```
+- **SSRF protection**: only http/https; private and reserved addresses are rejected (localhost, 127.x, 10.x, 172.16-31.x, 192.168.x, 169.254.x, and so on) with `PROXY_PRIVATE_ADDRESS`(400)
+
+### proxyFetchStream — Streaming proxy request
+
+Consume an SSE stream (such as word-by-word AI output) with a callback per chunk.
+
+```js
+await __PLUGIN_API__.proxyFetchStream(
+  {
+    url: 'https://api.deepseek.com/v1/chat/completions',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify({ model, messages, stream: true }),
+    timeoutMs: 120000,
+    signal: abortController.signal    // 可选，中断流
+  },
+  {
+    onChunk(chunk) {
+      // chunk 为 SSE data: 行内容（已去 data: 前缀）
+      const json = JSON.parse(chunk)
+      const delta = json.choices?.[0]?.delta?.content
+      if (delta) appendText(delta)
+    },
+    onError(err) { console.error(err) }
+  }
+)
+```
+- Permission: `network:cors_proxy`
+- The backend automatically adds `stream: true` when forwarding the upstream stream
+- `signal` (AbortSignal) aborts the stream; `req.signal` is stripped automatically before postMessage and sent as a `__plugin_api_abort` message instead
+- ⚠️ **Known limitation**: the Promise returned by `proxyFetchStream` resolves when the stream ends, but chunk callbacks may still fire after it resolves. Use `onError` or a `[DONE]` marker within the stream to detect completion
+
+### registerMethod — Register a plugin method
+
+Register a method of the current plugin in the global registry so that **other plugins** can call it via `callPlugin`.
+
+```js
+__PLUGIN_API__.registerMethod('renderMarkdown', function (md) {
+  return marked.parse(md || '')
+})
+
+// 支持异步方法
+__PLUGIN_API__.registerMethod('fetchTranslation', async function (text) {
+  const res = await fetch('https://api.example.com/translate?text=' + encodeURIComponent(text))
+  return res.json()
+})
+```
+- Permission: `config:write`
+- Parameters: `(method: string, fn: Function)`; `fn` may return a value or a Promise
+- All methods are unregistered automatically when the plugin is disabled
+- See [Plugin dependencies and inter-plugin calls](/en/plugins/dependencies) for details
+
+### callPlugin — Call another plugin's method
+
+Call a method already registered by the target plugin.
+
+```js
+try {
+  const html = await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdown', '**加粗**')
+  document.getElementById('out').innerHTML = html
+} catch (e) {
+  console.error(e.message)   // 目标未安装/未激活/未注册都会 reject
+}
+```
+- Permission: `network:fetch`
+- Parameters: `(pluginId: string, method: string, ...args)`
+- Rejects if the target is not installed / not active / has not registered the method
+
+### registerHook — Register a hook on a launcher method
+
+Register the current plugin as an interceptor of a launcher method, injecting logic before and after it runs (modify arguments or the return value, block execution, or replace the implementation entirely).
+
+```js
+__PLUGIN_API__.registerHook('scanVersions', async (ctx, next) => {
+  ctx.args[0] = ctx.args[0] + '/custom'   // before：修改参数
+  await next()                              // 执行默认实现
+  ctx.result = [...ctx.result, { name: 'virtual-1.20.1', gameVersion: '1.20.1', state: 'Available' }]  // after：修改结果
+})
+```
+- Permission: `hook:register` (**dangerous**)
+- Parameters: `(method: string, handler: (ctx, next) => Promise<void>)`
+- `handler` is Koa-style onion middleware: modify `ctx.args` before `next()`, modify `ctx.result` after `next()`, and use `ctx.prevent()` to block the default implementation
+- All of the plugin's hooks are unregistered automatically when the plugin is disabled
+- See [Hooks](/plugins/hooks) for details
+
+### callWasm — Call an exported WASM plugin function
+
+Call a function exported by an L3 WASM plugin (`on_load` / `on_unload` / custom exports). It runs through the launcher's Rust gateway (wasmtime).
+
+```js
+const result = await __PLUGIN_API__.callWasm('dev.example.wasmplugin', 'on_load')
+```
+- Permission: `wasm:execute`
+- Parameters: `(pluginId: string, exportName?: string)`; `exportName` defaults to `on_load`
+- Returns: `{ ok: true, result: ... }` or an error
+- See [WASM plugins](/plugins/wasm-plugin) for details
+
+### listWasmPlugins — List loaded WASM plugins
+
+```js
+const ids = await __PLUGIN_API__.listWasmPlugins()   // ['dev.example.wasmplugin', ...]
+```
+- Permission: `wasm:execute`
+
+### readText — Read a text file (authorization required)
+
+Read a **text** file (UTF-8) at the given path, with support for partial reads. **First access requires user authorization** (a confirmation dialog).
+
+```js
+const file = await __PLUGIN_API__.call('readText', 'C:/Users/me/data.json')
+// file = { path, content: '完整文本内容' }
+
+// 从第 5 个字符开始读 100 个字符
+const seg = await __PLUGIN_API__.call('readText', 'C:/Users/me/log.txt', { start: 5, length: 100 })
+```
+- Permission: `filesystem:read`
+- Parameters: `(path: string, options?: { start?: number; length?: number })`
+- `start`: start offset (characters), defaults to 0
+- `length`: number of characters to read, defaults to the rest of the file
+- Returns: `{ path, content: string }`
+- **Authorization**: the first access to an unauthorized path returns 403 `FS_AUTHORIZATION_REQUIRED`; the launcher automatically asks "allow this plugin to access this path?" and, once the user agrees, grants access (persisted per path prefix). The same plugin and path no longer prompts
+- Missing file → `FS_FILE_NOT_FOUND`(404)
+
+### readBytes — Read a binary file (authorization required)
+
+Read a **binary** file at the given path and return base64, with support for partial reads.
+
+```js
+const bin = await __PLUGIN_API__.call('readBytes', 'C:/Users/me/img.png')
+// bin = { path, contentBase64: 'base64...' }
+
+// 读前 4 字节
+const head = await __PLUGIN_API__.call('readBytes', 'C:/Users/me/img.png', { start: 0, length: 4 })
+```
+- Permission: `filesystem:read`
+- Parameters: `(path: string, options?: { start?: number; length?: number })`
+- `start`: start offset (bytes), defaults to 0
+- `length`: number of bytes to read, defaults to the rest of the file
+- Returns: `{ path, contentBase64: string }`
+- Authorization works the same as `readText`
+
+### writeText — Write a text file (authorization required)
+
+```js
+await __PLUGIN_API__.call('writeText', 'C:/Users/me/out.txt', '文件内容')
+```
+- Permission: `filesystem:write`
+- Parameters: `(path: string, content: string)`, written as UTF-8
+- Authorization works the same as `readText`; parent directories are created automatically
+- Returns: `{ path }`
+
+### writeBytes — Write a binary file (authorization required)
+
+```js
+await __PLUGIN_API__.call('writeBytes', 'C:/Users/me/out.bin', new Uint8Array([1,2,3]))
+```
+- Permission: `filesystem:write`
+- Parameters: `(path: string, bytes: Uint8Array)`, converted to base64 for transport automatically
+- Authorization works the same as `readText`; parent directories are created automatically
+- Returns: `{ path }`
+
+### deleteFile — Delete a file (authorization required)
+
+```js
+await __PLUGIN_API__.call('deleteFile', 'C:/Users/me/tmp.txt')
+```
+- Permission: `filesystem:write`
+- Parameters: `(path: string)`; deletes **files** only (directories are not supported)
+- Authorization works the same as `readText` (destructive operations also require confirmation)
+- Missing file → `FS_FILE_NOT_FOUND`(404)
+- Returns: `{ path }`
+
+### execCommand — Run a shell command
+
+Run a system command and return the exit code and output. **Uses powershell on Windows and /bin/sh on Linux/macOS**.
+
+```js
+const result = await __PLUGIN_API__.call('execCommand', 'echo hello')
+// result = { exitCode: 0, stdout: 'hello\n', stderr: '' }
+
+const fail = await __PLUGIN_API__.call('execCommand', 'nonexistent-cmd')
+// fail = { exitCode: 127, stdout: '', stderr: '...' }
+```
+- Permission: `shell:execute` (**dangerous permission**, shown in red at install time)
+- Parameters: `(command: string, timeoutMs?: number)`; `timeoutMs` defaults to 15000, range 1000–120000
+- Returns: `{ exitCode: number, stdout: string, stderr: string }`
+- Timeout → `SHELL_TIMEOUT`(400); the command is terminated forcibly
+- Empty command → `SHELL_COMMAND_REQUIRED`(400)
+
+### openUrl — Open an external link
+
+Open an external URL in the system default browser. Inside the L2 sandbox, `window.open` is blocked by the `sandbox` attribute, so use this method for external links.
+
+```js
+await __PLUGIN_API__.call('openUrl', 'https://example.com')
+```
+- Permission: `system:notification`
+- Uses `POST /api/system/open-url` under the hood; only `http://` / `https://` are accepted; invalid URLs return 400
+
+### getSystemInfo — Read system and launcher information
+
+Read OS, launcher, and memory information. Useful for `minLauncherVersion` compatibility checks or detecting the platform at runtime.
+
+```js
+const info = await __PLUGIN_API__.call('getSystemInfo')
+// { Os, Architecture, OsName, OsVersion, OsVersionId, OsDisplayName, GitCommit,
+//   Memory, AvailableMemory,
+//   LauncherName, LauncherVersion, VersionType, Developers, CoreDependencies }
+```
+- Permission: `system:info`
+- Uses `GET /api/systeminfo` under the hood (equivalent to `/api/system/info`)
+- `GitCommit` is the launcher's Git commit hash; `Memory` / `AvailableMemory` are byte counts
+- Launcher metadata fields:
+- `LauncherName`: launcher name (such as `Qomicex Launcher`)
+- `LauncherVersion`: launcher version (assembly version, such as `0.1.1`)
+- `VersionType`: version type, derived from the prerelease tag of the version number (`alpha` / `beta` / `rc` / `dev`, otherwise `stable`)
+- `Developers`: developer list as `[{ name, role }]`
+- `CoreDependencies`: core library list as `[{ name, version, license }]` (.NET / Tauri / Rust / Qomicex.Core and so on)
+
+### listPlugins — List installed plugins
+
+Return the list of installed plugins, useful for dependency checks or store integration.
+
+```js
+const plugins = await __PLUGIN_API__.call('listPlugins')
+// [{ id, name, version, status }, ...]  status: 'installed'|'active'|'disabled'
+```
+- Permission: `plugin:list`
+- Uses `GET /api/plugins/` under the hood
+
+### uploadPlugin — Install a plugin
+
+Upload a `.qplugin` package to install a plugin.
+
+```js
+const bytes = new TextEncoder().encode('...')  // .qplugin 文件字节
+await __PLUGIN_API__.call('uploadPlugin', Array.from(bytes), 'my-plugin.qplugin')
+```
+- Permission: `plugin:install` (**dangerous permission**)
+- Parameters: `(fileData: number[], fileName: string)`; the multipart field name is `plugin`
+
+### navigate — Navigate to a page
+
+Navigate to an internal launcher route.
+
+```js
+await __PLUGIN_API__.call('navigate', '/settings')
+```
+- Permission: `config:read`
+- Note: use internal launcher routes, not external URLs
+
+### openPluginSettings — Open the plugin settings page
+
+Navigate to "Settings → Plugins → Plugin settings" and focus the settings tab of the given plugin. Useful for a "settings" button on plugin pages and Overlay windows.
+
+```js
+// 定位到本插件的设置 tab
+await __PLUGIN_API__.call('openPluginSettings')
+
+// 定位到指定插件的设置 tab
+await __PLUGIN_API__.call('openPluginSettings', 'top.qomicex.weather')
+```
+- Permission: `config:read`
+- Parameters: `(targetPluginId?: string)`; defaults to the **current plugin**
+- The target plugin must declare `contributes.settingsPages` in its manifest to have a tab (see [manifest](/en/plugins/manifest#settingspages-array)); if the target has no settings page, the plugin settings area still opens and stays at the default position
+- If a plugin has several settings pages, the first one is focused
+
+### showToast — In-app notification
+
+Show a toast message.
+
+```js
+await __PLUGIN_API__.call('showToast', '操作成功', 'success')
+```
+- Permission: `ui:toast`
+- Parameters: `(message: string, type?: 'info' | 'error' | 'success')`, defaults to `info`
+
+### File drag-and-drop event (file-drop)
+
+When files are dropped onto the launcher window, the main window emits a `file-drop` event whose payload is the **array of absolute paths** of the dropped files. The frontend (main UI) can listen with `@tauri-apps/api/event`:
+
+```js
+import { listen } from '@tauri-apps/api/event'
+listen<string[]>('file-drop', (event) => {
+  const paths = event.payload   // 例如 ['C:/Users/me/a.pdf', 'D:/b.docx']
+})
+```
+
+- Emitted by the launcher's Rust `WindowEvent::DragDrop::Drop { paths, .. }` (when `dragDropEnabled` is on)
+- Paths are absolute system paths; well suited to interactions such as "drop a file to fill in its path"
+- **Note**: the native `drop` event's `File` object does not expose `.path` in the frontend (Tauri intercepts system drag-and-drop); you must use this event
+- For L2 sandbox plugins: the main UI frontend listens and relays via `__pluginRegistry.call(pluginId, '方法', [paths])` / `callPlugin`, and the plugin receives it with `registerMethod`
+
+### getThemeColor — Get the current theme seed color
+
+Return the seed color hex value of the current launcher theme so plugins can adapt their UI to it.
+
+```js
+const hex = await __PLUGIN_API__.call('getThemeColor')
+// hex: '#3b82f6' 或 null（未设置主题色时）
+```
+- Permission: `config:read`
+- Returns: `string | null` (`#rrggbb` format, or `null`)
+- Logic: prefers the static hex color from appearance settings; in Monet dynamic mode (`background`), takes the current `--primary` CSS variable and converts it to hex
+
+### applyThemeOverride — Apply a theme override
+
+Dynamically override the launcher UI's CSS variables (color theme) to implement plugin-driven global theming.
+
+```js
+await __PLUGIN_API__.call('applyThemeOverride', {
+  'background': '240 23% 9%',
+  'foreground': '220 20% 93%',
+  'primary': '142 71% 48%',
+  'accent.foreground': '220 20% 93%'
+})
+```
+- Permission: `config:write`
+- Parameters: `(vars: Record<string, string>)` — keys are semantic tokens (dot or hyphen naming supported), values are `H S% L%` strings
+- Safety restrictions:
+- **Token allowlist**: only 30 predefined semantic tokens such as `background`, `foreground`, `primary`, `accent`, and `border` are allowed
+- **HSL format validation**: values must strictly match `^\d{1,3} \d{1,3}% \d{1,3}%$`, preventing arbitrary CSS injection
+- Implementation: injects `<style id="qomicex-plugin-theme-override">` into `document.head`; the `:root:root` selector guarantees high priority
+- Repeated calls replace the previous override styles
+- The override is **not** cleared automatically when the plugin is disabled; call `clearThemeOverride` manually
+
+### clearThemeOverride — Clear the theme override
+
+Remove the override styles injected by `applyThemeOverride` and restore the original theme.
+
+```js
+await __PLUGIN_API__.call('clearThemeOverride')
+```
+- Permission: `config:write`
+- Removes the `<style>` element with `id="qomicex-plugin-theme-override"`
+- Recommended in the plugin's disable hook or when the user cancels the custom theme
+
+### overlay.create — Create an Overlay window
+
+Create a draggable standalone Overlay window and return its id.
+
+```js
+const overlayId = await __PLUGIN_API__.call('overlay.create', {
+  title: '我的悬浮窗',
+  html: '<div class="p-card">你好</div>',
+  x: 120, y: 80,
+  width: 320, height: 240,
+  minimizable: true,
+  resizable: true
+})
+```
+- Permission: `ui:sub_window`
+- Returns: the Overlay window id (string)
+- See [Overlay window development](/plugins/overlay) for details
+
+### overlay.show / hide / destroy — Overlay window control
+
+```js
+await __PLUGIN_API__.call('overlay.show', overlayId)    // 显示（含最小化恢复）
+await __PLUGIN_API__.call('overlay.hide', overlayId)    // 隐藏（最小化）
+await __PLUGIN_API__.call('overlay.destroy', overlayId) // 销毁
+```
+- Permission: `ui:sub_window`
+
+### overlay.setHtml — Update Overlay window content
+
+```js
+await __PLUGIN_API__.call('overlay.setHtml', overlayId, '<p>新内容</p>')
+```
+- Permission: `ui:sub_window`
+
+### overlay.setPosition — Move an Overlay window
+
+```js
+await __PLUGIN_API__.call('overlay.setPosition', overlayId, 300, 200)
+```
+- Permission: `ui:sub_window`
+
+### addMenuItem — Register a sidebar menu item dynamically
+
+Add a sidebar menu item at runtime without editing the manifest.
+
+```js
+__PLUGIN_API__.addMenuItem({
+  path: '/plugins/p/xxx',
+  label: '动态菜单',
+  icon: '🤖',
+  action: 'page'
+})
+```
+- Permission: none (no manifest declaration needed)
+- Parameters: `PluginMenuItem` (the same element as `contributes.menuItems`)
+- Dynamically registered menu items are removed automatically when the plugin is disabled
+
+## Downloads and installation
+
+### download.addTask — Create a download task
+
+Create a download task. The task appears in the launcher's "Download center", its progress is driven by SSE pushes, and it can be cancelled.
+
+```js
+// 方式一：指定绝对目标路径
+const { taskId } = await __PLUGIN_API__.call('download.addTask', {
+  url: 'https://example.com/asset.zip',
+  targetPath: 'C:/games/instances/foo/mods/asset.zip',
+  extract: true,                 // 可选：zip 下载后自动解压并删除原包
+  headers: { 'X-Token': 'abc' }, // 可选：自定义请求头
+  name: '我的资源'                // 可选：下载中心显示名（默认 fileName）
+})
+
+// 方式二：实例 + 类别（自动解析隔离目录）
+await __PLUGIN_API__.call('download.addTask', {
+  url: 'https://.../mod.jar',
+  instanceId: 'inst-uuid',
+  category: 'mods',   // mods / resourcepacks / shaderpacks / datapacks / saves / screenshots
+  fileName: 'mod.jar'
+})
+```
+- Permission: `download:manage`
+- Returns: `{ taskId, status, targetPath }`
+- The backend reuses `DownloadSessionManager` (type `"resource"`), the same pipeline as mod downloads
+
+### download.progress — Query download progress
+
+```js
+const snap = await __PLUGIN_API__.call('download.progress', taskId)
+// { sessionId, status, stage, progress, speed, currentFile, totalFiles, completedFiles, failedFiles, error, isPaused, instanceId }
+```
+- Permission: `download:manage`
+- Returns `null` if `taskId` does not exist
+
+### download.list — List all download sessions
+
+```js
+const list = await __PLUGIN_API__.call('download.list')
+```
+- Permission: `download:manage`
+- Returns: an array of snapshots with the same shape as `download.progress`
+
+### download.cancel — Cancel a download
+
+```js
+await __PLUGIN_API__.call('download.cancel', taskId)
+```
+- Permission: `download:manage`
+
+### download.registerInstall — Register an install task in the download center
+
+Register only a "game install" task (type `'game'`) in the frontend download center without creating a real download. Useful so users can see progress in the download center after a plugin starts an installation.
+
+```js
+await __PLUGIN_API__.call('download.registerInstall', {
+  instanceId: 'inst-uuid',
+  name: '我的整合包',
+  gameVersion: '1.20.1',
+  loader: 'forge',
+  loaderVersion: '47.1.0'
+})
+```
+- Permission: `instance:write`
+
+### modpack.install — One-click modpack install
+
+Install a modpack directly through the launcher's **normal modpack installation flow** (the same pipeline as the frontend "Modpacks" page): parse the source → create the instance → download and install.
+
+```js
+// 方式一：本地整合包文件（.zip / .mrpack）
+const { instanceId } = await __PLUGIN_API__.call('modpack.install', {
+  id: 'MyPack',                   // 实例名（必填）
+  path: 'C:/packs/pack.zip',      // 本地整合包路径
+  gameDir: 'C:/games/instances',  // 实例根目录（必填）
+  maxMemory: 8192,                // 可选：默认 4096
+  versionIsolation: true          // 可选：版本隔离，默认 false
+})
+
+// 方式二：在线整合包（Modrinth / CurseForge / FTB）
+await __PLUGIN_API__.call('modpack.install', {
+  id: 'MyPack',
+  type: 'mr',          // mr | cf | ftb（也接受 modrinth/curseforge）
+  projectId: 'abc',    // 项目 id
+  fileId: '123',       // 版本 id
+  gameDir: 'C:/games/instances'
+})
+```
+- Permission: `instance:write`
+- Uses `POST /api/modpack/install-direct`, reusing `ModpackService` (`ParseFileAsync`/`ResolveOnlineAsync`/`InstallAsync`) and `InstallTracker`
+- Returns: `{ instanceId }`; installation runs asynchronously (check progress in the download center / via SSE)
+- Error codes: `MODPACK_NAME_REQUIRED`, `MODPACK_GAME_DIR_REQUIRED`, `MODPACK_FILE_NOT_FOUND`, `MODPACK_SOURCE_REQUIRED`, `MODPACK_SOURCE_INVALID`
+- To show install progress in the download center, register it with `download.registerInstall`
+
+## Error handling
+
+All API calls reject on failure with messages like:
+
+```js
+try {
+  await __PLUGIN_API__.call('getSettings')
+} catch (e) {
+  console.error(e.message)
+}
+```
+
+Common errors:
+- `Permission denied: requires xxx` — the manifest permissions do not include it
+- `Backend error: 404` — the `callBackend` endpoint does not exist
+- `Proxy failed: 400` — `proxyFetch` parameter error (including SSRF blocking)
+- `插件 xxx 未提供方法 yyy（可能未安装或未激活）` — the `callPlugin` target is unavailable

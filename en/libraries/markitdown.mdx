@@ -1,0 +1,39 @@
+---
+title: "MarkItDown"
+---
+## MarkItDown
+
+MarkItDown (`top.qomicex.markitdown`) converts local documents into Markdown text, so other plugins (such as the [AI assistant](/en/plugins)) can parse binary content in PDF / Word / Excel / PPT / images / audio.
+
+## Capabilities
+
+| Format | Notes |
+|------|------|
+| PDF | Local text extraction (pdf.js on the main thread); with a vision model configured, pages are rendered to images and run through structured OCR (tables preserved) |
+| DOCX / XLSX / PPTX | Parsed with mammoth / SheetJS / jszip |
+| HTML / CSV / JSON / XML | Native parsing |
+| ZIP / EPUB | Recursively unpacked, with the files inside converted |
+| Images / audio | Requires an OpenAI-compatible vision / audio model (OCR / transcription) |
+
+## Registered methods
+
+```js
+const res = await __PLUGIN_API__.callPlugin('top.qomicex.markitdown', 'convertFile', {
+  base64: '...',            // 文件内容 base64（二进制文件用 readBytes 获取 contentBase64）
+  fileName: 'a.pdf',        // 文件名（用于判断格式）
+  mime: 'application/pdf'   // 可选
+})
+// => { title, markdown, text_content, format } 或 { error }
+```
+
+- `getConfig()`: read the plugin's LLM settings (baseUrl / apiKey / visionModel / audioModel / prompt)
+- `setConfig(patch)`: write LLM settings (used by frontend settings pages through `callPlugin`)
+
+## Dependencies and configuration
+
+- Pure document conversion (PDF / DOCX / XLSX / PPTX and so on) needs no configuration
+- **Image OCR and audio transcription** need an OpenAI-compatible API: fill in the vision / audio model and key in the "MarkItDown Document Conversion（文档转换）" section of the AI assistant settings page
+
+## Optional add-on
+
+MarkItDown is an **optional add-on** for the AI assistant: the AI assistant works without it, and its `convertDocument` tool prompts you to install it. Images and audio return a configuration prompt when no API is configured.

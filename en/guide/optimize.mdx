@@ -1,0 +1,48 @@
+---
+title: "Performance tuning"
+---
+## Performance tuning
+
+Laggy game, slow startup, slow downloads? Adjust these spots as needed; they resolve most performance problems.
+
+## Pick the right Java
+
+The launcher needs **Java 8 / 17 / 21**, choosing automatically per game version: old versions (1.16 and below) use Java 8, 1.17–1.20.4 use Java 17, and 1.20.5+ use Java 21.
+
+- **Prefer letting the launcher download it**: Settings → Java runtime → Download. JDKs downloaded automatically have the best game compatibility
+- Java already on your machine can be adopted by scanning, but JREs of unknown origin (for example, ones bundled by some adware) may be broken; remove them when they are flagged as abnormal
+
+## Memory allocation
+
+Settings → Launch settings → Memory:
+
+| Machine memory | Recommendation |
+| :--- | :--- |
+| 8GB or less | **Automatic allocation（自动分配）** (the launcher computes it from available memory and does not crowd out the system) |
+| 16GB | 4–6GB for Vanilla（原版）/light mods; 6–8GB for medium and large modpacks |
+| 32GB+ | 8–12GB is enough for large modpacks — **more is not better** |
+
+An oversized Java heap makes garbage collection pauses longer and produces regular stutters in game. Give it just enough.
+
+## Launch arguments
+
+Settings → Launch settings → JVM arguments. **If the modpack author provides recommended arguments, follow the modpack**; otherwise keep the defaults (the launcher already includes sensible garbage collection arguments). Tuning by hand is advanced territory — write down the original values before you change anything.
+
+## Downloads and network
+
+- Slow downloads: turn on **Automatic download source selection（下载源自动选择）**, or replace the domain manually with a [mirror](/en/guide/mirror)
+- Web pages or the resource center will not load: configure a proxy (Settings → Network settings); it affects only the launcher, not the game
+- Certificate errors behind a proxy: temporarily enable **Ignore SSL certificates（忽略 SSL 证书）** while troubleshooting, then turn it off once the issue is confirmed
+
+## Interface smoothness
+
+On low-end machines, do these three things first (Settings → Appearance):
+
+- Set **Component material（组件材质）** back to default (liquid glass, acrylic, and frosted glass all cost compositing work)
+- Lower or disable **Animation（动画）**
+- Limit the **maximum frame rate** to 60 (saves power and reduces overheating)
+
+## Data and cache
+
+- Version list cache (Settings → Storage and cache): extend the cache duration when CurseForge/NeoForge lists load slowly
+- Clear the download task list, export or clear logs: the Toolbox（工具箱） and logs section in Settings

@@ -1,0 +1,134 @@
+---
+title: "Dashboard widgets (dashboard:widgets)"
+---
+## Dashboard widgets (dashboard:widgets)
+
+The Dashboard widget（主页小组件）area is an **editable widget grid** (much like a phone home screen): the built-in watermark, account, announcement, and instance launcher are all widgets in the grid, and plugins can add their own UI as widgets too. Users drag, resize, add, and remove plugin widgets just like built-in ones.
+
+## Quick start
+
+Declare a `dashboard:widgets` Slot（槽位） in `contributes.slots` of `manifest.json`:
+
+```json
+{
+  "id": "top.qomicex.weather",
+  "name": "天气",
+  "version": "1.0.0",
+  "minLauncherVersion": "0.1.0",
+  "layers": ["l2"],
+  "entry": { "frontend": "dist/index.html" },
+  "contributes": {
+    "slots": [
+      { "slot": "dashboard:widgets", "file": "dist/widget.html" }
+    ]
+  }
+}
+```
+
+`widget.html` is a standalone HTML page (same Sandbox environment as `entry.frontend`, with the full `__PLUGIN_API__` Bridge). After the plugin is installed and enabled:
+
+- When the plugin activates, the Launcher mounts `widget.html` as an iframe Sandbox and registers it in the dashboard widget registry;
+- The grid automatically **appends the widget to the end** (default **2 × 1** cells); you do not need to register anything manually;
+- Users can move and resize it in edit mode, exactly like any other widget.
+
+One plugin can declare multiple `dashboard:widgets` slots (multiple widget.html files), and each becomes its own widget.
+
+## Grid model
+
+The grid is **4 columns × N rows**, and every widget occupies whole cells:
+
+- **Free placement**: drag a widget to any free spot; it does not snap upward automatically (similar to a Windows desktop with "auto arrange icons" off), and its old spot stays empty after you move it.
+- **Resize**: drag the handle on the bottom-right / right / bottom edge; it snaps to cells and can shrink to **1 × 1**.
+- **Dynamic row height**: row height scales with the window (roughly 64–84px), so widget physical size follows the viewport.
+- **Persistent layout**: the layout users adjust is stored locally by the Launcher (localStorage) and survives Launcher upgrades.
+
+Widget content renders inside an iframe, and the grid **stretches the iframe to the full size of its cells**. So the root element of your plugin page should fill the container using relative sizes:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    /* 启动器注入的 .p-* 基础样式已把 body/#root 设为 100% 高度 */
+    body { margin: 0; }
+    .widget {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* 垂直居中，矮格位也好看 */
+      padding: 12px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget" id="root">
+    <strong>天气</strong>
+    <span id="temp">--°C</span>
+  </div>
+  <script src="./widget.js"></script>
+</body>
+</html>
+```
+
+`contributes.slots[]` supports `width` / `height` to fix the iframe pixel size (for fixed slots such as `header:right`). **Do not set them on `dashboard:widgets`**: a fixed size stops the iframe from stretching to its cells, so content overflows or leaves blank space after a resize.
+
+## Responsive sizing
+
+Users can resize a widget to anything between 1×1 (about 250 × 70px) and 4×4 (about 1050 × 560px). A good approach is "show brief information when small, detailed information when large":
+
+```js
+// widget.js
+const root = document.getElementById('root')
+
+const ro = new ResizeObserver(([entry]) => {
+  const { width, height } = entry.contentRect
+  // iframe 的 viewport 即容器大小，直接按物理尺寸分档
+  root.classList.toggle('widget--compact', height < 120)
+  root.classList.toggle('widget--large', width > 500)
+})
+ro.observe(document.body)
+```
+
+```css
+/* 简略模式：只显示标题和关键数值 */
+.widget--compact .detail { display: none; }
+
+/* 大尺寸：追加摘要、图表等 */
+.widget .extra { display: none; }
+.widget--large .extra { display: block; }
+```
+
+The `ResizeObserver` callback fires **after the user releases the resize handle** (it does not update frame by frame while resizing), so you do not need your own throttling.
+
+## How users add and edit widgets
+
+Users click **Edit layout（编辑布局）** in the top-right corner of the dashboard to enter edit mode:
+
+| Action | How |
+|------|------|
+| Move a widget | Drag the widget |
+| Resize a widget | Drag the bottom-right / right / bottom edge handle |
+| Remove a widget | Hover it and click ✕ in its top-right corner |
+| Restore a removed widget | The 👁 icon in the toolbar (one per hidden widget) |
+| Add a widget | ➕ in the toolbar; the panel lists every hidden widget |
+| Restore the default layout | The ↺ button in the toolbar |
+| Save and exit | The **Done（完成）** button in the toolbar |
+
+When the toolbar is not shown (not in edit mode), widgets return to static display and buttons and links inside the grid work normally.
+
+## Lifecycle
+
+| Event | Behavior |
+|------|------|
+| Plugin enabled | The widget is appended to the end of the grid (other saved widget positions are kept unchanged) |
+| Plugin disabled / uninstalled | The widget is removed from the grid; its layout record is kept and restored in place when you re-enable the plugin |
+| Slot file fails to load | The widget does not appear and other widgets are unaffected |
+
+## Constraints and notes
+
+- **Sandbox environment**: widget.html runs in an `allow-scripts` iframe Sandbox with the same capabilities as the `entry.frontend` page (postMessage Bridge, `.p-*` styles, `registerMethod`, and so on). See the [plugin API reference](/en/plugins/plugin-api) for details.
+- **No Launcher context**: a widget cannot see its own position or size metadata in the grid (for example "how many cells do I span"); it can only read physical pixel size through `ResizeObserver`.
+- **Widget identity**: widget ids are generated by the Launcher as `plugin:{plugin id}:{index}` and cannot be customized. When one plugin declares several slots, they are numbered in Manifest declaration order.
+- **Light and dark themes**: the iframe gets the theme CSS variables automatically, so use `var(--foreground)`, `var(--card)`, and similar tokens to follow the theme; never hardcode colors.
+- **Overflow clipping**: the outer card uses `overflow: hidden` with rounded corners, so content beyond the cells is clipped. Make sure your layout adapts.

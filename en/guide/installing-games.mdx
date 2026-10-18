@@ -1,0 +1,59 @@
+---
+title: "Install a game"
+---
+## Install a game
+
+The launcher offers three ways to get a playable game: **install by downloading** a fresh copy, **install a modpack（整合包）** to set up everything at once, or **migrate an existing game** by taking over the `.minecraft` directory already on your computer.
+
+## Install by downloading
+
+Best for setting up a clean game from scratch.
+
+- In the sidebar, click **Instances（实例）** → **Install（安装）**
+- Choose a **game version** (a vanilla version number)
+- Choose a **loader（加载器）** and its version (Forge / Fabric / NeoForge / Quilt; pick "None" to play vanilla)
+- Confirm the instance name and icon, then start the installation
+
+You can track the installation task in [Downloads](/en/guide/downloads). When it finishes, the instance appears in the list — choose a [Java](/en/guide/settings#java-runtime) and you can launch.
+
+Before the first launch, the launcher guides you through scanning for or downloading a suitable Java in one click. See [Settings reference → Java runtime](/en/guide/settings#java-runtime).
+
+## Install a modpack
+
+A modpack is a game version plus a loader, a full set of mods and pre-configuration — **it sets up the whole game environment in one click**.
+
+### Install from Resource Center
+
+- Open the [Resource Center（资源中心）](/en/guide/resource-center) and select the **Modpacks**（整合包）category
+- Pick a modpack (filter by game version and loader) and open its details page
+- Choose a version → **Install** → the launcher creates an instance and downloads everything
+
+### Install from a local file
+
+If you already have a modpack file (`.zip`):
+
+- On the instances page, click **Import → Install modpack**
+- Select the modpack archive. Supported:
+
+| Format | Source |
+| :--- | :--- |
+| CurseForge modpack | Zip downloaded from the CurseForge website |
+| Modrinth modpack (`.mrpack`) | Downloaded from the Modrinth website |
+| MultiMC / Prism launcher instance | Instance zip exported from another launcher |
+
+- Confirm the instance name and game directory; the launcher resolves and downloads all dependencies automatically
+
+## Migrate an existing game
+
+If you already have a game installed on your computer with another launcher (the official launcher, PCL, HMCL and so on), you can **take it over directly** without downloading anything again:
+
+- On the instances page, click the directory combo box in the top-left corner to open the **directory list（目录列表）**, then click **Manage（管理）** to open directory management
+- Click **Browse to add（浏览添加）** and select your **`.minecraft` game directory** (it must contain a `versions/` folder)
+- The launcher scans every version in the directory and marks the availability of each one
+
+You can save several frequently used game directories (such as the `.minecraft` folders of different launchers) in the **directory list**, then pick a version from a saved directory at launch instead of browsing folders every time.
+
+
+## Complete missing files
+
+If a migrated or manually added instance is missing files (for example `libraries` or `assets`), you are prompted before the game launches. In **Instance details → Settings**, click **Complete missing files（补全文件）**; the launcher scans for missing game files and downloads them automatically — it only fills the gaps and leaves your existing data untouched.

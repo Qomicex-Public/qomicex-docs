@@ -1,0 +1,129 @@
+---
+title: "Debugging and hot reload"
+---
+## Debugging and hot reload
+
+The plugin debugging harness lets you debug plugin logic in a plain browser (Chromium) **without starting Tauri or the Rust backend**.
+
+## Quick start
+
+**Recommended: just use `qomicex dev`** (plugins inside the repo automatically use harness mode):
+
+```bash
+qomicex dev    # 在插件仓库内运行，自动检测并启动 harness
+```
+
+Or call the harness script directly:
+
+```bash
+# 前置：插件依赖已装好、plugin-ui 已构建
+pnpm --filter @qomicex/plugin-ui build
+
+# 跑 hello-plugin 调试（headless）
+pnpm run harness -- hello-plugin
+
+# 有头模式（看得见浏览器，配合 DevTools 断点）
+pnpm run harness -- hello-plugin --headed
+```
+
+> In `pnpm run harness -- hello-plugin`, the `--` forwards arguments to pnpm; you can also run `node scripts/harness/run.mjs hello-plugin` directly.
+
+If Playwright is not installed, you are prompted to install it:
+
+```bash
+pnpm add -D playwright
+pnpm exec playwright install chromium
+```
+
+## Architecture
+
+```text
+Node 脚本 scripts/harness/run.mjs（主控）
+  · 起 stub mock server（子进程，默认 :5100）
+  · 起 Vite dev（若未在跑，默认 :1420）
+  · Playwright 开 Chromium，addInitScript 注入 Tauri mock
+  · page.route 把 127.0.0.1:5000/api/** → 转发到 stub :5100
+  · fs.watch 插件 src → 重建 → page.reload
+```
+
+## Components
+
+| File | Responsibility |
+|---|---|
+| `scripts/harness/run.mjs` | Orchestrator: starts services, injects mocks, routes requests, hot reloads |
+| `scripts/harness/stub.mjs` | Pure node:http mock server (:5100) that emulates backend endpoints and serves plugin static files |
+
+## Stub endpoints
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/health`, `/api/ping` | Health check (so the SplashScreen polling passes) |
+| `GET /api/plugins` | Plugin list (`state: active`; auto-scans `plugins-dev/{id}/manifest.json`) |
+| `GET /api/plugins/{id}/files/{path}` | Serves plugin dist static files (paths are confined to the plugin directory to block traversal) |
+| `GET/POST /api/plugins/settings/{id}` | In-memory settings read/write (supports `{key,value}`) |
+| `GET/POST /api/plugins/cache/{id}` | Fake cache data |
+| `POST /api/plugins/proxy` | Fixed fake response (`stream:true` returns SSE to simulate streaming) |
+| `GET/POST /api/plugins/download/*` | Fake download tasks |
+| `GET /api/systeminfo`, `POST /api/system/open-url` | Fake system info / open URL |
+| `POST /api/modpack/install-direct` | Fake modpack install |
+| `POST /api/plugins/shell/{id}` | Fake command execution (fake stdout) |
+| `POST /api/plugins/files/{id}/read\|write\|delete\|authorize` | Fake file read/write |
+| `GET /api/plugins/wasm`, `POST /api/plugins/wasm/{id}/invoke` | Empty WASM list / 400 |
+| `POST /api/plugins/upload` | 400 `HARNESS_READONLY` (**upload is disabled in the harness**) |
+
+### Custom mock data
+
+```bash
+pnpm run harness -- hello-plugin --mock mock-hello.json
+```
+
+```json
+{
+  "settings": { "greeting": "自定义假配置", "foo": 1 },
+  "systemInfo": { "os": "Linux", "arch": "x86_64" },
+  "execCommand": { "exitCode": 0, "stdout": "mock echo 输出", "stderr": "" }
+}
+```
+
+Overridable keys: `settings`, `systemInfo`, `proxyResponse`, `modpackInstall`, `downloadStart`, `downloadProgress`, `fileRead`, `execCommand`, `wasmList`, `pluginStates` (`{ "插件id": "active" }`).
+
+## Breakpoint debugging
+
+- `pnpm run harness -- hello-plugin --headed` (headed mode)
+- Press F12 in the browser to open DevTools
+- The plugin renders inside an iframe (sandbox `sandbox="allow-scripts"`, opaque origin) — select the iframe in the DevTools Elements panel, then **switch the Console context dropdown to that iframe's document** and call `__PLUGIN_API__.call('getSettings')` directly to verify the bridge and the stub return value
+- In the Sources panel, set a breakpoint on `handleApiCall` in `src/plugins/sandbox.ts` to step through the whole `__PLUGIN_API__` postMessage → `executePluginMethod` → `createPluginBridge` chain
+
+Playwright Inspector (recording and stepping, optional):
+
+```bash
+pnpm exec playwright codegen http://127.0.0.1:1420/plugins/p/hello-plugin
+```
+
+> codegen does not inject the Tauri mock, so it only suits inspecting page rendering or exercising UI interactions; to verify bridge APIs, use the harness.
+
+## Hot reload
+
+- Watches `src/`, `index.html`, `theme.css`, `overlay.html`, and `vite.config.ts` under `plugins-dev/{pluginId}/`
+- A change → 400ms debounce → run the build command in the plugin directory (defaults to `pnpm run build`, override with `--build-cmd`) → on a successful build → `page.reload()` reloads the whole page and remounts the plugin iframe
+- A failed build does not reload the page; stderr goes to the terminal, so you can keep editing and watching
+
+```bash
+pnpm run harness -- hello-plugin --build-cmd "pnpm run build"
+```
+
+## CLI integration
+
+Inside the repo, `qomicex dev` detects the harness and invokes it (see [qomicex CLI reference](/en/plugins/cli)):
+
+```bash
+qomicex dev    # 自动启动 harness 模式，监听 plugins-dev/{id} 源码
+```
+
+## Limitations and caveats
+
+- **Chromium ≠ WebView2**: rendering and compositing can differ (backdrop-filter, for example), so web debugging conclusions need re-checking in real Tauri/WebView2
+- **The harness is a read-only sandbox**: every stub returns fake data or 400 for real data writes, instance launches, and real downloads; do not trigger real business actions from a plugin
+- **Exit cleanup**: after `Ctrl+C`, run.mjs kills the stub and Vite it spawned; if you started Vite(:1420) yourself first (`pnpm run dev`), the harness reuses it and does **not** kill that process on exit
+- **iframe sandbox**: `sandbox="allow-scripts"` without `allow-same-origin`, so a synchronous `while(true)` inside the iframe can still block the shared renderer process (matching real WebView2 behavior)
+- Plugins depend on `@qomicex/plugin-ui`, so its `dist/` must already be built (`pnpm --filter @qomicex/plugin-ui build`)

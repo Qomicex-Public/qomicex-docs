@@ -1,0 +1,197 @@
+---
+title: "License and privacy"
+---
+## License and privacy
+
+This page contains the full copyright notice, open-source license list, and privacy policy of Qomicex Launcher. Entry point: **Settings → About → License and privacy（版权与隐私）** in the launcher.
+
+## Copyright notice
+
+**Qomicex Launcher** is developed and maintained by the **Qomicex team**, and the copyright belongs to the Qomicex team.
+
+- This software is released under the **GPL-3.0 License**, and you may freely use, copy, modify, and distribute it as long as you comply with that license.
+- This software has no affiliation, partnership, or endorsement relationship with **Mojang Studios / Microsoft** or their products.
+- **Minecraft** and related names, logos, and copyrights are owned by **Mojang Studios / Microsoft**.
+- This software does not include the Minecraft game itself; the copyright of game assets belongs to their respective owners.
+- By using this software, you confirm that you have read and agree to the Terms of Service（用户协议） and the Privacy Policy（隐私政策）.
+
+## Terms of Service
+
+The full Terms of Service are on the official website: [https://www.qomicex.top/legal/user-agreement](https://www.qomicex.top/legal/user-agreement)
+
+## Privacy Policy
+
+**Last updated: September 2026**
+
+Qomicex Launcher (hereinafter "this software") is developed and maintained by the Qomicex team. We take your privacy seriously, and this policy explains how we collect, use, and protect your information.
+
+### 1. Legal notice
+
+- This software has no affiliation, partnership, or endorsement relationship with **Mojang Studios / Microsoft** or their products.
+- **Minecraft** and related names, logos, and copyrights are owned by **Mojang Studios / Microsoft**.
+- This software does not include the Minecraft game itself; the copyright of game assets belongs to their respective owners.
+- By using this software, you confirm that you have read and agree to the Terms of Service and this Privacy Policy.
+
+### 2. Scope of data collection
+
+This software may collect the following information:
+
+| Data type | Description | Purpose | Anonymous |
+|---------|------|---------|---------|
+| Microsoft account credentials | Used for Minecraft authentication (Microsoft login method only) | Authentication | No (stored locally) |
+| Plugin error telemetry | Plugin ID, version, error type | Improve the plugin ecosystem | Yes |
+| Crash reports | Error stack, device information (OS, CPU, memory) | Diagnosis and fixes | No (contains device information) |
+| Crash logs | Minecraft crash logs, game logs | Problem diagnosis | No (contains path information) |
+| Launcher version | Current version number | Update checks | Yes |
+| License information | Hardware fingerprint + license token | License verification | No (license-required builds only) |
+
+### 3. How data is used
+
+- **Account credentials**: used only to authenticate with Microsoft/Minecraft services and never transmitted to third parties
+- **Error telemetry**: used to improve the stability of the plugin ecosystem; fully anonymous and free of personally identifiable information
+- **Crash reports**: used to diagnose and fix software problems, sent with your consent or when a critical error occurs
+- **Crash log sharing**: when you run crash analysis, the system automatically uploads the crash log to the third-party mclo.gs service to generate a shareable link
+- **Version information**: used only to check for software updates
+- **License information**: used only to verify your authorization to use the software (license-required builds only)
+
+### 4. Data storage and retention
+
+- **Account data**: stored on your local device; you may choose to delete it when uninstalling the software
+- **Crash reports**: retained for 90 days, then deleted automatically
+- **Telemetry data**: retained for 365 days, then anonymized automatically
+- **License information**: retained for as long as the license is valid
+
+### 5. Data security
+
+- We use industry-standard security measures to protect your data
+- HTTPS encryption is used in transit
+- Sensitive data stored locally (such as tokens) is encrypted at rest
+- We do not sell, trade, or otherwise transfer your personal data to third parties
+
+### 6. Third-party services
+
+This software interacts with the following third-party services:
+
+| Service | Purpose | Data transmitted | Privacy policy |
+|-----|------|---------|---------|
+| Microsoft | Account authentication | OAuth token | [https://privacy.microsoft.com](https://privacy.microsoft.com) |
+| mclo.gs | Crash log sharing | Crash log content | [https://mclo.gs/privacy](https://mclo.gs/privacy) |
+| api.qomicex.top | Update checks, error reports | Version information, crash reports | This policy applies |
+| plugins.qomicex.top | Plugin store | Plugin queries, install records | This policy applies |
+
+### 7. Cookies and local storage
+
+- This software uses local storage (LocalStorage) to save your preferences
+- This software does not use browser cookies
+- Locally stored data is not accessed by third parties
+
+### 8. Cross-border data transfer
+
+- This software primarily operates within China
+- The crash log sharing service (mclo.gs) may involve cross-border data transfer
+- Using third-party services indicates your consent to the relevant data transfer
+
+### 9. Your rights
+
+- **Right of access**: you may view locally stored account data at any time
+- **Right of deletion**: you may delete locally stored account data at any time
+- **Right of control**: you may turn automatic error reporting and plugin error telemetry on or off in the settings at any time
+- **Withdrawal of consent**: you may withdraw your consent to this Privacy Policy at any time
+
+### 10. Protection of minors
+
+This software does not collect personal information from minors under the age of 14. If you are a minor, please use this software under the guidance of a guardian.
+
+### 11. Policy updates
+
+We may update this Privacy Policy from time to time. Updated versions will be published within this software. For significant changes, we will notify you inside the software.
+
+### 12. Contact us
+
+If you have privacy-related questions, contact us through:
+
+- Official website: [https://www.qomicex.top](https://www.qomicex.top)
+- Email: support@qomicex.top
+
+## Open-source licenses
+
+The launcher is released under the **GPL-3.0 License**: [https://www.gnu.org/licenses/gpl-3.0.en.html](https://www.gnu.org/licenses/gpl-3.0.en.html)
+
+### Backend dependencies
+
+**Rust backend runtime**
+
+| Project | Version | License |
+| :--- | :--- | :--- |
+| Rust | stable | MIT/Apache-2.0 |
+| axum | 0.8 | MIT |
+| tokio | 1.x | MIT |
+
+**Core libraries**
+
+| Project | License |
+| :--- | :--- |
+| qomicex-core-rust | GPL-3.0 |
+| qomicex-connector-rust | GPL-3.0 |
+| qomicex-downloader-rust | GPL-3.0 |
+
+### Frontend dependencies
+
+**Core frameworks**
+
+| Project | Version | License |
+| :--- | :--- | :--- |
+| react / react-dom | 19.1.0 | MIT |
+| react-router-dom | 7.18.0 | MIT |
+| @tauri-apps/api | 2.x | MIT |
+| @tauri-apps/plugin-opener | 2.x | MIT |
+| @tauri-apps/plugin-dialog | 2.7.1 | MIT |
+
+**UI components**
+
+| Project | Version | License |
+| :--- | :--- | :--- |
+| @radix-ui/react-checkbox | 1.3.5 | MIT |
+| @radix-ui/react-slot | 1.3.0 | MIT |
+| @fortawesome/* icon libraries | 7.2.0 / 3.3.1 | MIT |
+
+**Styling and utilities**
+
+| Project | Version | License |
+| :--- | :--- | :--- |
+| tailwindcss | 3.4.19 | MIT |
+| class-variance-authority | 0.7.1 | MIT |
+| clsx / tailwind-merge | — | MIT |
+
+**Animation**
+
+| Project | Version | License |
+| :--- | :--- | :--- |
+| gsap / @gsap/react | 3.15.0 / 2.1.2 | see site |
+
+**Rendering and display**
+
+| Project | Version | License |
+| :--- | :--- | :--- |
+| react-markdown / rehype-raw / remark-gfm | 10.1.0 etc. | MIT |
+| skinview3d | 3.4.2 | MIT |
+
+## Service acknowledgements
+
+| Service | Capability provided |
+| :--- | :--- |
+| [Modrinth](https://modrinth.com) | Mod and resource search API |
+| [CurseForge](https://www.curseforge.com) | Mod and resource search API |
+| [FTB](https://www.feed-the-beast.com) | Modpack API |
+| [BMCLAPI (bangbang93)](https://bmclapi2.bangbang93.com) | Download mirror service |
+| [MCMod (mcmod.cn)](https://www.mcmod.cn) | Chinese mod database |
+| [Minecraft website](https://www.minecraft.net) | Official website; please support the official release |
+| [xphost008](https://github.com/xphost008) | Reference tutorial on the launch process |
+
+## Reference projects
+
+| Project | What was referenced |
+| :--- | :--- |
+| [HMCL](https://github.com/HMCL-dev/HMCL) | Version detection reference |
+| [ProjBobcat](https://github.com/Corona-Studio/ProjBobcat) | ModLoader installer reference |
+| [PCL-CE](https://github.com/PCL-Community/PCL2-CE) | Source of mod Chinese name data files |

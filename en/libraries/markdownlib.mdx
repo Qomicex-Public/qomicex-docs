@@ -1,0 +1,238 @@
+---
+title: "MarkdownLib Library plugin"
+---
+## MarkdownLib Library plugin
+
+> MarkdownLib is a library that wraps Markdown parsing as a Library plugin（前置插件）, which any plugin can call through `callPlugin` to render Markdown text as HTML.
+
+- **Plugin ID**: `top.qomicex.markdown`
+- **Version**: `1.2.1`
+- **Dependency**: none
+- **Bundling**: `marked v15.0.12` is embedded, with no external CDN dependency (not affected by the Tauri CSP)
+
+## Why you need it
+
+QML plugins run inside a Tauri WebView, and after packaging the CSP blocks all external requests and external `<script src>` loads. If a plugin references marked straight from a CDN in its HTML:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+```
+
+the CSP blocks it in packaged builds, `marked` is undefined, and Markdown cannot be rendered.
+
+Once marked lives in its own Library plugin:
+
+- the marked code is embedded in the MarkdownLib package, so **no external CDN is needed** and CSP is bypassed naturally;
+- multiple plugins can **share a single rendering implementation** instead of embedding duplicate code;
+- plugin dependencies manage it, so **versions are explicit and upgradeable**.
+
+## Installation
+
+After you install the MarkdownLib Library plugin, other plugins declare the dependency in `manifest.json`:
+
+```json
+{
+  "dependencies": [
+    { "id": "top.qomicex.markdown", "version": ">=1.0.0" }
+  ]
+}
+```
+
+Dependency fields:
+
+| Field | Required | Notes |
+|------|------|------|
+| `id` | Yes | manifest id of the depended-on plugin |
+| `version` | No | Version range; missing means any version |
+| `optional` | No | `true` for an optional Library plugin, `false` or missing for a required one |
+
+Supported version syntax: `>=1.2.0`, `<=1.2.0`, `>1.0`, `<2.0`, `=1.0.1`, exact `1.2.0`, and multiple conditions separated by spaces `">=1.0 <2.0"`.
+
+## Interface
+
+MarkdownLib exposes the following methods through `registerMethod`:
+
+### `renderMarkdown(md)`
+
+Renders a full Markdown text as an HTML string.
+
+| Item | Notes |
+|----|------|
+| Parameter | `md: string` — Markdown text |
+| Returns | `Promise<string>` — HTML string |
+| Use case | Rendering paragraphs, headings, bold text, lists, code blocks, tables, links, and so on |
+
+### `renderMarkdownInline(md)`
+
+Renders **inline** Markdown as HTML (no block-level elements).
+
+| Item | Notes |
+|----|------|
+| Parameter | `md: string` — inline Markdown |
+| Returns | `Promise<string>` — HTML string |
+| Use case | Rendering `**bold**`, `` `code` ``, `[link](url)` and so on within a single line of text |
+
+### `stripHtml(html)`
+
+Removes HTML tags and returns plain text.
+
+| Item | Notes |
+|----|------|
+| Parameter | `html: string` — HTML string |
+| Returns | `Promise<string>` — plain text |
+| Use case | Extracting text content, preview summaries, and so on |
+
+## Calling methods
+
+Call through `__PLUGIN_API__.callPlugin`:
+
+```js
+await __PLUGIN_API__.callPlugin(插件Id, 方法名, ...参数)
+```
+
+```js
+const html = await __PLUGIN_API__.callPlugin(
+  'top.qomicex.markdown',  // 插件 ID
+  'renderMarkdown',        // 方法名
+  '# 标题\n\n**加粗** 和 `代码`'
+)
+```
+
+## Examples
+
+### Basic rendering
+
+```html
+<div id="out"></div>
+<script>
+  async function render() {
+    try {
+      const html = await __PLUGIN_API__.callPlugin(
+        'top.qomicex.markdown',
+        'renderMarkdown',
+        '## 标题\n\n**加粗**、*斜体*、`行内代码`'
+      )
+      document.getElementById('out').innerHTML = html
+    } catch (e) {
+      document.getElementById('out').textContent = '渲染失败: ' + e.message
+    }
+  }
+  render()
+</script>
+```
+
+### Inline rendering + stripping tags
+
+```js
+const inline = await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdownInline', '**你好** 世界')
+// → '<strong>你好</strong> 世界'
+
+const text = await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'stripHtml', '<p>Hello <b>World</b></p>')
+// → 'Hello World'
+```
+
+### Using it in an overlay window
+
+Overlay windows expose `callPlugin` on `__PLUGIN_API__` too, with the same usage.
+
+### Handling a missing dependency
+
+```js
+if (await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdown', '**测试**')) {
+  // 正常渲染
+} else {
+  // 依赖缺失或未激活，走降级逻辑
+}
+```
+
+## Implementation approach
+
+### Provider: register methods
+
+Once activated, MarkdownLib's `dist/index.html` exposes marked's capabilities to the plugin system through `registerMethod`:
+
+```html
+<script>
+  __PLUGIN_API__.registerMethod('renderMarkdown', function (md) {
+    return marked.parse(md || '')
+  })
+</script>
+```
+
+Key points:
+
+- `registerMethod(methodName, fn)`: `fn` may return a plain value or a Promise (async methods are supported too);
+- a plugin can register multiple methods;
+- all methods are unregistered automatically when the plugin is disabled;
+- name methods meaningfully so they do not clash with other plugins.
+
+### Consumer: call methods
+
+Dependent plugins call through `callPlugin`:
+
+```js
+await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdown', md)
+```
+
+Call flow:
+
+```text
+调用方插件 ──callPlugin──▶ 主窗口 __pluginRegistry 中转
+                              │
+                              ▼
+                         MarkdownLib（已激活）执行 renderMarkdown
+                              │
+                              ▼
+                    返回渲染结果（Promise 值）
+```
+
+### Why embed instead of using a CDN
+
+MarkdownLib **embeds** `marked.min.js` in the plugin package instead of referencing it through `<script src="CDN">`:
+
+- **CSP-safe after packaging**: external scripts are blocked, embedded ones are not;
+- **works offline**: no network needed;
+- **locked version**: bundled into the plugin, so the version is deterministic and reproducible.
+
+## How it is defined
+
+### Plugin dependency mechanism
+
+Dependencies are declared in the `dependencies` array of `manifest.json` and validated by the backend at install and startup:
+
+```text
+安装时：检查必装前置是否已安装且版本符合 → 否则拒绝安装（PLUGIN_MISSING_DEPENDENCY）
+启动时：按依赖拓扑排序激活（先激活被依赖方，再激活依赖方）
+运行中：可选前置缺失不影响启用，调用其方法时才报错
+```
+
+Dependent plugins register methods with `registerMethod` on `__PLUGIN_API__`, and the methods are stored in the main window's `__pluginRegistry`. Disabling a plugin removes its methods automatically.
+
+### How method registration and calls work
+
+```text
+registerMethod(name, fn)
+  ──▶ 主窗口 __pluginRegistry[name] = fn
+
+callPlugin(pluginId, name, ...args)
+  ──▶ 查找 pluginId 注册的 name 方法
+       ├── 找到 → 执行 fn(...args)，返回结果（值或 Promise）
+       └── 未找到 → reject（插件未安装 / 未激活 / 方法未注册）
+```
+
+### Error handling
+
+`callPlugin` rejects on failure, so always wrap it in try/catch on the caller side:
+
+| Scenario | Error message (runtime string, shown as the launcher returns it) |
+|------|----------|
+| Target plugin not installed | 插件 xxx 未提供方法 yyy（可能未安装或未激活） |
+| Target plugin not active | Same as above |
+| Method not registered | Same as above |
+| Error thrown inside the method | 插件 xxx 方法 yyy 执行失败: &lt;具体错误&gt; |
+
+## Revision history
+
+| Date | Version | Changes | Author |
+|------|------|----------|--------|
+| 2026-08-02 | v1.0 | Initial version | AI Agent |

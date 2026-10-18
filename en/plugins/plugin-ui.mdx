@@ -1,0 +1,212 @@
+---
+title: "UI component library (.p-* styles)"
+---
+## UI component library (.p-* styles)
+
+The launcher ships a built-in set of `.p-*` style components for plugins (`plugin-css.ts`). They are injected automatically into plugin pages and Overlay windows（悬浮窗）and follow the light/dark theme. Plugins can use them without importing any CSS file.
+
+## Theme variables
+
+All colors are defined through CSS variables that follow the launcher's light/dark theme automatically:
+
+```css
+--background  --foreground  --card  --card-foreground
+--popover  --popover-foreground  --primary  --primary-foreground
+--secondary  --secondary-foreground  --muted  --muted-foreground
+--accent  --accent-foreground  --destructive  --destructive-foreground
+--border  --input  --ring
+```
+
+Reference them in your plugin styles:
+
+```css
+.my-box { color: hsl(var(--foreground)); border: 1px solid hsl(var(--border)); }
+```
+
+### How theme following works
+
+- Plugin pages and Overlay windows **follow the launcher's light/dark theme automatically**: the launcher injects the current theme's CSS variables into the plugin environment (synced via the `__qomicex_theme` postMessage), so light/dark switches take effect immediately.
+- The plugin `body` background is **transparent**, exposing the launcher background (the plugin container needs no background of its own; just use the CSS variables).
+- Theme variables are available both in plugin pages (inline/sandbox) and in Overlay windows (iframe).
+
+## Component list
+
+### Card
+
+```html
+<div class="p-card">
+  <div class="p-card-title">标题</div>
+  <div class="p-card-desc">描述文字</div>
+  <div>内容...</div>
+</div>
+```
+
+### Button
+
+```html
+<button class="p-btn p-btn--primary">主要</button>
+<button class="p-btn p-btn--default">默认</button>
+<button class="p-btn p-btn--ghost">幽灵</button>
+<button class="p-btn p-btn--danger">危险</button>
+<button class="p-btn p-btn--outline">描边</button>
+<button class="p-btn p-btn--sm">小按钮</button>
+```
+Variants: `--primary` `--default` `--ghost` `--danger` `--outline`; size: `--sm`
+
+### Input / Textarea
+
+```html
+<label class="p-label">API 地址</label>
+<input class="p-input" placeholder="请输入">
+<textarea class="p-textarea"></textarea>
+```
+
+### Badge
+
+```html
+<span class="p-badge p-badge--green">成功</span>
+<span class="p-badge p-badge--red">失败</span>
+<span class="p-badge p-badge--yellow">警告</span>
+<span class="p-badge p-badge--blue">信息</span>
+<span class="p-badge p-badge--default">默认</span>
+```
+
+### Tabs
+
+```html
+<div class="p-tabs">
+  <button class="p-tab active" data-p-tab="a">标签A</button>
+  <button class="p-tab" data-p-tab="b">标签B</button>
+</div>
+<div class="p-panel active" id="panel-a">A 的内容</div>
+<div class="p-panel" id="panel-b">B 的内容</div>
+```
+- `data-p-tab` points to a panel with `id="panel-{name}"`.
+- Click-to-switch is handled automatically by the injected script; you do not need to write any JS.
+- Supported in Overlay windows as well.
+
+### Switch
+
+```html
+<label class="p-swiper">
+  <input type="checkbox" checked>
+  <span class="p-swiper-track"></span>
+  启用功能
+</label>
+```
+- In an Overlay window, to use a Switch to show or hide a panel, add `data-p-switch="panelId"` to the input and the script toggles the matching `id` element automatically.
+
+### Checkbox
+
+```html
+<label class="p-check-field">
+  <input type="checkbox">
+  记住选择
+</label>
+```
+
+### Progress
+
+```html
+<div class="p-progress"><div class="p-progress__bar" style="width:60%"></div></div>
+（不确定进度）
+<div class="p-progress"><div class="p-progress__bar p-progress__bar--indeterminate"></div></div>
+```
+Modifiers: `--indeterminate` indeterminate, `--danger` danger, `--warn` warning
+
+### Spinner
+
+```html
+<div class="p-loader"></div>
+```
+
+### Empty state
+
+```html
+<div class="p-empty">
+  <div class="p-empty__icon">📭</div>
+  <div class="p-empty__text">暂无数据</div>
+</div>
+```
+
+### Alert
+
+```html
+<div class="p-alert p-alert--info">信息</div>
+<div class="p-alert p-alert--success">成功</div>
+<div class="p-alert p-alert--warn">警告</div>
+<div class="p-alert p-alert--error">错误</div>
+```
+
+### Table
+
+```html
+<table class="p-table">
+  <tr><th>名称</th><th>值</th></tr>
+  <tr><td>示例</td><td>123</td></tr>
+</table>
+```
+
+### Select
+
+```html
+<div class="p-select">
+  <select>
+    <option>选项A</option>
+    <option>选项B</option>
+  </select>
+</div>
+```
+
+### Menu
+
+```html
+<div class="p-menu">
+  <div class="p-menu-item">普通项</div>
+  <div class="p-menu-item p-menu-item--danger">危险项</div>
+</div>
+```
+
+### Tooltip
+
+```html
+<span class="p-tooltip" data-tip="提示文字">悬停我</span>
+```
+
+### Color picker
+
+```html
+<div class="p-color-picker"><span class="p-color-picker__swatch" style="background:#f00"></span> 颜色</div>
+```
+
+### Layout and utilities
+
+```html
+<div class="p-row"><span>横向排列</span></div>
+<div class="p-row p-row--between">两端对齐</div>
+<div class="p-col">纵向排列</div>
+```
+- `.p-row` `--wrap` `--between`, `.p-col`
+- `.p-icon` `--lg`, `.p-divider` `.p-hr` `.p-separator`, `.p-status-dot --up/--down/--warn`, `.p-pre`
+- Spacing: `.p-mt-1/2/3` `.p-mb-1/2/3` `.p-gap-1/2/3`
+- Text: `.p-text-center` `.p-text-muted` `.p-text-sm/xs/lg` `.p-font-mono`
+- Other: `.p-ml-auto` `.p-truncate` `.p-rounded`
+
+## Example
+
+```html
+<div class="p-card">
+  <div class="p-card-title">下载状态</div>
+  <div class="p-row p-row--between">
+    <span>安装中</span>
+    <span class="p-badge p-badge--blue">进行中</span>
+  </div>
+  <div class="p-progress"><div class="p-progress__bar" style="width:45%"></div></div>
+  <div class="p-tabs" style="margin-top:12px">
+    <button class="p-tab active" data-p-tab="log">日志</button>
+    <button class="p-tab" data-p-tab="info">详情</button>
+  </div>
+  <div class="p-panel active" id="panel-log"><pre class="p-pre">下载中...</pre></div>
+  <div class="p-panel" id="panel-info">版本 1.2.0</div>
+</div>
+```

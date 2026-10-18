@@ -1,0 +1,364 @@
+---
+title: "React + Vite plugin development tutorial"
+---
+## React + Vite plugin development tutorial
+
+For **real plugins with a UI**, use project-based development with React 19 + Vite 7 + TypeScript + Tailwind, together with the launcher's built-in component library `@qomicex/plugin-ui`. Compared with hand-written plain HTML, you get component reuse, type checking, HMR, and on-demand packaging.
+
+**Generate the project with the `qomicex create` scaffold（脚手架）** (it configures everything for you). This tutorial explains what the scaffold produces and what each config does, so you can adjust as needed.
+
+## 1. Why Vite
+
+- **Type safety**: TS strict mode; `tsc --noEmit` catches errors before the build
+- **Component reuse**: Use the same `@qomicex/plugin-ui` components as the launcher (Card / Button / Dialog / Select, and more); styles follow the theme automatically
+- **Clean output**: Only the components you use are bundled, and CSS is generated on demand (Tree-shaking + Tailwind JIT)
+
+## 2. Generate a project with the CLI (recommended)
+
+```bash
+qomicex create com.example.myplugin
+cd com.example.myplugin
+pnpm install
+```
+
+The generated project structure (Vite + React 19 + TS + Tailwind + `@qomicex/plugin-ui`, with the id already substituted in `manifest.json`/`package.json`):
+
+```text
+my-plugin/
+├── manifest.json        # 插件清单（发布时打进 .qplugin 根目录）
+├── index.html           # Vite 入口
+├── vite.config.ts       # 已设 base: './'
+├── tailwind.config.js   # 已引用 @qomicex/plugin-ui/tailwind-preset
+├── postcss.config.js
+├── tsconfig.json
+├── package.json         # scripts: dev/build/package
+└── src/
+    ├── main.tsx         # React 入口，挂载 #root
+    ├── api.ts           # window.__PLUGIN_API__ 的类型化封装
+    ├── App.tsx          # 插件页面
+    └── index.css        # Tailwind 指令
+```
+
+The scaffold template comes from the built-in template of `qomicex create` (`packages/qomicex-cli/templates/`). Add or remove from it when it does not fit your needs.
+
+### Manual setup without the CLI (alternative)
+
+```bash
+mkdir my-plugin && cd my-plugin
+npm init -y
+# 依赖
+npm i react react-dom @qomicex/plugin-ui@file:../../packages/plugin-ui
+# 开发依赖
+npm i -D typescript vite @vitejs/plugin-react @types/react @types/react-dom tailwindcss autoprefixer postcss
+```
+
+`@qomicex/plugin-ui` is a workspace package inside the launcher repository, so referencing it with `file:../../packages/plugin-ui` is enough. You do not need to publish it to npm.
+
+### package.json
+
+```json
+{
+  "name": "my-plugin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "package": "bash scripts/build.sh"
+  }
+}
+```
+
+### vite.config.ts: the key is a relative base
+
+```ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  // 必须为 './'：否则产物中的 /assets/xxx 会被解析成站点根路径，沙箱内 404
+  base: './',
+  build: { outDir: 'dist' },
+})
+```
+
+### tailwind.config.js: reference the preset
+
+```js
+import preset from '@qomicex/plugin-ui/tailwind-preset'
+
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    './index.html',
+    './src/**/*.{ts,tsx}',
+    // 关键：必须扫描 plugin-ui 源码，否则其内部类（bg-card 等）不会生成
+    '../../packages/plugin-ui/src/**/*.{ts,tsx}',
+  ],
+  presets: [preset],
+  darkMode: 'class',
+}
+```
+
+Tailwind's `content` only scans `./src` by default. The style classes of `@qomicex/plugin-ui` components (`bg-card`, `bg-muted`, `text-foreground`) live in the **component source**, not under your `src`. **If you do not add `../../packages/plugin-ui/src/**/*.{ts,tsx}` to `content`, the built CSS is missing those classes and the plugin page has no styling** (a built CSS file of only a few KB is the typical symptom).
+
+### postcss.config.js
+
+```js
+export default {
+  plugins: { tailwindcss: {}, autoprefixer: {} },
+}
+```
+
+### tsconfig.json
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}
+```
+
+### src/index.css
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+```
+
+## 3. Typed wrapper for the plugin API
+
+Plugin scripts talk to the launcher through `window.__PLUGIN_API__`. Wrap it in a typed module, and handle the case where there is **no API bridge when you run `npm run dev` standalone (opening the page directly in a browser)**:
+
+`src/api.ts`:
+
+```ts
+/// <reference types="vite/client" />
+
+declare global {
+  interface Window {
+    __PLUGIN_API__?: PluginApi
+    __PLUGIN_ID__?: string
+  }
+}
+
+export interface PluginApi {
+  call: (method: string, ...args: unknown[]) => Promise<unknown>
+  registerMethod: (method: string, fn: (...args: unknown[]) => unknown) => void
+  callPlugin: (pluginId: string, method: string, ...args: unknown[]) => Promise<unknown>
+  proxyFetchStream: (req: unknown, handlers: { onChunk: (c: string) => void; onError: (e: Error) => void }) => Promise<void>
+}
+
+/** 沙箱注入的插件 API 桥；独立 dev（浏览器直开）时返回 null */
+export function getApi(): PluginApi | null {
+  return window.__PLUGIN_API__ ?? null
+}
+
+export function getPluginId(): string {
+  return window.__PLUGIN_ID__ ?? 'unknown'
+}
+```
+
+## 4. Write the plugin page
+
+`src/main.tsx`:
+
+```tsx
+import React from 'react'
+import { createRoot } from 'react-dom/client'
+import App from './App.tsx'
+import './index.css'
+
+const rootEl = document.getElementById('root')
+if (rootEl) createRoot(rootEl).render(<React.StrictMode><App /></React.StrictMode>)
+```
+
+The repository TS convention**requires file extensions** (`./App.tsx`, `./api.ts`). Vite's path resolution has a bug and fails when the extension is omitted. `allowImportingTsExtensions` is already enabled in `tsconfig`.
+
+Using the component library in `src/App.tsx`:
+
+```tsx
+import { getApi } from './api.ts'
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@qomicex/plugin-ui'
+
+export default function App() {
+  const api = getApi()
+
+  if (!api) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>未检测到插件 API 桥</CardTitle>
+          <CardDescription>当前以普通浏览器直接打开页面，`window.__PLUGIN_API__` 未注入。</CardDescription>
+        </CardHeader>
+      </Card>
+    )
+  }
+
+  const handleToast = async () => {
+    await api.call('showToast', '来自 React 插件的问候', 'success')
+  }
+
+  return (
+    <div className="flex flex-col gap-4 p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Hello, Qomicex!</CardTitle>
+          <CardDescription>基于 React + Vite + @qomicex/plugin-ui</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={handleToast}>showToast</Button>
+            <Badge>默认</Badge>
+            <Badge variant="destructive">危险</Badge>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+```
+
+`@qomicex/plugin-ui` exports: `Button` / `Badge` / `Card`(Header/Title/Description/Content/Footer) / `Checkbox` / `Combobox` / `Dialog` / `Input` / `Label` / `Select`(+`SelectOption`/`SelectDivider`) / `Separator` / `Table` / `Tabs` / `Textarea` / `Tooltip` / `useMessageBox`(+`MessageBoxProvider`) / `cn`. See [plugin-ui component library](/en/plugins/plugin-ui) for full usage.
+
+## 5. Overlay window and theme files
+
+`overlay.html` and `theme.css` are not part of the Vite build output, so you must copy them into `dist/` manually when packaging:
+
+- `overlay.html` → `dist/overlay.html` (where manifest `contributes.overlay.file` points)
+- `theme.css` → `dist/theme.css` (where manifest `entry.theme` points)
+
+**Overlay window bridge timing (important):** the launcher appends the overlay window's `__PLUGIN_API__` bridge script at the end of the page `<body>`. So **do not capture `window.__PLUGIN_API__` synchronously while the page loads** (the bridge is not injected yet). Read it lazily inside event callbacks:
+
+```html
+<script>
+  (function () {
+    // 不要在这里写 var api = window.__PLUGIN_API__ —— 此时桥尚未注入，值为 undefined
+    function api() { return window.__PLUGIN_API__ }
+
+    document.getElementById('btn').addEventListener('click', function () {
+      api().call('showToast', '来自悬浮窗', 'success')
+    })
+  })()
+</script>
+```
+
+## 6. Package the .qplugin
+
+### Package with the CLI (recommended)
+
+```bash
+qomicex pack                      # tsc && vite build → release/<id>-<version>.qplugin
+qomicex pack --key ./dev-key.pem  # 附 Ed25519 签名（离线可验）
+qomicex pack --version 0.2.0      # 覆盖版本号
+```
+
+`qomicex pack` handles everything automatically: it builds the frontend, copies the root `overlay.html` / `theme.css` into `dist/`, and assembles the zip (`manifest.json` at the root plus `dist/**`). If `entry.theme` or `contributes.overlay.file` reference files under `dist/` while the source sits in the root directory, they are copied in automatically.
+
+### Manual packaging without the CLI (alternative)
+
+#### Packaging script (scripts/build.sh)
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+VERSION="${1:-0.1.0}"
+PLUGIN_ID="my-plugin"
+
+echo "==> 构建前端"
+npm run build
+
+echo "==> 整理 dist"
+cp "$ROOT/overlay.html" "$ROOT/dist/overlay.html"
+cp "$ROOT/theme.css" "$ROOT/dist/theme.css"
+
+echo "==> 组装 .qplugin"
+STAGING="$ROOT/.staging"
+rm -rf "$STAGING" "$ROOT/release"
+mkdir -p "$STAGING/dist" "$ROOT/release"
+
+# 关键：manifest 引用的是 dist/ 下相对路径，zip 内必须保留 dist/ 子目录
+cp "$ROOT/dist/index.html" "$STAGING/dist/"
+cp -r "$ROOT/dist/assets" "$STAGING/dist/assets"
+cp "$ROOT/dist/overlay.html" "$STAGING/dist/"
+cp "$ROOT/dist/theme.css" "$STAGING/dist/"
+cp "$ROOT/manifest.json" "$STAGING/"
+
+cd "$STAGING"
+if command -v zip >/dev/null 2>&1; then
+  zip -qr "$ROOT/release/${PLUGIN_ID}-${VERSION}.qplugin" .
+else
+  powershell -NoProfile -Command "Compress-Archive -Path '*' -DestinationPath '$ROOT/release/${PLUGIN_ID}-${VERSION}.qplugin' -Force"
+fi
+cd "$ROOT" && rm -rf "$STAGING"
+echo "==> 完成: $ROOT/release/${PLUGIN_ID}-${VERSION}.qplugin"
+```
+
+### Package structure after packaging
+
+```text
+my-plugin.qplugin（即 zip）
+└── manifest.json          # 根目录
+└── dist/
+    ├── index.html         # Vite 产物（引用 ./assets/... 相对路径）
+    ├── overlay.html
+    ├── theme.css
+    └── assets/
+        ├── main-xxx.js
+        └── main-xxx.css
+```
+
+The Backend（后端）resolves files as `plugins/{id}/{path}`, so `entry.frontend: "dist/index.html"` fetches `plugins/{id}/dist/index.html`. **The `dist/` subdirectory must stay inside the zip**: if you hoist the files from `dist` to the zip root, then after installation `dist/index.html`, `dist/theme.css`, and `dist/overlay.html` all return 404 (blank page, no styles, overlay window will not open).
+
+## 7. Install and test
+
+- Run `qomicex pack` (or manually `bash scripts/build.sh 0.1.0`; on Windows: `pwsh ./scripts/build.ps1 0.1.0`)
+- Launcher → Plugins → upload `release/my-plugin-0.1.0.qplugin`
+- Enable the plugin → restart the launcher → open the plugin page from the sidebar
+
+After uploading and installing, changes to the code require you to **repackage and upload again** (the backend reads files from disk in real time, with no cache). During development, using `qomicex dev` with the debug harness is preferable: hot reload in the browser, no Tauri or backend needed (see [Debugging and hot reload](/en/plugins/debugging)).
+
+## FAQ
+
+| Symptom | Cause |
+|------|------|
+| The plugin page has no styles (CSS is only a few KB) | `content` in `tailwind.config.js` does not include `../../packages/plugin-ui/src/**/*.{ts,tsx}` |
+| Blank page / assets return 404 | `base` in `vite.config.ts` is not `'./'`, or the `dist/` directory is not preserved in the zip |
+| An overlay window button fails with `Cannot read properties of undefined (reading 'call')` | `window.__PLUGIN_API__` was captured synchronously too early, before the bridge was injected; read it lazily inside the event callback instead |
+| A standalone `npm run dev` page reports errors | Opening it directly in a browser means there is no `__PLUGIN_API__` bridge; use `getApi()` and degrade gracefully when it is null |
+| A `callBackend` request goes to `/api/api/...` | `callBackend` already prefixes `/api` internally; pass `/diagnostics/health` rather than `/api/diagnostics/health` |
+
+## Next steps
+
+- Full API reference: [Complete plugin API reference](/en/plugins/plugin-api)
+- Component library: [UI component library (.p-* styles)](/en/plugins/plugin-ui)
+- Overlay window: [Overlay window development](/en/plugins/overlay)
+- CLI command reference: [CLI reference](/en/plugins/cli)
+- Debugging and hot reload: [Debugging and hot reload](/en/plugins/debugging)
+- Publishing guidelines: [Publishing guidelines](/en/plugins/publishing)

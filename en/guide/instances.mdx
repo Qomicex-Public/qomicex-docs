@@ -1,0 +1,54 @@
+---
+title: "Instance management"
+---
+## Instance management
+
+An **instance（实例）** is a self-contained copy of Minecraft you can run independently — game files, mods（模组）, worlds and its own settings. The launcher's instances page creates, installs and manages them.
+
+## Instance list
+
+Click **Instances** in the sidebar to open it. The list supports:
+
+- **Search**: filter quickly by name
+- **Filter**: filter by loader (Vanilla / Forge / Fabric / NeoForge / Quilt and more) or game version
+- **Pin to home**: pin frequently used instances to the home page and launch them in one click from the home launch bar
+- **Bulk actions**: select several and delete them together
+
+## Install a new game
+
+Three ways: **install by downloading** a fresh copy, **install a modpack** to set up everything at once, or **migrate an existing game** to take over a `.minecraft` installed by another launcher (multiple game directories, scan and import, complete missing files).
+
+See **[Install a game](/en/guide/installing-games)**.
+
+Installation progress is shown in [Downloads](/en/guide/downloads). When it finishes, the instance appears in the list — click it to open its details page.
+
+## Instance details
+
+Click any instance to open its details page, which contains the following sections:
+
+| Section | Description |
+| :--- | :--- |
+| **Overview** | Instance information at a glance and quick actions (launch, open folder, pin to home) |
+| **Settings** | Instance name, icon, Java runtime, integrity check, version isolation, linked account |
+| **Game settings** | Game-level settings such as launch arguments and memory (can follow global settings) |
+| **Worlds** | Single-player world list with rename / backup / delete |
+| **Screenshots** | Browse in-game screenshots |
+| **Mods** | Mod list with enable/disable, update and bulk delete, plus one-click search in Resource Center |
+| **Resource packs** | Manage resource packs |
+| **Shader packs** | Manage shader packs |
+| **Data packs** | Manage world data packs |
+| **Schematics** | Manage Litematica schematic files (preview / rename / delete) |
+| **Servers** | Server list from `servers.dat` |
+
+## Version isolation
+
+When **version isolation（版本隔离）** is on, each instance keeps its mods, worlds, resource packs, shaders and other data in its own directory without interfering with others; when it is off, they all share the common folders under the game directory (the habit of older modpacks).
+
+- Turn version isolation on or off for a single instance in **Instance details → Settings**;
+- Change the global default in **Settings → Basics**.
+
+Keeping it on is generally recommended.
+
+## Delete an instance
+
+Select several instances in the list to delete them together, or delete one from its details page. Deleting only removes the instance record from the launcher and its version directory — **back up personal data such as worlds beforehand**.

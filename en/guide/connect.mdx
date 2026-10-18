@@ -1,0 +1,55 @@
+---
+title: "Multiplayer"
+---
+## Multiplayer
+
+The Launcher（启动器）has built-in Multiplayer（多人联机）: no public IP and no server hosting required to play your singleplayer world with friends.
+
+## Quick start
+
+Click **Multiplayer** in the sidebar to open it.
+
+### Host（房主）: the person creating the room
+
+- Select the **local instance** you want to play on
+- Click **Create room（创建房间）** to get a **Room code（房间码）**
+- Send the room code to your friends
+- Keep the page open and wait for players to join
+
+### Player（玩家）: the person joining
+
+- Enter the **room code** from the host
+- The launcher automatically detects your **NAT** type and establishes a connection
+- After joining, select your local instance and the launcher compares Mods automatically
+
+## Mod consistency（Mod 一致性）check
+
+When you join, the launcher compares the **host's mod list** against your local instance, item by item:
+
+| Status | Meaning | What to do |
+| :--- | :--- | :--- |
+| **Matched** | Your mods are identical to the host's | Use **Quick launch** directly |
+| **Missing** | You're missing some mods | Fill in the missing mods from the Resource Center, then launch |
+| **Mismatched** | Versions or counts differ | You can **ignore differences and force launch** (at your own risk; the game may crash) |
+
+When you have several local instances, the launcher recommends the **instance with the largest mod overlap with the host**, and the missing list is calculated against it.
+
+## Host controls
+
+Inside the room, the host can:
+
+- **View the player list**: current online members in real time
+- **Kick player（踢出玩家）**: remove a disruptive player from the room (their network identifier is also blocked to prevent automatic reconnection)
+- **Rejoin approval**: when a kicked player tries to come back, a dialog asks you to confirm. Allow lets them in, deny keeps blocking them. You can also deny silently (no more dialogs)
+- **Unban（解封）**: lift the block from the kicked players list
+
+## Troubleshooting connection failures
+
+| Symptom | Possible cause and fix |
+| :--- | :--- |
+| NAT detection fails | Restricted network (common on corporate or campus networks). Try a mobile hotspot |
+| Can't connect to the host at all | At least one side has a strict network. The host can recreate the room and try again. A leftover et process may be running in the background, so restart the launcher and try again |
+| Connects but the game won't load | Make sure both sides run the same game version and mods, and check that the host has entered the world (a singleplayer world must open to LAN first or be proxied by the multiplayer layer) |
+| A kicked player can still join | They changed their network identifier. Kick them again and consider deny silently |
+
+Virtual network adapter software such as Radmin VPN and Hamachi can conflict with multiplayer. The launcher avoids common conflicts automatically, but if connections misbehave, quit those apps first and try again.

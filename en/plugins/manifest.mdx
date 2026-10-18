@@ -1,0 +1,234 @@
+---
+title: "Manifest reference"
+---
+## Manifest reference
+
+`manifest.json` is a plugin's identity file, located at the root of the `.qplugin` package. It describes the plugin's metadata, permissions, entries, and extension points.
+
+Generating a valid manifest skeleton with `qomicex create <id>` is recommended (it sets up id / layers / permissions / entry automatically); then validate it with `qomicex verify`. This page covers every field so you can adjust them as needed.
+
+## Complete structure
+
+```json
+{
+  "id": "top.qomicex.assistant",
+  "name": "AI 助手",
+  "version": "1.2.0",
+  "minLauncherVersion": "0.1.0",
+  "layers": ["l3"],
+  "render": "iframe",
+  "permissions": ["ui:toast", "config:read", "config:write", "network:cors_proxy"],
+  "dependencies": [
+    { "id": "top.qomicex.markdown", "version": ">=1.0.0" }
+  ],
+  "entry": {
+    "frontend": "dist/index.html",
+    "theme": "dist/theme.css"
+  },
+  "contributes": {
+    "menuItems": [
+      { "path": "/plugins/p/top.qomicex.assistant", "label": "AI 助手", "icon": "A", "action": "overlay" }
+    ],
+    "overlay": {
+      "file": "dist/overlay.html",
+      "title": "AI 助手",
+      "width": 380,
+      "height": 500,
+      "minimizable": false,
+      "resizable": true
+    }
+  }
+}
+```
+
+## Field summary
+
+| Field | Type | Required | Default | Description |
+|------|------|------|--------|------|
+| `id` | string | ✅ | — | Unique plugin ID, used as the install directory name `plugins/{id}/`. Never change it once published |
+| `name` | string | ✅ | — | Plugin display name |
+| `version` | string | ✅ | — | Plugin version (used for dependency matching). See [Version range syntax](#version-range-syntax) |
+| `minLauncherVersion` | string | ❌ | `""` | Minimum launcher version. ⚠️ It is currently **stored only and not actually validated** |
+| `layers` | string[] | ❌ | `[]` | Layer declarations. Values: `l0`/`l1`/`l2`/`l3`/`l4`, and you can declare several. See [layers layer definitions](#layers-layer-definitions) |
+| `render` | string | ❌ | `"iframe"` | Rendering mode: `"inline"` / `"iframe"` / `"webview"`. **`"iframe"` (sandbox) is the default**; inline rendering only happens when you explicitly declare `"render": "inline"`; `"webview"`, or `l4` in `layers`, uses standalone window rendering. See [layers layer definitions](#layers-layer-definitions) |
+| `permissions` | string[] | ❌ | `[]` | Permission declarations. ⚠️ The backend only stores them; **they are validated by the frontend at runtime** (a missing permission makes the API call fail) |
+| `dependencies` | PluginDependency[] | ❌ | `[]` | Library plugin dependencies. See [Plugin dependencies and inter-plugin calls](/en/plugins/dependencies) |
+| `entry` | object | ❌ | `{}` | Entry declarations |
+| `contributes` | object | ❌ | `null` | Extension points |
+
+### entry object
+
+| Field | Type | Description |
+|------|------|------|
+| `frontend` | string | Plugin page entry (relative path inside the `.qplugin`). **Only plugins that declare frontend are activated** and rendered at `/plugins/p/:id` |
+| `theme` | string | Path to the theme CSS file; injected as `<style data-plugin-theme>` on activation |
+| `backend` | string | Reserved field, currently unused |
+
+If you omit `entry.frontend`, the plugin **is not activated** (`activatePlugin` only renders and marks `active` when `entry.frontend` exists), so it cannot register methods or provide UI. Even for purely functional plugins, providing an empty page entry is recommended.
+
+### contributes object
+
+| Field | Type | Description |
+|------|------|------|
+| `menuItems` | PluginMenuItem[] | List of entries at the bottom of the sidebar |
+| `overlay` | PluginOverlayConfig | Overlay window configuration |
+| `slots` | PluginSlotContribution[] | Main UI slot injection: `header:right` (right side of the title bar) / `dashboard:widgets` (dashboard widget grid). See [Dashboard widgets](/en/plugins/dashboard-widget) |
+| `downloadSources` | string[] | Reserved, currently unused |
+| `commands` | string[] | Reserved, currently unused |
+| `settingsPages` | string[] | Plugin settings page: list of relative HTML paths inside the package (such as `"dist/settings.html"`); a vertical tab is generated for each path under Settings → Plugins → Plugin settings. See [settingsPages array](#settingspages-array) |
+| `iconTheme` | string | Icon theme: relative path of `icon-theme.json` inside the `.qtheme` package (such as `"dist/icon-theme.json"`), registered through the theme manager on activation. See [Theme system](/en/plugins/theme#icon-theme-icon-theme-json) |
+| `fontLinks` | string[] | Font/ligature contribution: list of font CSS/CDN URLs, injected automatically as `<link rel="stylesheet">` on activation and removed on deactivation. See [Font and ligature contribution](/en/plugins/theme#font-and-ligature-contribution) |
+| `hooks` | PluginHookDecl[] | Declares the launcher methods this plugin can hook. The `hook:register` permission must also be declared. See [Hook system](/en/plugins/hooks) |
+
+### hooks array elements
+
+| Field | Type | Description |
+|------|------|------|
+| `method` | string | Name of a launcher method that can be hooked (such as `"scanVersions"`, `"launchInstance"`) |
+| `priority` | number | Execution order priority; a lower number runs first (default 100). Same priority runs in registration order |
+
+The declaration documents the hook and allows a permission pre-check; the actual handler is registered at runtime with `__PLUGIN_API__.registerHook`.
+
+```json
+{
+  "permissions": ["hook:register"],
+  "contributes": {
+    "hooks": [
+      { "method": "scanVersions", "priority": 10 }
+    ]
+  }
+}
+```
+
+### menuItems array elements
+
+| Field | Type | Description |
+|------|------|------|
+| `path` | string | Entry target path (page route, such as `/plugins/p/:id`) |
+| `label` | string | Entry display text |
+| `icon` | string | Entry icon. Three forms are supported: ① emoji / plain text (such as `"🛠"`, `"A"`); ② absolute URL (such as `"https://example.com/icon.png"`); ③ relative path inside the package (such as `"dist/icon.svg"`, which the launcher resolves to a file URL automatically) |
+| `action` | string | `"page"` (default, navigate to a page) or `"overlay"` (open the overlay window; requires the `overlay` configuration) |
+
+### settingsPages array
+
+Collect a plugin's settings UI into the launcher, so settings entry points are not scattered around.
+
+```json
+{
+  "contributes": {
+    "settingsPages": ["dist/settings.html"]
+  }
+}
+```
+
+- Each path is the relative path of an HTML file inside the `.qplugin` package; the tab disappears automatically when the plugin is disabled
+- The launcher renders one tab per path under Settings → Plugins → Plugin settings (vertical tabs on the left list each plugin; the right side is an iframe sandbox with the same `__PLUGIN_API__` bridge as plugin pages)
+- For the full development guide (writing the settings HTML, using getSettings/setSettings, openPluginSettings navigation, lifecycle rules), see [Plugin settings page](/en/plugins/settings-page)
+
+### icon examples
+
+```json
+// ① emoji / 纯文本
+{ "path": "/plugins/p/xxx", "label": "AI 助手", "icon": "🤖" }
+
+// ② 绝对 URL
+{ "path": "/plugins/p/xxx", "label": "AI 助手", "icon": "https://example.com/icon.png" }
+
+// ③ 包内相对路径（推荐）
+// 文件放在插件包 dist/icon.png，manifest 写相对路径
+{ "path": "/plugins/p/xxx", "label": "AI 助手", "icon": "dist/icon.png" }
+```
+
+Relative paths inside the package are resolved by the launcher to `http://localhost:5000/api/plugins/{id}/files/dist/icon.png`, with nothing extra needed on the plugin side.
+
+### Top-level icon (library plugin icon)
+
+Besides `menuItems[].icon`, `icon` is also supported at the manifest **top level**, so library plugins without `contributes.menuItems` show an icon in **plugin management / the list**:
+
+```json
+{
+  "id": "top.qomicex.markdown",
+  "name": "MarkdownLib",
+  "icon": "fa-solid fa-file-lines",
+  "layers": ["l3"],
+  "entry": { "frontend": "dist/index.html" }
+}
+```
+
+- The supported forms match `menuItems[].icon` (emoji / absolute URL / relative path inside the package / **FontAwesome class name**)
+- Plugin management cards read them in this order: `contributes.menuItems[0].icon ?? manifest.icon`
+- **Library plugins should use the top-level `icon`** and should not declare `contributes.menuItems` (which creates a sidebar entry)
+- Prefer FontAwesome class names for icons (such as `fa-solid fa-file-lines`, `fa-brands fa-markdown`; they must be in the launcher's `BuiltinIcons.tsx` preset list): SVG paths rendered through `<img>` stay black and do not follow the theme, whereas FA class names follow the light and dark themes
+
+
+### overlay object
+
+| Field | Type | Default | Description |
+|------|------|--------|------|
+| `file` | string | — | Path to the overlay window HTML file (relative path inside the `.qplugin`) |
+| `title` | string | menuItem.label | Overlay window title |
+| `width` | number | 380 | Width (px) |
+| `height` | number | 500 | Height (px) |
+| `minimizable` | bool | true | Whether to show a minimize button |
+| `resizable` | bool | false | Whether resizing by dragging the bottom-right corner is allowed (minimum 200×120) |
+
+## layers layer definitions
+
+`layers` sorts plugins **by complexity**, from pure declarations to executable logic, and determines a plugin's capabilities and how it runs:
+
+| Layer | Technology | Use cases | Description |
+|------|------|---------|------|
+| **L0** static | `theme.json` + CSS | Themes, color schemes | Purely declarative, no execution capability |
+| **L1** declarative | Configuration file declarations | New download sources, new mirrors, API endpoints | Purely declarative, no execution capability |
+| **L2** script | JS (runs inside the frontend sandbox) | UI extensions, menu injection, panels | Permission checks through the postMessage gateway |
+| **L3** WASM | WASM (backend Wasmtime sandbox) | Agents, protocol parsers, complex logic | Host API permission gating |
+| **L4** remote WebView | Standalone Tauri WebviewWindow (separate renderer process) | Heavy UI, untrusted, plugins that need process-level isolation | Cross-window event bridge; the main window runs APIs and permission checks |
+
+**How to declare:** `layers` is an array, so you can declare several layers at once:
+
+```json
+{ "layers": ["l2", "l3"] }
+```
+
+**Current implementation status (important):**
+
+- **The iframe sandbox is the default rendering mode**: plugins with `entry.frontend` **use the iframe sandbox by default** (`<iframe sandbox="allow-scripts">` plus a postMessage bridge), isolated from the main UI's DOM/CSS (opaque origin, preventing CSS leakage and same-origin theft). Inline rendering (same context as the main UI, compatible with older plugins) only happens when the manifest explicitly declares `"render": "inline"`.
+- The iframe sandbox also supports all `__PLUGIN_API__` methods, `.p-*` component styles, and `registerMethod`/`callPlugin` (relayed across windows)
+- Sandboxed plugin scripts run automatically when the `srcdoc` is parsed, without visiting the page
+- **Plugin activation conditions**: after installation a plugin starts in the `installed` state, and actual activation depends on two things: ① `entry.frontend` exists (`activatePlugin` only renders and marks `active` when `entry.frontend` exists); ② the user enables it in the plugin list. This is independent of the `layers` declaration; a pure `["l3"]` plugin with `entry.frontend` is still activated (using the iframe sandbox by default).
+- **Differences between the iframe sandbox and inline rendering**:
+  | Dimension | iframe sandbox (default) | Inline rendering (`"render":"inline"`) |
+  |------|----------------|---------|
+  | Isolation | Fully isolated from the main UI (separate window, opaque origin) | Same window as the main UI |
+  | Script execution | Runs as soon as the srcdoc is parsed | Runs immediately when loaded on activation |
+  | Dependency injection | `registerMethod` notifies the main window to relay | Calls the main window registry directly |
+  | Use cases | Plugins that need isolation and independence (the recommended default) | Lightweight UI, plugins that need access to the main UI DOM |
+- L0/L1 are currently **reserved declarative layers** with no standalone runtime mechanism yet; **L3 WASM is implemented**: plugins that declare `l3` and ship `plugin.wasm` in the package are loaded and executed by the launcher's Rust layer (wasmtime) (see [WASM plugins](/en/plugins/wasm-plugin))
+- **L4 remote WebView is implemented**: for plugins that declare `render:"webview"` or include `"l4"` in `layers`, the main window calls `createRemoteWebview` on activation to open a standalone Tauri WebviewWindow (process-level isolation from the main UI); the plugin UI renders inside that window, and API calls are forwarded to the main window through Tauri events for execution (see [L4 remote WebView](/en/plugins/webview-l4))
+
+- Plugins that need an isolated environment or a long-running script (such as AI assistants or tool panels) → use the default iframe sandbox
+- Pure UI/theme plugins, or lightweight plugins that depend on the main UI DOM → explicitly declare `"render": "inline"`
+- If the plugin will later add WASM backend logic, you can layer `"l3"` on top
+- **Heavy UI / untrusted / process-isolation plugins** (such as complex editors or game UI enhancements) → declare `"render": "webview"` or include `"l4"` in `layers` (standalone window, so a busy loop does not affect the main UI)
+
+## Version range syntax
+
+`dependencies[].version` supports the following forms:
+
+| Form | Meaning | Example |
+|------|------|------|
+| Empty / omitted | Any version | — |
+| `>=X` | ≥ X | `>=1.0.0` |
+| `<=X` | ≤ X | `<=2.0.0` |
+| `>X` | > X | `>1.0` |
+| `<X` | < X | `<2.0` |
+| `=X` | Exactly equal | `=1.2.0` |
+| `X` | Exactly equal (bare version) | `1.2.0` |
+| Space-separated | All constraints must hold | `">=1.0 <2.0"` |
+
+**Comparison rules:**
+- Segments are split on `.` and compared numerically one by one; `-` (prerelease) and `+` (build number) suffixes are ignored
+- A missing segment counts as 0 (so `1.0` equals `1.0.0`)
+- `^`, `~`, `*`, the `x` wildcard, `||`, and commas are **not supported**
+
+The `minLauncherVersion` field is not validated currently, but **filling it in is recommended** for future compatibility. If the launcher enables validation later, launchers below that version will refuse to install the plugin.

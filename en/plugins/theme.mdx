@@ -1,0 +1,271 @@
+---
+title: "Theme system"
+---
+## Theme system
+
+The Qomicex Theme system（主题系统）uses a **three-tier primitive → semantic → component semantic token** structure, carried by `.qtheme` theme packages, so the launcher and plugin UI reskin instantly and completely, **with no plugin-ui dist rebuild**.
+
+## The three-tier semantic model
+
+```text
+primitives（原始色板，主题包可选）
+  └─ 具体色值（HSL/hex），仅供派生
+semantic（语义层，.qtheme 作者书写）
+  └─ 语义角色：background/foreground/accent/status…（点分命名）
+component（组件消费层 = CSS 变量，唯一被 var() 读取）
+  └─ --background / --accent-foreground …（平铺，与 index.css 一一对应）
+```
+
+- **v1 scope**: `.qtheme` expresses the semantic/component tiers directly (the flat `--*` variables); primitive derivation and the `theme.mjs` computation tier are deferred to v2
+- **plugin-ui components consume only `var(--*)`**, with zero inline color values → switching themes reskins every component instantly, eliminating the stale "change a component, rebuild dist" problem
+
+## Semantic token naming
+
+Dot-separated naming, where `.` normalizes to `-` (`background.emphasis` → `--background-emphasis`).
+
+### Color tokens (the standard component-level set = everything plugin-ui consumes)
+
+| token (theme.json key) | CSS variable | Default (dark) | Meaning |
+|---|---|---|---|
+| background | `--background` | `230 20% 6%` | Page background |
+| foreground | `--foreground` | `220 20% 93%` | Primary text |
+| card / card-foreground | `--card` / `--card-foreground` | `228 18% 10%` / `220 20% 93%` | Card |
+| popover / popover-foreground | `--popover` / `--popover-foreground` | `228 18% 10%` / `220 20% 93%` | Popover |
+| primary / primary-foreground | `--primary` / `--primary-foreground` | `142 71% 48%` / `230 20% 6%` | Primary accent |
+| secondary / secondary-foreground | `--secondary` / `--secondary-foreground` | `228 18% 14%` / `220 20% 93%` | Secondary |
+| muted / muted-foreground | `--muted` / `--muted-foreground` | `228 10% 18%` / `228 8% 55%` | Muted |
+| accent / accent-foreground | `--accent` / `--accent-foreground` | `228 18% 14%` / `220 20% 93%` | Accent background |
+| destructive / destructive-foreground | `--destructive` / `--destructive-foreground` | `0 84% 60%` / `220 20% 93%` | Destructive |
+| border | `--border` | `228 14% 21%` | Borders |
+| input | `--input` | `228 14% 21%` | Input fields |
+| ring | `--ring` | `142 71% 48%` | Focus ring |
+
+**Extended semantics** (optional in v1, emitted as `--foreground-accent` and so on, for forward compatibility): `foreground.accent`, `foreground.muted`, `foreground.destructive`, `background.elevated`, `background.emphasis`, `background.sunken`, `border.strong`, `border.accent`, `accent.hover`, `accent.active`, `status.success`, `status.warning`, `status.error`.
+
+### Non-color tokens
+
+| token | CSS variable | Default | Description |
+|---|---|---|---|
+| radius | `--radius` | `0.625rem` | Corner radius |
+| glass-blur | `--glass-blur` | `18px` | Frosted-glass blur |
+
+`space.*`, `font.family/size/weight`, `motion.*`, and `shadow.*` belong to the v2 non-color extensions.
+
+## `.qtheme` package format
+
+```text
+.qtheme（zip 或目录）
+  theme.json        ← 颜色主题（v1，见下 schema）
+  theme.css         ← 可选，命名空间注入（--qtx- 前缀 / scoped），v2
+  theme.mjs         ← 可选，CSS-in-JS 计算层（沙箱），v2
+  icon-theme.json   ← 图标主题（v1.5，见下）
+  fonts/            ← 字体贡献，v1.5（经 contributes.fontLinks 注入）
+```
+
+### theme.json schema v1
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "catppuccin-mocha",
+  "name": "Catppuccin Mocha",
+  "type": "color",
+  "scheme": "dark",
+  "colors": {
+    "background": "240 23% 9%",
+    "accent.foreground": "240 23% 9%"
+  },
+  "radius": 10,
+  "glassBlur": 18
+}
+```
+
+| Field | Type | Required | Description |
+|------|------|------|------|
+| `schemaVersion` | number | ✅ | Currently only `1` |
+| `id` | string | ✅ | `^[a-z0-9][a-z0-9-]*$` |
+| `name` | string | ✅ | Display name |
+| `type` | string | ❌ | Currently only `"color"` |
+| `scheme` | string | ❌ | `"dark"` / `"light"` |
+| `colors` | object | ✅ | Key = semantic token (may be dot-separated), value = HSL color string |
+| `radius` | number | ❌ | Corner radius, in rem |
+| `glassBlur` | number | ❌ | Frosted-glass blur, in px |
+
+An invalid theme.json is rejected by `src/theme/schema.ts` with a friendly error.
+
+## Theme manager
+
+The theme manager（`src/theme/manager.ts`）provides:
+
+- **`applyTheme(json)`**: validate, then inject CSS variables into `:root` → every component reskins instantly; persists the theme id to `localStorage`
+- **`clearTheme()`**: remove the custom theme and fall back to the settings layer light/dark/preset
+- **`restoreSavedTheme()`**: restore the registered theme at startup
+- **`useTheme()`**: React Hook that subscribes to change events and drives re-rendering
+- **`registerTheme()`**: register the bundled built-in `.qtheme` packages (including the four Catppuccin presets)
+
+## Theme contributions (contributes)
+
+Plugins and theme packages can declare three kinds of contributions through manifests; v1 supports color themes only:
+
+| Type | Description | Status |
+|------|------|------|
+| **Color theme** | Full token mapping, with plugin UI and the launcher sharing one source → native controls reskin globally | ✅ Implemented in v1 |
+| **Icon theme** | icon-theme.json: `{ "plugin-ui 图标名": "path/svg \| codepoint \| url" }` | ✅ Implemented in v1.5 |
+| **Font and ligature contribution** | Font resources + scoped `font-feature-settings` | ✅ Implemented in v1.5 |
+
+## Icon theme (icon-theme.json)
+
+The Icon theme（图标主题）is a new file in the `.qtheme` package, alongside `theme.json`, that provides override mappings for icons such as plugin sidebar entries and menu items.
+
+### Format
+
+```json
+{
+  "schemaVersion": 1,
+  "fonts": ["MyIconFont"],
+  "icons": {
+    "fa-solid fa-robot": { "type": "svg", "path": "M0 0h24v24H0z..." },
+    "fa-solid fa-cog": { "type": "char", "codepoint": "⚙", "fontFamily": "MyIconFont" },
+    "my-custom": { "type": "url", "url": "https://example.com/icon.png" }
+  }
+}
+```
+
+### Fields
+
+| Field | Type | Required | Description |
+|------|------|------|------|
+| `schemaVersion` | number | ✅ | Currently only `1` |
+| `fonts` | string[] | ❌ | List of `font-family` names this theme depends on (declarative; font resources must be injected through `contributes.fontLinks`) |
+| `icons` | object | ✅ | Icon mappings. Key = FontAwesome class name (such as `fa-solid fa-robot`) or a custom icon ID; value = icon definition object |
+
+### Icon definition object
+
+| Field | Type | type=svg | type=char | type=url |
+|------|------|----------|-----------|----------|
+| `type` | `"svg"` / `"char"` / `"url"` | ✅ | ✅ | ✅ |
+| `path` | string | ✅ `<path d="...">` | — | — |
+| `codepoint` | string | — | ✅ Character or entity | — |
+| `fontFamily` | string | — | ❌ Custom font name | — |
+| `url` | string | — | — | ✅ Image URL |
+
+### Render priority
+
+The `PluginIcon` component renders in this order:
+
+- Look up the `src` key in the current theme's `icon-theme.json` → if it matches, render SVG/char/URL
+- No match and `src` is a URL → `<img>`
+- No match and `src` is a FontAwesome class name → `<FontAwesomeIcon>`
+- No match at all → `null`
+
+### Registration
+
+Icon themes are registered through the theme manager and bound to color themes:
+
+- `registerTheme(colorJson, iconJson?)` — register a color and icon theme together
+- `registerIconTheme(themeId, iconJson)` — bind icons separately to an already registered color theme
+
+Get the active theme's icon mappings with `getActiveIconTheme()` or `useIconTheme()` (a React Hook). The mappings update automatically when the theme switches.
+
+## Font and ligature contribution
+
+### manifest declaration
+
+Plugin manifests declare font resources through the `contributes` field:
+
+```json
+{
+  "contributes": {
+    "fontLinks": ["https://cdn.example.com/my-icons.css"]
+  }
+}
+```
+
+- `fontLinks` (string[]): list of font CSS/CDN URLs. When the plugin activates, the launcher automatically injects `<link rel="stylesheet">` into `<head>`; it removes them when the plugin deactivates.
+- You can use the `font-feature-settings` scoping convention to enable ligatures in specific areas (see below).
+
+### Ligature scoping convention
+
+The launcher predefines the `.font-ligatures` class (the plugin-internal equivalent is `.p-font-ligatures`); apply it to areas that need font ligatures (such as console logs or version diffs):
+
+```html
+<div class="font-ligatures">-> => <!-- 连字生效 --></div>
+```
+
+The corresponding CSS:
+
+```css
+.font-ligatures {
+  font-feature-settings: "liga" 1, "calt" 1;
+  font-variant-ligatures: common-ligatures contextual;
+}
+```
+
+Inside plugins, use `.p-font-ligatures` for the same effect.
+
+## Relationship with plugin-ui
+
+**Hard rule**: plugin-ui components may consume tokens only through `var(--*)`; inline color values are forbidden. An audit confirms `packages/plugin-ui/src/` has zero inline color values in total → switching themes reskins instantly with no dist rebuild.
+
+## Preset theme
+
+The launcher bundles four Catppuccin Preset theme（预设主题）packages (latte / frappe / macchiato / mocha), already migrated to the new token naming. When you switch presets or apply a custom `.qtheme`, every UI component that consumes `var(--*)` responds immediately.
+
+## Plugin-driven Theme override
+
+Plugins can dynamically override the launcher UI's CSS variables through `__PLUGIN_API__`, reskinning at runtime without shipping a `.qtheme` package.
+
+### Priority levels
+
+```text
+themeColor inline style（--primary/--ring/--primary-foreground，最高）
+  └─ applyThemeOverride（:root:root，选择器特异性 0,2,0）
+    └─ .qtheme 主题（:root）
+      └─ index.css @layer base（最低）
+```
+
+- The `<style>` injected by `applyThemeOverride` has higher specificity than `.qtheme` and `@layer base`
+- If the user has set a theme color (the inline style from `themeColor.ts`), inline styling takes over `--primary`/`--ring`/`--primary-foreground`, so overrides of those three do not take effect
+
+### API
+
+| Method | Permission | Description |
+|------|------|------|
+| `getThemeColor` | `config:read` | Get the current seed color hex (`#rrggbb` or `null`) |
+| `applyThemeOverride(vars)` | `config:write` | Override CSS variables (HSL format, whitelisted tokens) |
+| `clearThemeOverride()` | `config:write` | Remove the override styles |
+
+### Usage example
+
+```js
+const __PLUGIN_API__ = window.__PLUGIN_API__
+
+// 获取当前主题色，调整插件 UI
+const seedColor = await __PLUGIN_API__.call('getThemeColor')
+if (seedColor) {
+  document.getElementById('my-plugin-card').style.borderColor = seedColor
+}
+
+// 应用自定义主题覆盖
+await __PLUGIN_API__.call('applyThemeOverride', {
+  'background': '240 23% 9%',
+  'foreground': '220 20% 93%',
+  'primary': '262 83% 58%',
+  'accent': '262 83% 58%'
+})
+
+// 用户取消自定义主题时清除
+await __PLUGIN_API__.call('clearThemeOverride')
+```
+
+### Security limits
+
+- **Token whitelist**: only 30 predefined semantic tokens are allowed (`background`, `foreground`, `primary`, `accent`, `border`, `status-*`, and so on)
+- **HSL format validation**: values must strictly match `H S% L%` (such as `142 71% 48%`), rejecting arbitrary CSS injection
+- Tokens outside the whitelist and invalid formats are silently ignored
+
+### Lifecycle
+
+- `applyThemeOverride` can be called repeatedly; the latest call overrides earlier ones
+- **Overrides are not cleared automatically when the plugin is disabled** (tokens may be bound to the plugin UI); call `clearThemeOverride` yourself in the disable hook or on user action
+- `clearThemeOverride` removes only the override styles; it does not affect `.qtheme` or the built-in light/dark themes

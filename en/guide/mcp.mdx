@@ -1,0 +1,146 @@
+---
+title: "Use MCP in AI clients"
+description: "Connect Qomicex Docs to any MCP-capable AI client and ask questions against this site directly."
+---
+
+This site is hosted on Mintlify, which automatically exposes a **Model Context Protocol (MCP)** endpoint. Any MCP-capable AI client can connect to it, search this documentation, and answer your questions without you copying and pasting pages.
+
+## Endpoint
+
+```text
+https://qomicex.mintlify.site/mcp
+```
+
+Transport is **HTTP** (JSON-RPC 2.0, `text/event-stream` responses). The endpoint is read-only: it cannot change anything and cannot reach data outside this site.
+
+## Tools
+
+After connecting, `tools/list` reports three tools. **Tool names are derived from the site name and change when the site is renamed**, so always read them from `tools/list` instead of hardcoding them in your configuration.
+
+| Tool | Purpose | Parameters |
+| :--- | :--- | :--- |
+| `search_qomicex_docs_qml启动器` | Search docs, code examples, API references, and guides. Returns snippets with titles and direct links. | `query` (string, required) |
+| `query_docs_filesystem_qomicex_docs_qml启动器` | Run read-only shell-like commands against a virtual filesystem to read full pages or match keywords exactly. | `command` (string, required) |
+| `submit_feedback` | Report a page that is wrong, outdated, or missing. Delivered to the docs maintainers. | `path` (page path without `.mdx`), `feedback` (description); both required |
+
+### Read a full page
+
+Paths inside the virtual filesystem are page URL paths plus `.mdx`. For example, the page `https://qomicex.mintlify.site/guide/instances` lives at `/guide/instances.mdx`:
+
+```text
+# Inspect the layout
+tree / -L 2
+
+# Read the first 80 lines of a page
+head -80 /guide/instances.mdx
+
+# Find which pages mention a keyword
+rg -il "version isolation" /
+```
+
+Supported commands include `rg`, `grep`, `find`, `tree`, `ls`, `cat`, `head`, `tail`, `stat`, `wc`, `sort`, `uniq`, `cut`, `sed`, `awk`, and `jq`. Every call is **stateless**: the working directory always resets to `/`, so use absolute paths or chain commands with `&&` in a single call.
+
+## Configure a client
+
+Most clients add a remote MCP server through JSON configuration:
+
+<CodeGroup>
+```json Cursor
+{
+  "mcpServers": {
+    "qomicex-docs": {
+      "url": "https://qomicex.mintlify.site/mcp"
+    }
+  }
+}
+```
+
+```json Claude Code
+{
+  "mcpServers": {
+    "qomicex-docs": {
+      "type": "http",
+      "url": "https://qomicex.mintlify.site/mcp"
+    }
+  }
+}
+```
+
+```json VS Code
+{
+  "servers": {
+    "qomicex-docs": {
+      "type": "http",
+      "url": "https://qomicex.mintlify.site/mcp"
+    }
+  }
+}
+```
+</CodeGroup>
+
+For other clients, follow their own documentation. The only required values are the `url` above and the HTTP transport type.
+
+## Verify the endpoint
+
+You can test the endpoint without a client: send `initialize`, then `notifications/initialized`, before calling any tool.
+
+<CodeGroup>
+```bash curl
+# 1) Handshake
+curl -s https://qomicex.mintlify.site/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"1.0"}}}'
+
+# 2) Send the initialized notification
+curl -s https://qomicex.mintlify.site/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+
+# 3) List the real tool names
+curl -s https://qomicex.mintlify.site/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+```
+
+```powershell PowerShell
+# 1) Handshake
+$body = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"1.0"}}}'
+Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $body `
+  -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } | Select-Object -Expand Content
+
+# 2) Send the initialized notification
+$init = '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $init `
+  -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } | Out-Null
+
+# 3) List the real tool names
+$list = '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $list `
+  -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } | Select-Object -Expand Content
+```
+</CodeGroup>
+
+<Warning>
+**Skipping `notifications/initialized` makes calls fail.** If you call `tools/call` right after `initialize`, the endpoint returns `-32602 Tool ... not found`. The tool exists; the session is simply not ready yet.
+</Warning>
+
+## FAQ
+
+**Why don't the tool names match what I expected?**
+
+Tool names are derived from the site name. This site was renamed to `Qomicex Docs - QML启动器`, so the actual names look like `search_qomicex_docs_qml启动器`. Always use the output of `tools/list`.
+
+**Can an AI change the docs through MCP?**
+
+No. The endpoint is read-only. The only write-like action is `submit_feedback`, which merely forwards a report to the maintainers.
+
+**Is the content Chinese or English?**
+
+It depends on the page. This site ships both: Chinese pages live at the site root (for example `/guide/instances`), English pages live under `/en` (for example `/en/guide/instances`). State your preferred language, or include language keywords in `query`, for better results.
+
+**Do I need an API key?**
+
+No. The endpoint is public and unauthenticated, and it only reaches published documentation.

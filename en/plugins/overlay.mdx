@@ -1,0 +1,139 @@
+---
+title: "Overlay development"
+---
+## Overlay development
+
+The Overlay window（悬浮窗）is a small window independent of the main interface that you can drag, minimize, and resize. It is usually for tool panels that stay open, such as an AI assistant chat window.
+
+## 1. Declare an Overlay window
+
+Declare both `contributes.menuItems` (the entry point) and `contributes.overlay` (the Overlay window configuration) in the Manifest（清单）:
+
+```json
+{
+  "id": "top.qomicex.assistant",
+  "entry": { "frontend": "dist/index.html" },
+  "contributes": {
+    "menuItems": [
+      { "path": "/plugins/p/top.qomicex.assistant", "label": "AI 助手", "icon": "A", "action": "overlay" }
+    ],
+    "overlay": {
+      "file": "dist/overlay.html",
+      "title": "AI 助手",
+      "width": 380,
+      "height": 500,
+      "minimizable": false,
+      "resizable": true
+    }
+  }
+}
+```
+
+Key points:
+- `menuItems[].action` must be `"overlay"`; only then does clicking the sidebar button open the Overlay window instead of navigating to a page
+- `overlay.file`: the path to the Overlay window HTML file (relative inside the `.qplugin`)
+- `overlay.title` defaults to `menuItems[].label`
+
+## 2. Write the Overlay window HTML
+
+`overlay.html` is a complete HTML document (with its own `<html>`/`<head>`/`<body>`), and its scripts can use the `.p-*` Component（组件）classes and `window.__PLUGIN_API__` directly.
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { padding: 12px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="p-card">
+    <div class="p-card-title">快速操作</div>
+    <div class="p-row">
+      <button id="btn" class="p-btn p-btn--primary">刷新</button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('btn').addEventListener('click', async function () {
+      const res = await __PLUGIN_API__.call('callBackend', '/instance')
+      __PLUGIN_API__.call('showToast', '实例数: ' + (res || []).length, 'success')
+    })
+  </script>
+</body>
+</html>
+```
+
+### Overlay window environment
+
+- The `.p-*` Component styles and theme variables are injected automatically, so it follows the light and dark themes
+- `window.__PLUGIN_ID__` is the current plugin id (available inside the Overlay window)
+- All `__PLUGIN_API__` methods are available (including the streaming `proxyFetchStream`)
+- The Overlay window is a **Sandbox iframe** (`sandbox="allow-scripts"`), so its scripts are isolated from the main interface
+- The title bar (title, minimize, close buttons) is rendered by the Launcher; your HTML only owns the content area
+
+### Toggle panels inside an Overlay window
+
+Inside an Overlay window, a `.p-swiper` switch with `data-p-switch` shows and hides a panel automatically:
+
+```html
+<label class="p-swiper">
+  <input type="checkbox" checked data-p-switch="settingsPanel">
+  <span class="p-swiper-track"></span>
+  显示设置
+</label>
+<div id="settingsPanel">...设置内容...</div>
+```
+
+## 3. Create Overlay windows dynamically
+
+Instead of going through the sidebar, plugin scripts can also create Overlay windows at runtime:
+
+```js
+const overlayId = await __PLUGIN_API__.call('overlay.create', {
+  title: '我的悬浮窗',
+  html: '<div class="p-card">动态内容</div>',
+  x: 120, y: 80,
+  width: 320, height: 240,
+  minimizable: true,
+  resizable: true
+})
+
+await __PLUGIN_API__.call('overlay.setHtml', overlayId, '<p>更新内容</p>')
+await __PLUGIN_API__.call('overlay.setPosition', overlayId, 300, 200)
+await __PLUGIN_API__.call('overlay.hide', overlayId)     // 最小化
+await __PLUGIN_API__.call('overlay.show', overlayId)     // 恢复
+await __PLUGIN_API__.call('overlay.destroy', overlayId)  // 销毁
+```
+
+### `overlay.*` methods
+
+| Method | Parameters | Description |
+|------|------|------|
+| `overlay.create` | `{title, html, x?, y?, width?, height?, minimizable?, resizable?}` | Creates an Overlay window and returns its id |
+| `overlay.show` | `(id)` | Shows / restores it |
+| `overlay.hide` | `(id)` | Hides / minimizes it |
+| `overlay.destroy` | `(id)` | Destroys it |
+| `overlay.setHtml` | `(id, html)` | Updates its content |
+| `overlay.setPosition` | `(id, x, y)` | Moves it |
+
+Permission: `ui:sub_window`
+
+## 4. Package and publish
+
+The Overlay window HTML must ship with the package (`overlay.file` points to a path inside the package). When you package with the CLI, `qomicex pack` copies `overlay.html` from the project root into `dist/` automatically:
+
+```bash
+qomicex pack                # dist/overlay.html 自动入包
+qomicex pack --key ./dev-key.pem    # 附签名
+```
+
+If `overlay.file` references `dist/overlay.html` but the source `overlay.html` sits in the project root, `qomicex pack` copies it in for you; if you package by hand, copy it yourself (see the packaging section of [React + Vite plugin development](/en/plugins/react-plugin)).
+
+## 5. Notes
+
+- The Launcher processes the Overlay window HTML: it moves `<style>`/`<link>` into the head, strips the `<html>/<head>/<body>` shell, and injects Component styles
+- The Overlay window is draggable (click anywhere that is not a button), and with `resizable: true` you can resize from the bottom-right corner (minimum 200×120)
+- Close an Overlay window with the x button in the title bar; inside a plugin, destroy it with `__PLUGIN_API__.call('overlay.destroy', id)`
+- Script errors in an Overlay window do not affect the main interface; check the DevTools console when debugging

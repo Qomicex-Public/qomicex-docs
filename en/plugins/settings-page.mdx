@@ -1,0 +1,107 @@
+---
+title: "Plugin settings pages (settingsPages)"
+---
+## Plugin settings pages (settingsPages)
+
+Plugins often need their own configuration UI (toggles, API keys, default behavior). Instead of scattering **Settings** buttons across plugin pages, put the settings UI **inside the Launcher**: in **Settings → Plugins → Plugin settings（设置 → 插件 → 插件设置）** the left side lists one vertical tab per plugin and the right side shows the settings UI that plugin provides. Users can find it and do not get lost.
+
+## Quick start
+
+**Step 1**: Declare a Plugin settings page（插件设置页） in `contributes.settingsPages` of `manifest.json` (the relative path of an HTML file inside the `.qplugin` package):
+
+```json
+{
+  "id": "top.qomicex.weather",
+  "name": "天气",
+  "version": "1.0.0",
+  "layers": ["l2"],
+  "entry": { "frontend": "dist/index.html" },
+  "contributes": {
+    "settingsPages": ["dist/settings.html"]
+  }
+}
+```
+
+**Step 2**: Write `dist/settings.html` inside the package. It is a plain HTML page running in **exactly the same Sandbox environment** as the plugin's main page (iframe Sandbox + full `__PLUGIN_API__` Bridge + injected theme variables); use `getSettings` / `setSettings` to read and write the plugin's own configuration:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { margin: 0; padding: 16px; font-family: inherit; color: var(--foreground); background: transparent; }
+    .row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+    .hint { color: var(--muted-foreground); font-size: 12px; }
+    input[type="text"] {
+      background: var(--background); color: var(--foreground);
+      border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <div>
+      <div>城市</div>
+      <div class="hint">天气组件显示的城市名</div>
+    </div>
+    <input id="city" type="text" placeholder="北京" />
+  </div>
+  <div class="row">
+    <div>
+      <div>自动刷新</div>
+      <div class="hint">每 10 分钟刷新一次天气数据</div>
+    </div>
+    <input id="autoRefresh" type="checkbox" />
+  </div>
+
+  <script>
+    const api = window.__PLUGIN_API__
+    // 初始化：读已有配置
+    api.call('getSettings').then((s) => {
+      document.getElementById('city').value = s.city ?? ''
+      document.getElementById('autoRefresh').checked = s.autoRefresh === true
+    })
+    // 修改即保存（setSettings 按 key 合并，无需整包写入）
+    document.getElementById('city').addEventListener('change', (e) =>
+      api.call('setSettings', 'city', e.target.value))
+    document.getElementById('autoRefresh').addEventListener('change', (e) =>
+      api.call('setSettings', 'autoRefresh', e.target.checked))
+  </script>
+</body>
+</html>
+```
+
+**Step 3**: Pack the `.qplugin`, install it, and enable the plugin. **Settings → Plugins → Plugin settings** now shows a tab named after the plugin, and opening it shows the UI you wrote.
+
+## Runtime environment
+
+- **iframe Sandbox**: `<iframe sandbox="allow-scripts">` rendered through srcdoc, isolated from the main interface DOM/CSS; every `__PLUGIN_API__` method is available (same Permission checks as plugin pages)
+- **Theme following**: the Launcher injects the theme CSS variables (`--foreground` / `--background` / `--primary` / `--border`, and so on) and `.p-*` Component styles, and light and dark themes switch automatically; you do not need to handle it yourself
+- **Container size**: the content area on the right is about **560px** high and adapts in width; when the page overflows it scrolls internally, so just lay out your root element at 100% height
+- **Configuration persistence**: `getSettings` / `setSettings` read and write `plugins/{plugin id}/settings.json`, and `setSettings` merges by key (concurrency-safe), so you never write the whole object at once
+
+## Jump straight to the settings page
+
+When you provide a **Settings** button on a plugin page or inside an Overlay window, jump with `openPluginSettings`; the Launcher opens **Plugin settings** and selects your plugin:
+
+```js
+await __PLUGIN_API__.call('openPluginSettings')
+
+// 或定位到其他插件的设置 tab
+await __PLUGIN_API__.call('openPluginSettings', 'top.qomicex.weather')
+```
+
+- Permission: `config:read`
+- If the target plugin declares no `settingsPages`, the plugin settings area still opens (at its default position)
+- If one plugin declares several settings pages, the first one is selected
+
+## Rules and Lifecycle（生命周期）
+
+| Rule | Description |
+|------|------|
+| Tab generation | One tab per path; a single page uses the plugin name, multiple pages use `plugin name 1`, `plugin name 2`… |
+| Visibility | The tab appears only while the plugin is **active**; it disappears immediately after you disable the plugin (its iframe is destroyed too) |
+| Re-enabling | After reactivation the settings page reloads and configuration is restored from `settings.json` |
+| Relationship to Dashboard widgets | Independent: `slots` (dashboard:widgets) covers dashboard widgets and `settingsPages` covers settings UI; you can declare both |
+
+Consumers of plugin configuration (widgets, Overlay windows) should also call `getSettings` at runtime and apply the latest values; the settings page only writes, and it does not broadcast changes automatically.
