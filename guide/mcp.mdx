@@ -8,7 +8,7 @@ description: "把 Qomicex Docs 接入支持 MCP 的 AI 客户端，直接检索�
 ## 端点地址
 
 ```text
-https://qomicex.mintlify.site/mcp
+https://docs.qomicex.top/mcp
 ```
 
 传输方式为 **HTTP**（JSON-RPC 2.0，`text/event-stream` 响应）。这是只读端点：它不能修改任何内容，也不能访问本站以外的数据。
@@ -24,7 +24,7 @@ https://qomicex.mintlify.site/mcp
 
 ### 读取整页内容
 
-虚拟文件系统里的路径就是页面 URL 路径加 `.mdx`。例如页面 `https://qomicex.mintlify.site/guide/instances` 对应 `/guide/instances.mdx`：
+虚拟文件系统里的路径就是页面 URL 路径加 `.mdx`。例如页面 `https://docs.qomicex.top/guide/instances` 对应 `/guide/instances.mdx`：
 
 ```text
 # 看目录结构
@@ -54,7 +54,7 @@ rg -il "version isolation" /
 {
   "mcpServers": {
     "qomicex-docs": {
-      "url": "https://qomicex.mintlify.site/mcp"
+      "url": "https://docs.qomicex.top/mcp"
     }
   }
 }
@@ -65,7 +65,7 @@ rg -il "version isolation" /
   "mcpServers": {
     "qomicex-docs": {
       "type": "http",
-      "url": "https://qomicex.mintlify.site/mcp"
+      "url": "https://docs.qomicex.top/mcp"
     }
   }
 }
@@ -76,7 +76,7 @@ rg -il "version isolation" /
   "servers": {
     "qomicex-docs": {
       "type": "http",
-      "url": "https://qomicex.mintlify.site/mcp"
+      "url": "https://docs.qomicex.top/mcp"
     }
   }
 }
@@ -92,19 +92,19 @@ rg -il "version isolation" /
 <CodeGroup>
 ```bash curl
 # 1) 握手
-curl -s https://qomicex.mintlify.site/mcp \
+curl -s https://docs.qomicex.top/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"1.0"}}}'
 
 # 2) 发送 initialized 通知
-curl -s https://qomicex.mintlify.site/mcp \
+curl -s https://docs.qomicex.top/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
 
 # 3) 查询真实工具名
-curl -s https://qomicex.mintlify.site/mcp \
+curl -s https://docs.qomicex.top/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
@@ -113,17 +113,17 @@ curl -s https://qomicex.mintlify.site/mcp \
 ```powershell PowerShell
 # 1) 握手
 $body = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"1.0"}}}'
-Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $body `
+Invoke-WebRequest 'https://docs.qomicex.top/mcp' -Method POST -Body $body `
   -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } | Select-Object -Expand Content
 
 # 2) 发送 initialized 通知
 $init = '{"jsonrpc":"2.0","method":"notifications/initialized"}'
-Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $init `
+Invoke-WebRequest 'https://docs.qomicex.top/mcp' -Method POST -Body $init `
   -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } | Out-Null
 
 # 3) 查询真实工具名
 $list = '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
-Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $list `
+Invoke-WebRequest 'https://docs.qomicex.top/mcp' -Method POST -Body $list `
   -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } | Select-Object -Expand Content
 ```
 </CodeGroup>

@@ -8,7 +8,7 @@ This site is hosted on Mintlify, which automatically exposes a **Model Context P
 ## Endpoint
 
 ```text
-https://qomicex.mintlify.site/mcp
+https://docs.qomicex.top/mcp
 ```
 
 Transport is **HTTP** (JSON-RPC 2.0, `text/event-stream` responses). The endpoint is read-only: it cannot change anything and cannot reach data outside this site.
@@ -25,7 +25,7 @@ After connecting, `tools/list` reports three tools. **Tool names are derived fro
 
 ### Read a full page
 
-Paths inside the virtual filesystem are page URL paths plus `.mdx`. For example, the page `https://qomicex.mintlify.site/guide/instances` lives at `/guide/instances.mdx`:
+Paths inside the virtual filesystem are page URL paths plus `.mdx`. For example, the page `https://docs.qomicex.top/guide/instances` lives at `/guide/instances.mdx`:
 
 ```text
 # Inspect the layout
@@ -49,7 +49,7 @@ Most clients add a remote MCP server through JSON configuration:
 {
   "mcpServers": {
     "qomicex-docs": {
-      "url": "https://qomicex.mintlify.site/mcp"
+      "url": "https://docs.qomicex.top/mcp"
     }
   }
 }
@@ -60,7 +60,7 @@ Most clients add a remote MCP server through JSON configuration:
   "mcpServers": {
     "qomicex-docs": {
       "type": "http",
-      "url": "https://qomicex.mintlify.site/mcp"
+      "url": "https://docs.qomicex.top/mcp"
     }
   }
 }
@@ -71,7 +71,7 @@ Most clients add a remote MCP server through JSON configuration:
   "servers": {
     "qomicex-docs": {
       "type": "http",
-      "url": "https://qomicex.mintlify.site/mcp"
+      "url": "https://docs.qomicex.top/mcp"
     }
   }
 }
@@ -87,19 +87,19 @@ You can test the endpoint without a client: send `initialize`, then `notificatio
 <CodeGroup>
 ```bash curl
 # 1) Handshake
-curl -s https://qomicex.mintlify.site/mcp \
+curl -s https://docs.qomicex.top/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"1.0"}}}'
 
 # 2) Send the initialized notification
-curl -s https://qomicex.mintlify.site/mcp \
+curl -s https://docs.qomicex.top/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
 
 # 3) List the real tool names
-curl -s https://qomicex.mintlify.site/mcp \
+curl -s https://docs.qomicex.top/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
@@ -108,17 +108,17 @@ curl -s https://qomicex.mintlify.site/mcp \
 ```powershell PowerShell
 # 1) Handshake
 $body = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"1.0"}}}'
-Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $body `
+Invoke-WebRequest 'https://docs.qomicex.top/mcp' -Method POST -Body $body `
   -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } | Select-Object -Expand Content
 
 # 2) Send the initialized notification
 $init = '{"jsonrpc":"2.0","method":"notifications/initialized"}'
-Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $init `
+Invoke-WebRequest 'https://docs.qomicex.top/mcp' -Method POST -Body $init `
   -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } | Out-Null
 
 # 3) List the real tool names
 $list = '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
-Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $list `
+Invoke-WebRequest 'https://docs.qomicex.top/mcp' -Method POST -Body $list `
   -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } | Select-Object -Expand Content
 ```
 </CodeGroup>
