@@ -130,7 +130,19 @@
               "store/registry-spec"
             ]
           }
-        ]
+        ],
+        "navbar": {
+          "links": [
+            {
+              "label": "官网",
+              "href": "https://www.qomicex.top/"
+            },
+            {
+              "label": "问题反馈",
+              "href": "https://github.com/Qomicex-Public/Qomicex.Tauri/issues"
+            }
+          ]
+        }
       },
       {
         "language": "en",
@@ -245,7 +257,19 @@
               "en/store/registry-spec"
             ]
           }
-        ]
+        ],
+        "navbar": {
+          "links": [
+            {
+              "label": "Website",
+              "href": "https://www.qomicex.top/"
+            },
+            {
+              "label": "Report an issue",
+              "href": "https://github.com/Qomicex-Public/Qomicex.Tauri/issues"
+            }
+          ]
+        }
       }
     ]
   },
