@@ -1,8 +1,8 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Qomicex Docs - QML启动器",
-  "description": "Qomicex Docs - QML启动器用户手册与插件开发指南",
+  "name": "Qomicex Docs - QML Launcher",
+  "description": "Qomicex Docs - QML Launcher user guide and plugin development",
   "seo": {
     "metatags": {
       "og:locale": "zh_CN"
