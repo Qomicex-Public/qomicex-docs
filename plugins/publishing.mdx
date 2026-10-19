@@ -98,7 +98,7 @@ my-wasm-plugin.qplugin（即 zip）
 
 ### 签名工具
 
-- 生成密钥对：`openssl genpkey -algorithm Ed25519 -out dev-key.pem`，或 `node scripts/plugin-keygen.mjs generate`（仓库内脚本）
+- 生成密钥对：`openssl genpkey -algorithm Ed25519 -out dev-key.pem`，或 `node scripts/plugin-keygen.mjs`（仓库内脚本，无子命令；可选参数 `--out <path>`、`--json`、`--force`，默认写入 `plugin-key.json`）
 - 签名：`qomicex pack --key ./dev-key.pem`（打签名的 `.qplugin`），或 `qomicex publish` 一键走完设备流登录 → 上传公钥获证书 → 签名 → 上传
 - 验签：`qomicex verify --package ./release/xxx.qplugin`
 
@@ -114,10 +114,10 @@ my-wasm-plugin.qplugin（即 zip）
 ## 六、更新、升级与回滚
 
 - **更新检查**：启动器启动后静默轮询商店 `POST /plugins/check-updates`（按 launcher 版本 + 已装插件清单），有更新时在插件管理页显示升级按钮。
-- **灰度放量**：商店返回 `rolloutPercent`（0-100，缺省/100 = 全量）。`<100` 时启动器按 `hash(slug@latestVersion) % 100 < rolloutPercent` 决定该用户是否看到升级提示，同一用户结果稳定。
+- **灰度放量（未实现）**：商店暂未提供灰度列，`rolloutPercent` 固定返回 `100`（全量）。后续若实现，启动器会按 `hash(slug@latestVersion) % 100 < rolloutPercent` 决定该用户是否看到升级提示，同一用户结果稳定。
 - **遥测自动暂停**：商店按 24h 错误上报计数对版本做**灰度保护**——某版本 24h 错误数超过阈值（默认 10）后，商店不再把该版本作为更新建议下发（已安装用户不受影响）。详见 [灰度遥测](/plugins/telemetry)。
 - **升级流程**：点击升级按钮 → 确认 → 走商店安装管线（下载 → SHA-256 校验 → 验签 → 覆盖安装）。
-- **回滚快照**：覆盖安装前旧目录会改名 `plugins/{id}.bak-{version}` 快照；升级后插件异常可点「回滚」按钮恢复（`POST /api/plugins/{id}/rollback`）。`PluginInfo.hasRollback` 标记是否有可用快照。
+- **回滚快照**：覆盖安装时先解压到临时目录 `.{id}.tmp-{uuid}`，再把旧目录改名为 `plugins/{id}.bak-{旧版本}`，最后原子 rename 新目录到位（全新安装不产生快照）；升级后插件异常可点「回滚」按钮恢复（`POST /api/plugins/{id}/rollback`）。`PluginInfo.hasRollback` 标记是否有可用快照。
 - **卸载**：设置 → 插件 → 删除按钮（会删除 `plugins/{id}/` 整个目录）。
 
 ## 七、发布渠道
@@ -185,6 +185,6 @@ my-wasm-plugin.qplugin（即 zip）
 
 ## 十、版本兼容建议
 
-- `minLauncherVersion` 建议填写，虽然当前版本未强制校验
+- `minLauncherVersion` **必须填写**：商店在 `POST /plugins/check-updates` 与 `GET /plugins?minLauncherVersion=` 会按 semver 过滤不兼容版本，CLI（`qomicex verify`）缺失该字段直接报错；仅启动器安装路径当前不校验
 - 插件 API 可能演进，发布时说明兼容的启动器版本范围
 - 重大变更（方法签名、权限变化）建议递增主版本

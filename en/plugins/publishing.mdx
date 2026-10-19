@@ -98,7 +98,7 @@ store root key -> issues the developer public-key certificate -> the developer k
 
 ### Signing tools
 
-- Generate a key pair: `openssl genpkey -algorithm Ed25519 -out dev-key.pem`, or `node scripts/plugin-keygen.mjs generate` (script in the repository)
+- Generate a key pair: `openssl genpkey -algorithm Ed25519 -out dev-key.pem`, or `node scripts/plugin-keygen.mjs` (repository script, no subcommands; optional flags `--out <path>`, `--json`, `--force`, and it writes to `plugin-key.json` by default)
 - Sign: `qomicex pack --key ./dev-key.pem` (builds a signed `.qplugin`), or `qomicex publish` to run the whole chain (device-flow login → upload the public key and get a certificate → sign → upload)
 - Verify: `qomicex verify --package ./release/xxx.qplugin`
 
@@ -114,10 +114,10 @@ store root key -> issues the developer public-key certificate -> the developer k
 ## 6. Updates, upgrades, and rollback
 
 - **Update checks**: after startup the launcher silently polls the store `POST /plugins/check-updates` (with the launcher version and installed plugin list) and shows an upgrade button on the plugin management page when an update exists.
-- **Staged rollout**: the store returns `rolloutPercent` (0-100; missing or 100 means everyone). When it is `<100`, the launcher decides whether the user sees the upgrade prompt with `hash(slug@latestVersion) % 100 < rolloutPercent`, so the result is stable for a given user.
+- **Staged rollout (not implemented)**: the store does not expose a rollout column yet, so `rolloutPercent` always returns `100` (full rollout). If it is implemented later, the launcher will use `hash(slug@latestVersion) % 100 < rolloutPercent` to decide whether a user sees the upgrade prompt, with a stable result for the same user.
 - **Automatic telemetry pause**: the store applies **staged-rollout protection** per version based on 24h error report counts — once a version exceeds the threshold (default 10) in 24h, the store stops offering it as an update (installed users are unaffected). See [Staged rollout telemetry](/en/plugins/telemetry) for details.
 - **Upgrade flow**: click the upgrade button → confirm → the store install pipeline runs (download → SHA-256 check → signature verification → overwrite install).
-- **Rollback snapshot**: before overwriting, the old directory is renamed to the snapshot `plugins/{id}.bak-{version}`. If a plugin misbehaves after upgrading, click **Rollback** to restore it (`POST /api/plugins/{id}/rollback`). `PluginInfo.hasRollback` indicates whether a usable snapshot exists.
+- **Rollback snapshot**: when overwriting, the package is first extracted to the temporary directory `.{id}.tmp-{uuid}`, then the old directory is renamed to `plugins/{id}.bak-{oldVersion}`, and finally the new directory is moved into place with an atomic rename (fresh installs produce no snapshot). If a plugin misbehaves after upgrading, click **Rollback** to restore it (`POST /api/plugins/{id}/rollback`). `PluginInfo.hasRollback` indicates whether a usable snapshot exists.
 - **Uninstall**: Settings → Plugins → delete button (removes the whole `plugins/{id}/` directory).
 
 ## 7. Distribution channels
@@ -185,6 +185,6 @@ Data directory locations:
 
 ## 10. Version compatibility guidance
 
-- Filling in `minLauncherVersion` is recommended, even though the current version does not enforce it
+- `minLauncherVersion` **must be filled in**: the store filters incompatible versions by semver in `POST /plugins/check-updates` and `GET /plugins?minLauncherVersion=`, and the CLI (`qomicex verify`) reports an error when the field is missing; only the launcher install path does not validate it currently
 - The plugin API may evolve, so state the supported launcher version range when you publish
 - For major changes (method signatures, permission changes), bump the major version

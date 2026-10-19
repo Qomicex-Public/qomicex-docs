@@ -50,22 +50,11 @@ https://mirror.qomicex.dpdns.org/files/8685/162/jei-26.2-neoforge-30.24.0.176.ja
 
 ### 支持替换的源域名
 
-- `cdn.modrinth.com`
+- `cdn.modrinth.com` / `cdn-alt.modrinth.com`
 - `mediafilez.forgecdn.net` / `edge.forgecdn.net`
-- `files.minecraftforge.net` / `maven.minecraftforge.net`
 
-## 强制 Proxy 模式（可选）
+## 启动器的实际取源顺序
 
-默认路由不可用(可能不走Proxy部分情况)时，可强制走 Proxy：
-
-```text
-https://modrinth.lenmei233.dpdns.org/data/.../file.jar?qml_proxy=true
-```
-
-或通过请求头：
-
-```bash
-curl -H "X-QML-Force-Proxy: true" https://modrinth.lenmei233.dpdns.org/data/.../file.jar
-```
+启动器默认优先使用 MCIM 公共镜像（`mod.mcimirror.top`），不可用时依次回退到 QML 镜像节点与官方源。这个回退逻辑写在「设置 → 下载设置 → 资源下载源」里，不需要手动拼 URL。
 
 > 仅供学习交流使用，请遵守相关服务条款。

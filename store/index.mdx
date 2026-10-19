@@ -35,16 +35,17 @@ Qomicex Launcher 插件商店（`plugins.qomicex.top`）后端 API 规格，供�
 
 | HTTP | code | 场景 |
 | :--- | :--- | :--- |
-| 400 | `bad_request` / `bad_json` | 参数缺失 / body 非合法 JSON |
+| 400 | `bad_request` / `bad_json` / `invalid_token` / `expired_token` / `state_mismatch` | 参数缺失 / body 非合法 JSON / 邮件或重置令牌无效 / 设备会话过期 / 绑定会话无效 |
 | 401 | `unauthorized` / `invalid_credentials` / `invalid_api_key` / `invalid_refresh_token` | 未认证或凭证无效 |
-| 403 | `forbidden` / `account_disabled` / `email_unverified` / `not_org_member` / `membership_pending` / `need_org_admin` | 无权限 |
+| 403 | `forbidden` / `account_disabled` / `email_unverified` / `not_installed` | 无权限 |
 | 404 | `not_found` / `invalid_invite` | 资源不存在 |
-| 409 | `slug_taken` / `account_exists` / `version_exists` / `cannot_delete_latest` / `no_published_version` / `already_member` / `invite_exhausted` / `github_already_bound` / `github_org_taken` 等 | 冲突 |
+| 409 | `slug_taken` / `account_exists` / `email_taken` / `code_collision` / `version_exists` / `cannot_delete_latest` / `no_published_version` / `already_member` / `invite_exhausted` / `github_already_bound` / `github_org_taken` / `not_eligible` / `key_revoked` / `qomicex_already_bound` 等 | 冲突 |
 | 410 | `invite_expired` | 邀请链接过期 |
 | 413 | `too_large` | 包体超 50MB |
 | 422 | `validation_error` / `invalid_package` / `unsafe_package` / `version_mismatch` / `missing_dependency` / `signature_invalid` | 校验失败 |
 | 429 | `rate_limited` | 触发限流 |
-| 500 | `internal` / `mail_send_failed` | 服务器内部 / 邮件发送失败 |
+| 500 | `internal` / `mail_send_failed` / `root_key_unconfigured` | 服务器内部 / 邮件发送失败 / 商店签名根钥未配置（无法签发开发者证书） |
+| 503 | `sso_disabled` | Qomicex Account 登录未配置 |
 
 ## 认证 `/auth`
 
@@ -99,7 +100,7 @@ RFC 8628 简化版，免 WebView 认证：
 | 方法 | 路径 | 说明 |
 | :--- | :--- | :--- |
 | POST | `/auth/device/code` | 发起：→ 201 `{deviceCode, userCode:"XXXX-XXXX", verificationUri, verificationUriComplete, expiresIn:600, interval:5}`；IP 限速 |
-| POST | `/device/token` | 轮询 `{deviceCode}` → pending 时 `{"status":"pending"}`；批准后 `{"status":"ok", user, accessToken, refreshToken, expiresIn}`（与登录同构，会话一次性消费）；400 `expired_token` 需重新发起 |
+| POST | `/auth/device/token` | 轮询 `{deviceCode}` → pending 时 `{"status":"pending"}`；批准后 `{"status":"ok", user, accessToken, refreshToken, expiresIn}`（与登录同构，会话一次性消费）；400 `expired_token` 需重新发起 |
 | POST | `/auth/device/approve` | 🔒 网页确认 `{userCode}`（8 位，忽略连字符/大小写）→ `{ok}`；404 `invalid_user_code`。确认页：`https://plugins.qomicex.top/auth/device?code=...` |
 
 ## 插件 `/plugins`
@@ -123,7 +124,7 @@ Plugin 对象公共字段：`{id, slug, developerId, name, description, category
 | 方法 | 路径 | 权限 | 说明 |
 | :--- | :--- | :--- | :--- |
 | GET | `/plugins/mine` | 登录 | 我参与（个人+组织）的插件及全部版本状态、最近审核意见与驳回理由 → `{items[]}` |
-| POST | `/plugins/` | 登录 | 创建插件 `{orgId?, slug(3-64 小写字母数字连字符), name(≤64), description?(≤2000), category?, tags?(≤10), iconUrl?}` → 201 `{plugin}`；初始待审核；409 `slug_taken` |
+| POST | `/plugins/` | 登录 | 创建插件 `{orgId?, slug(3-128 小写字母数字、点与连字符，反向域名风格，禁止连续双点), name(≤64), description?(≤2000), category?, tags?(≤10), iconUrl?}` → 201 `{plugin}`；初始待审核；409 `slug_taken` |
 | PUT | `/plugins/:id` | full | 更新元信息（同创建字段，均可选）→ `{plugin}` |
 | DELETE | `/plugins/:id` | full | 删除插件（软删）→ `{ok:true}` |
 | POST | `/plugins/:id/versions` | full / member | 上传新版本，multipart/form-data：`file`(.qplugin ≤50MB 必填)、`changelog?`(≤4000)、`version?`(须与 manifest 一致)。校验链：zip 结构 → 根级 manifest.json → zip-slip → **签名验证（Ed25519，缺签名或验签失败 → 422 `signature_invalid`）** → 依赖存在性 → 版本去重。纯 L3 且无 danger 权限自动发布，否则人工审核。→ 201 `{id, version, sha256, size, reviewStatus:'published'\|'pending'}` |

@@ -48,12 +48,12 @@ title: "manifest 清单详解"
 | `id` | string | ✅ | — | 插件唯一 ID，用作安装目录名 `plugins/{id}/`。一经发布不要更改 |
 | `name` | string | ✅ | — | 插件显示名 |
 | `version` | string | ✅ | — | 插件版本（用于依赖匹配）。见 [版本语法](#版本范围语法) |
-| `minLauncherVersion` | string | ❌ | `""` | 最低启动器版本。⚠️ 当前版本**仅存储、未实际校验** |
-| `layers` | string[] | ❌ | `[]` | 图层声明。值：`l0`/`l1`/`l2`/`l3`/`l4`，可多个。详见 [layers 图层定义](#layers-图层定义) |
+| `minLauncherVersion` | string | ❌ | `""` | 最低启动器版本。⚠️ 启动器把它当**可选**（缺省 `""`，仅存储）；但 `qomicex verify` / CLI 校验把它当**必填**，缺失即报错 |
+| `layers` | string[] | ❌ | `[]` | 图层声明。值：`l0`/`l1`/`l2`/`l3`/`l4`，可多个。⚠️ 启动器缺省按 `[]` 处理，但 CLI `validateManifest` 要求**至少一项**，缺失或为空即报错。详见 [layers 图层定义](#layers-图层定义) |
 | `render` | string | ❌ | `"iframe"` | 渲染方式：`"inline"` / `"iframe"` / `"webview"`。**默认 `"iframe"`（沙箱）**；仅显式声明 `"render": "inline"` 才走内联渲染；`"webview"` 或 `layers` 含 `l4` 走独立窗口渲染。详见 [layers 图层定义](#layers-图层定义) |
 | `permissions` | string[] | ❌ | `[]` | 权限声明。⚠️ 后端仅存储，**由前端运行时校验**（缺失则 API 调用报错） |
 | `dependencies` | PluginDependency[] | ❌ | `[]` | 前置插件依赖。见 [插件依赖与互调用](/plugins/dependencies) |
-| `entry` | object | ❌ | `{}` | 入口声明 |
+| `entry` | object | ❌ | `{}` | 入口声明。纯 L3（wasm）插件可省略，CLI 对此仅告警 |
 | `contributes` | object | ❌ | `null` | 扩展点 |
 
 ### entry 对象
@@ -64,7 +64,7 @@ title: "manifest 清单详解"
 | `theme` | string | 主题 CSS 文件路径，激活时注入 `<style data-plugin-theme>` |
 | `backend` | string | 保留字段，当前未使用 |
 
-若省略 `entry.frontend`，插件**不会被激活**（`activatePlugin` 只在 `entry.frontend` 存在时渲染并标记 `active`），因此无法注册方法或提供 UI。即使纯功能插件也建议提供一个空页面入口。
+若省略 `entry.frontend`，插件**不会被激活**（`activatePlugin` 只在 `entry.frontend` 存在时渲染并标记 `active`），因此无法注册方法或提供 UI。即使纯功能插件也建议提供一个空页面入口。唯一例外是纯 L3（wasm）插件：`layers` 只含 `l3`（不含 `l2`/`l4`）时 CLI 允许省略 `entry`（网关按固定文件名 `plugin.wasm` 加载），但这类插件同样没有页面入口、不会被激活渲染。
 
 ### contributes 对象
 
@@ -74,7 +74,7 @@ title: "manifest 清单详解"
 | `overlay` | PluginOverlayConfig | 悬浮窗配置 |
 | `slots` | PluginSlotContribution[] | 主界面槽位注入：`header:right`（标题栏右侧）/ `dashboard:widgets`（主页小组件网格）。详见 [主页小组件](/plugins/dashboard-widget) |
 | `downloadSources` | string[] | 保留，当前未使用 |
-| `commands` | string[] | 保留，当前未使用 |
+| `commands` | string[] | 快捷键命令列表。插件激活后，主窗口按下对应快捷键即向该插件派发 `plugin:command` 事件（`COMMAND_KEY_MAP` 映射，如 `devtools:toggle`），插件用 `window.addEventListener('plugin:command', …)` 处理 |
 | `settingsPages` | string[] | 插件设置页：包内 HTML 相对路径列表（如 `"dist/settings.html"`），在「设置 → 插件 → 插件设置」为每个路径生成一个纵向 tab。详见 [settingsPages 数组](#settingspages-数组) |
 | `iconTheme` | string | 图标主题：`.qtheme` 包内 `icon-theme.json` 的相对路径（如 `"dist/icon-theme.json"`），激活时经主题管理器注册。详见 [主题系统](/plugins/theme#图标主题icon-themejson) |
 | `fontLinks` | string[] | 字体/连字贡献：字体 CSS/CDN URL 列表，激活时自动注入 `<link rel="stylesheet">`，停用时移除。详见 [字体/连字贡献](/plugins/theme#字体连字贡献) |
@@ -231,4 +231,4 @@ title: "manifest 清单详解"
 - 缺段视为 0（如 `1.0` 等于 `1.0.0`）
 - **不支持** `^`、`~`、`*`、通配 `x`、`||`、逗号
 
-`minLauncherVersion` 字段当前未校验，但**建议填写**以兼容未来版本。若后续启动器启用校验，低于该版本的启动器将拒绝安装。
+`minLauncherVersion`：启动器侧当前不校验，但**商店侧会校验**——`POST /plugins/check-updates` 用 semver 比较，把最低版本高于当前启动器的版本从更新列表剔除；`GET /plugins?minLauncherVersion=` 也会据此过滤。CLI（`qomicex verify`）则要求该字段**必须存在**。因此请务必填写，否则 CLI 校验不通过，且商店无法做兼容过滤。

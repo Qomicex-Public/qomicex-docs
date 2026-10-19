@@ -119,7 +119,7 @@ qomicex dev --port 3000
 ```bash
 qomicex pack                          # 有 package.json → pnpm run build；无则跳过构建直接打包
 qomicex pack --version 0.2.0          # 覆盖 manifest 版本号
-qomicex pack --key ./dev-key.pem      # 附签名（仅 signature.json；完整证书链请用 publish）
+qomicex pack --key ./dev-key.pem      # 附签名（signature.json + signature.cert.json；自签名证书无法通过 verify，正式发布请用 publish）
 qomicex pack --skip-build             # 跳过构建（复用现有 dist）
 qomicex pack --out-dir ./dist-releases # 指定输出目录（默认 release/）
 ```
@@ -130,7 +130,7 @@ qomicex pack --out-dir ./dist-releases # 指定输出目录（默认 release/）
 
 ```bash
 qomicex pack                                    # 开发自测包
-qomicex pack --key ./dev-key.pem                # 带自签名的离线包（本地 verify 可验）
+qomicex pack --key ./dev-key.pem                # 带自签名证书的离线包（verify 会因根钥校验失败而拒绝，仅供本地安装/网页上传取证书）
 qomicex pack --version 0.3.0 --skip-build       # 改版本号后直接出包（复用 dist）
 ```
 
@@ -144,7 +144,7 @@ qomicex verify --package ./release/x.qplugin   # 包模式：manifest + 签名�
 - **manifest 合法性**：id（反向域名/安全字符）、name、version(semver)、minLauncherVersion、layers、permissions、entry、contributes
 - **权限最小化**：对比 `manifest.permissions` 与源码实际调用的桥方法（`METHOD_PERMISSIONS` 表）。声明未用 / 用了未声明都会报错
 - **长循环告警**：`while(true)`、`for(;;)`、`setInterval` 无界轮询（提示放 Worker / WASM / 后端）——启发式文本扫描，可能误报/漏报
-- **签名检查**：包模式用内置商店根公钥验签（ADR-050）；无签名提示「未签名」不拒绝
+- **签名检查**：包模式用内置商店根公钥验签（ADR-050）；无签名提示「未签名」不拒绝；验签失败（含 `pack --key` 生成的**自签名证书**被根钥拒绝）以非 0 退出
 
 **实例**（发布前快检 + 复验签名包）：
 

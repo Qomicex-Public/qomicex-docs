@@ -3,26 +3,31 @@ title: "Multiplayer"
 ---
 ## Multiplayer
 
-The Launcher (Launcher)has built-in Multiplayer (Multiplayer): no public IP and no server hosting required to play your singleplayer world with friends.
+The launcher has built-in multiplayer: no public IP and no server hosting required to play your singleplayer world with friends.
 
 ## Quick start
 
 Click **Multiplayer** in the sidebar to open it.
 
-### Host (Host): the person creating the room
+### Host: the person creating the room
 
 - Select the **local instance** you want to play on
-- Click **Create room (Create Room)** to get a **Room code (Room code)**
+- Click **Start and create room** to get a **room code** (the launcher starts that instance first)
+- After it starts, remember to use "Open to LAN" on your **singleplayer world** in game so the multiplayer layer can reach the world
+- The launcher **scans local ports**; if it finds none, switch to **manually enter port**
 - Send the room code to your friends
 - Keep the page open and wait for players to join
 
-### Player (Players): the person joining
+> Already started the instance yourself? Click "**Already started the instance manually? Click here**" on the page to create the room directly.
+
+### Player: the person joining
 
 - Enter the **room code** from the host
-- The launcher automatically detects your **NAT** type and establishes a connection
-- After joining, select your local instance and the launcher compares Mods automatically
+- After joining, select your local instance and the launcher compares mods automatically
 
-## Mod consistency (Mod consistency)check
+> Multiplayer is built on **EasyTier**; the component is downloaded automatically on first use, so wait for the download to finish. If you need a custom relay, configure it in **Settings → Network settings → Multiplayer nodes**.
+
+## Mod consistency check
 
 When you join, the launcher compares the **host's mod list** against your local instance, item by item:
 
@@ -39,17 +44,17 @@ When you have several local instances, the launcher recommends the **instance wi
 Inside the room, the host can:
 
 - **View the player list**: current online members in real time
-- **Kick player (Kick)**: remove a disruptive player from the room (their network identifier is also blocked to prevent automatic reconnection)
+- **Kick player**: remove a disruptive player from the room (their network identifier is also blocked to prevent automatic reconnection)
 - **Rejoin approval**: when a kicked player tries to come back, a dialog asks you to confirm. Allow lets them in, deny keeps blocking them. You can also deny silently (no more dialogs)
-- **Unban (Unban)**: lift the block from the kicked players list
+- **Unban**: lift the block from the kicked players list
 
 ## Troubleshooting connection failures
 
 | Symptom | Possible cause and fix |
 | :--- | :--- |
-| NAT detection fails | Restricted network (common on corporate or campus networks). Try a mobile hotspot |
+| NAT detection fails | "NAT detection" is a manual diagnostic button on the page; click it to run the check. If the network is restricted (common on corporate or campus networks), try a mobile hotspot |
 | Can't connect to the host at all | At least one side has a strict network. The host can recreate the room and try again. A leftover et process may be running in the background, so restart the launcher and try again |
 | Connects but the game won't load | Make sure both sides run the same game version and mods, and check that the host has entered the world (a singleplayer world must open to LAN first or be proxied by the multiplayer layer) |
 | A kicked player can still join | They changed their network identifier. Kick them again and consider deny silently |
 
-Virtual network adapter software such as Radmin VPN and Hamachi can conflict with multiplayer. The launcher avoids common conflicts automatically, but if connections misbehave, quit those apps first and try again.
+Virtual network adapter software such as Radmin VPN and Hamachi can conflict with multiplayer. The launcher does not work around them automatically: if connections misbehave, quit such software first and try again. If you need to keep it running, switch to a custom relay node in Settings → Network settings → Multiplayer nodes.

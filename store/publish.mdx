@@ -184,7 +184,7 @@ qomicex pack --key ./dev-key.pem    # 产出带 signature.json 的 .qplugin
 
 - **商店上传强制验签**：缺 `signature.json` 或验签失败 → 422 `signature_invalid`，上传被拒
 - 签名 = Ed25519 三级信任链（商店根钥签发开发者公钥证书 → 开发者私钥签包体），`signedHash` 为规范化 manifest + 文件清单的 SHA-256
-- 密钥生成：`openssl genpkey -algorithm Ed25519 -out dev-key.pem` 或 `node scripts/plugin-keygen.mjs generate`
+- 密钥生成：`openssl genpkey -algorithm Ed25519 -out dev-key.pem` 或 `node scripts/plugin-keygen.mjs`（无子命令，可选 `--out <path>` / `--json` / `--force`，默认写入 `plugin-key.json`）
 
 常见上传错误速查：
 

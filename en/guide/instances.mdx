@@ -10,9 +10,9 @@ An **instance (Instance)** is a self-contained copy of Minecraft you can run ind
 Click **Instances** in the sidebar to open it. The list supports:
 
 - **Search**: filter quickly by name
-- **Filter**: filter by loader (Vanilla / Forge / Fabric / NeoForge / Quilt and more) or game version
+- **Filter**: switch between the **All / Modded / Vanilla / Snapshots / April Fools / Broken** tabs by version category, or filter by a custom group
 - **Pin to home**: pin frequently used instances to the home page and launch them in one click from the home launch bar
-- **Bulk actions**: select several and delete them together
+- **Open details**: click an instance card to open its details page and view information, change settings, and manage mods and worlds
 
 ## Install a new game
 
@@ -28,9 +28,9 @@ Click any instance to open its details page, which contains the following sectio
 
 | Section | Description |
 | :--- | :--- |
-| **Overview** | Instance information at a glance and quick actions (launch, open folder, pin to home) |
-| **Settings** | Instance name, icon, Java runtime, integrity check, version isolation, linked account |
-| **Game settings** | Game-level settings such as launch arguments and memory (can follow global settings) |
+| **General** | Instance information at a glance and quick actions (launch, open folder, pin to home) |
+| **Settings** | Instance name, icon, Java runtime, memory allocation, JVM arguments, integrity check, version isolation, linked account |
+| **Game settings** | `options.txt` and key binding editor (search settings, customize keys) |
 | **Worlds** | Single-player world list with rename / backup / delete |
 | **Screenshots** | Browse in-game screenshots |
 | **Mods** | Mod list with enable/disable, update and bulk delete, plus one-click search in Resource Center |
@@ -45,10 +45,10 @@ Click any instance to open its details page, which contains the following sectio
 When **version isolation (Version isolation)** is on, each instance keeps its mods, worlds, resource packs, shaders and other data in its own directory without interfering with others; when it is off, they all share the common folders under the game directory (the habit of older modpacks).
 
 - Turn version isolation on or off for a single instance in **Instance details → Settings**;
-- Change the global default in **Settings → Basics**.
+- Change the global default in **Settings → Launcher settings**.
 
 Keeping it on is generally recommended.
 
 ## Delete an instance
 
-Select several instances in the list to delete them together, or delete one from its details page. Deleting only removes the instance record from the launcher and its version directory — **back up personal data such as worlds beforehand**.
+Right-click an instance card and choose **Delete instance**, or open Instance details → **General** and delete it there; a running instance cannot be deleted. Deleting removes the instance record from the launcher and permanently deletes the corresponding version directory — **back up personal data such as worlds beforehand**.

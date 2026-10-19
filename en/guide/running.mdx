@@ -3,7 +3,7 @@ title: "Running"
 ---
 ## Running
 
-After you launch the game, the **Running (Running)** page monitors and manages the game instances that are currently active.
+After you launch the game, the **Running** page monitors and manages the game instances that are currently active.
 
 ## Instance status
 
@@ -14,13 +14,14 @@ Click **Running** in the sidebar (you can also get there from the home page or a
 
 ## Live log window
 
-Click **Test game** in the **instance details** to open the **live game log** (Live logs)window:
+On the **instance details** page, open the dropdown next to the launch button and choose **Test game** to open the **live game log** window:
 
-- The log scrolls in real time, and you can pause following
-- Color-coded filtering by level: INFO / WARN / ERROR / DEBUG / FATAL
+- The log scrolls in real time; there is no separate pause button — **scrolling away from the bottom stops following**, and scrolling back to the bottom resumes it automatically
+- Color-coded filtering by level: INFO / WARN / ERROR / DEBUG / FATAL / Other
 - **Keyword search** to jump straight to an anomaly
-- Toggle network request logging (to diagnose multiplayer or download problems)
 - **Stop game**: ends the process after confirmation (unsaved world progress is lost)
+
+> The network request logging switch is not in the log window; it lives in the **Debug** panel (for diagnosing multiplayer or download problems).
 
 When the game fails to start or hangs on the loading screen, the live log usually shows the last block of output. Copy it into [Log analysis](/en/guide/log-analysis) to get a diagnosis.
 
@@ -29,5 +30,5 @@ When the game fails to start or hangs on the loading screen, the live log usuall
 When the game crashes:
 
 - The Running page or the log window reports **the game exited unexpectedly**
-- Open Crash analysis (Crash analysis), where the launcher parses the Crash report (Crash Report)and gives you a diagnosis (common causes: mod conflicts, out of memory, version mismatch)
+- Crash analysis takes over: the launcher parses the crash report and gives you a diagnosis (common causes: mod conflicts, out of memory, version mismatch)
 - When you need help, generate an mclo.gs link to share (see [Log analysis](/en/guide/log-analysis))

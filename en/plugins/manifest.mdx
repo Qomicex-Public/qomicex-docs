@@ -48,12 +48,12 @@ Generating a valid manifest skeleton with `qomicex create <id>` is recommended (
 | `id` | string | ✅ | — | Unique plugin ID, used as the install directory name `plugins/{id}/`. Never change it once published |
 | `name` | string | ✅ | — | Plugin display name |
 | `version` | string | ✅ | — | Plugin version (used for dependency matching). See [Version range syntax](#version-range-syntax) |
-| `minLauncherVersion` | string | ❌ | `""` | Minimum launcher version. ⚠️ It is currently **stored only and not actually validated** |
-| `layers` | string[] | ❌ | `[]` | Layer declarations. Values: `l0`/`l1`/`l2`/`l3`/`l4`, and you can declare several. See [layers layer definitions](#layers-layer-definitions) |
+| `minLauncherVersion` | string | ❌ | `""` | Minimum launcher version. ⚠️ The launcher treats it as **optional** (defaults to `""` and only stores it), but `qomicex verify` / the CLI validation treats it as **required** and reports an error when it is missing |
+| `layers` | string[] | ❌ | `[]` | Layer declarations. Values: `l0`/`l1`/`l2`/`l3`/`l4`, and you can declare several. ⚠️ The launcher falls back to `[]` when it is absent, but the CLI `validateManifest` requires **at least one** entry and reports an error when it is missing or empty. See [layers layer definitions](#layers-layer-definitions) |
 | `render` | string | ❌ | `"iframe"` | Rendering mode: `"inline"` / `"iframe"` / `"webview"`. **`"iframe"` (sandbox) is the default**; inline rendering only happens when you explicitly declare `"render": "inline"`; `"webview"`, or `l4` in `layers`, uses standalone window rendering. See [layers layer definitions](#layers-layer-definitions) |
 | `permissions` | string[] | ❌ | `[]` | Permission declarations. ⚠️ The backend only stores them; **they are validated by the frontend at runtime** (a missing permission makes the API call fail) |
 | `dependencies` | PluginDependency[] | ❌ | `[]` | Library plugin dependencies. See [Plugin dependencies and inter-plugin calls](/en/plugins/dependencies) |
-| `entry` | object | ❌ | `{}` | Entry declarations |
+| `entry` | object | ❌ | `{}` | Entry declarations. Pure L3 (wasm) plugins may omit it; the CLI only warns in that case |
 | `contributes` | object | ❌ | `null` | Extension points |
 
 ### entry object
@@ -64,7 +64,7 @@ Generating a valid manifest skeleton with `qomicex create <id>` is recommended (
 | `theme` | string | Path to the theme CSS file; injected as `<style data-plugin-theme>` on activation |
 | `backend` | string | Reserved field, currently unused |
 
-If you omit `entry.frontend`, the plugin **is not activated** (`activatePlugin` only renders and marks `active` when `entry.frontend` exists), so it cannot register methods or provide UI. Even for purely functional plugins, providing an empty page entry is recommended.
+If you omit `entry.frontend`, the plugin **is not activated** (`activatePlugin` only renders and marks `active` when `entry.frontend` exists), so it cannot register methods or provide UI. Even for purely functional plugins, providing an empty page entry is recommended. The one exception is a pure L3 (wasm) plugin: when `layers` contains only `l3` (no `l2`/`l4`), the CLI allows `entry` to be omitted (the gateway loads it from the fixed file name `plugin.wasm`), but such a plugin still has no page entry and is never activated or rendered.
 
 ### contributes object
 
@@ -74,7 +74,7 @@ If you omit `entry.frontend`, the plugin **is not activated** (`activatePlugin` 
 | `overlay` | PluginOverlayConfig | Overlay window configuration |
 | `slots` | PluginSlotContribution[] | Main UI slot injection: `header:right` (right side of the title bar) / `dashboard:widgets` (dashboard widget grid). See [Dashboard widgets](/en/plugins/dashboard-widget) |
 | `downloadSources` | string[] | Reserved, currently unused |
-| `commands` | string[] | Reserved, currently unused |
+| `commands` | string[] | Keyboard shortcut command list. Once the plugin is active, pressing the matching shortcut in the main window dispatches a `plugin:command` event to that plugin (`COMMAND_KEY_MAP` mapping, such as `devtools:toggle`); the plugin handles it with `window.addEventListener('plugin:command', …)` |
 | `settingsPages` | string[] | Plugin settings page: list of relative HTML paths inside the package (such as `"dist/settings.html"`); a vertical tab is generated for each path under Settings → Plugins → Plugin settings. See [settingsPages array](#settingspages-array) |
 | `iconTheme` | string | Icon theme: relative path of `icon-theme.json` inside the `.qtheme` package (such as `"dist/icon-theme.json"`), registered through the theme manager on activation. See [Theme system](/en/plugins/theme#icon-theme-icon-theme-json) |
 | `fontLinks` | string[] | Font/ligature contribution: list of font CSS/CDN URLs, injected automatically as `<link rel="stylesheet">` on activation and removed on deactivation. See [Font and ligature contribution](/en/plugins/theme#font-and-ligature-contribution) |
@@ -231,4 +231,4 @@ Besides `menuItems[].icon`, `icon` is also supported at the manifest **top level
 - A missing segment counts as 0 (so `1.0` equals `1.0.0`)
 - `^`, `~`, `*`, the `x` wildcard, `||`, and commas are **not supported**
 
-The `minLauncherVersion` field is not validated currently, but **filling it in is recommended** for future compatibility. If the launcher enables validation later, launchers below that version will refuse to install the plugin.
+The launcher does not validate `minLauncherVersion` itself, but **the store does**: `POST /plugins/check-updates` compares semver and drops versions whose minimum version is above the current launcher from the update list, and `GET /plugins?minLauncherVersion=` filters on it as well. The CLI (`qomicex verify`) additionally requires the field to **be present**. So always fill it in, otherwise CLI validation fails and the store cannot apply compatibility filtering.

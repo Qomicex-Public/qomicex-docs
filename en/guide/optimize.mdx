@@ -7,42 +7,44 @@ Laggy game, slow startup, slow downloads? Adjust these spots as needed; they res
 
 ## Pick the right Java
 
-The launcher needs **Java 8 / 17 / 21**, choosing automatically per game version: old versions (1.16 and below) use Java 8, 1.17–1.20.4 use Java 17, and 1.20.5+ use Java 21.
+The launcher offers **Java 8 / 11 / 17 / 21 / 25 / 26** and several other versions, choosing automatically per game version: 1.16 uses Java 11, 1.17 uses Java 16, 1.18–1.20.4 use Java 17, 1.20.5+ use Java 21, and 26.1+ uses Java 25 (older versions use Java 8).
 
 - **Prefer letting the launcher download it**: Settings → Java runtime → Download. JDKs downloaded automatically have the best game compatibility
 - Java already on your machine can be adopted by scanning, but JREs of unknown origin (for example, ones bundled by some adware) may be broken; remove them when they are flagged as abnormal
 
 ## Memory allocation
 
-Settings → Launch settings → Memory:
+Settings → Java runtime → Default configuration:
 
 | Machine memory | Recommendation |
 | :--- | :--- |
-| 8GB or less | **Automatic allocation (Automatic allocation)** (the launcher computes it from available memory and does not crowd out the system) |
-| 16GB | 4–6GB for Vanilla (Vanilla)/light mods; 6–8GB for medium and large modpacks |
+| 8GB or less | **Automatic allocation** (the launcher computes it from available memory and does not crowd out the system) |
+| 16GB | 4–6GB for vanilla/light mods; 6–8GB for medium and large modpacks |
 | 32GB+ | 8–12GB is enough for large modpacks — **more is not better** |
+
+Automatic allocation gives the game 70% of available memory (512MiB minimum); manual allocation ranges from 512MiB up to available memory in steps of 256MiB.
 
 An oversized Java heap makes garbage collection pauses longer and produces regular stutters in game. Give it just enough.
 
 ## Launch arguments
 
-Settings → Launch settings → JVM arguments. **If the modpack author provides recommended arguments, follow the modpack**; otherwise keep the defaults (the launcher already includes sensible garbage collection arguments). Tuning by hand is advanced territory — write down the original values before you change anything.
+Settings → Java runtime → Default configuration → JVM arguments. **If the modpack author provides recommended arguments, follow the modpack**; otherwise keep the defaults (the launcher already includes sensible garbage collection arguments). Tuning by hand is advanced territory — write down the original values before you change anything.
 
 ## Downloads and network
 
-- Slow downloads: turn on **Automatic download source selection (Auto-select download source)**, or replace the domain manually with a [mirror](/en/guide/mirror)
+- Slow downloads: turn on automatic download source selection, or replace the domain manually with a [mirror](/en/guide/mirror)
 - Web pages or the resource center will not load: configure a proxy (Settings → Network settings); it affects only the launcher, not the game
-- Certificate errors behind a proxy: temporarily enable **Ignore SSL certificates (Ignore SSL certificates)** while troubleshooting, then turn it off once the issue is confirmed
+- Certificate errors behind a proxy: temporarily enable **Ignore SSL certificate verification** while troubleshooting, then turn it off once the issue is confirmed
 
 ## Interface smoothness
 
 On low-end machines, do these three things first (Settings → Appearance):
 
-- Set **Component material (Component material)** back to default (liquid glass, acrylic, and frosted glass all cost compositing work)
-- Lower or disable **Animation (Animation)**
-- Limit the **maximum frame rate** to 60 (saves power and reduces overheating)
+- Set **Component material** back to default (liquid glass, acrylic, and frosted glass all cost compositing work)
+- Lower or disable **Page animations**
+- Limit the **frame rate cap** to 60 (saves power and reduces overheating)
 
 ## Data and cache
 
 - Version list cache (Settings → Storage and cache): extend the cache duration when CurseForge/NeoForge lists load slowly
-- Clear the download task list, export or clear logs: the Toolbox (Toolbox) and logs section in Settings
+- Clear the download task list, export or clear logs: the Toolbox and logs section in Settings

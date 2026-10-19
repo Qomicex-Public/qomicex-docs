@@ -9,9 +9,9 @@ The launcher offers three ways to get a playable game: **install by downloading*
 
 Best for setting up a clean game from scratch.
 
-- In the sidebar, click **Instances (Instance)** → **Install (Install)**
+- On the **Instances** page, click **Download new version**
 - Choose a **game version** (a vanilla version number)
-- Choose a **loader (Loader)** and its version (Forge / Fabric / NeoForge / Quilt; pick "None" to play vanilla)
+- In the **Mod loader** dropdown, choose a loader and its version (Forge / Fabric / NeoForge / Quilt / LegacyFabric / LiteLoader / Cleanroom / Babric — 9 entries in total; choose `None (vanilla)` to play vanilla)
 - Confirm the instance name and icon, then start the installation
 
 You can track the installation task in [Downloads](/en/guide/downloads). When it finishes, the instance appears in the list — choose a [Java](/en/guide/settings#java-runtime) and you can launch.
@@ -32,14 +32,16 @@ A modpack is a game version plus a loader, a full set of mods and pre-configurat
 
 If you already have a modpack file (`.zip`):
 
-- On the instances page, click **Import → Install modpack**
+- On the instances page, click **Import** to open the **Import modpack** dialog directly
 - Select the modpack archive. Supported:
 
 | Format | Source |
 | :--- | :--- |
 | CurseForge modpack | Zip downloaded from the CurseForge website |
 | Modrinth modpack (`.mrpack`) | Downloaded from the Modrinth website |
-| MultiMC / Prism launcher instance | Instance zip exported from another launcher |
+| Qomicex modpack (`.qmodpack`) | Modpack exported from the Qomicex launcher |
+| Technic modpack | Zip downloaded from the Technic platform |
+| MultiMC / Prism launcher instance | Instance zip or instance **folder** exported from another launcher (you can click **Select folder**) |
 
 - Confirm the instance name and game directory; the launcher resolves and downloads all dependencies automatically
 
@@ -56,4 +58,4 @@ You can save several frequently used game directories (such as the `.minecraft` 
 
 ## Complete missing files
 
-If a migrated or manually added instance is missing files (for example `libraries` or `assets`), you are prompted before the game launches. In **Instance details → Settings**, click **Complete missing files (Repair files)**; the launcher scans for missing game files and downloads them automatically — it only fills the gaps and leaves your existing data untouched.
+If a migrated or manually added instance is missing files (for example `libraries` or `assets`), you are prompted before the game launches. In the **Instance details → Complete files** tab, click **Complete files**; the launcher scans for missing game files and downloads them automatically — it only fills the gaps and leaves your existing data untouched.

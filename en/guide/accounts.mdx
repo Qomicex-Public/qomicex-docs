@@ -3,7 +3,7 @@ title: "Account management"
 ---
 ## Account management
 
-The Launcher (Launcher)supports several login methods, and all accounts are managed on the **Account management (Account Management)** page.
+The Launcher supports several login methods, and all accounts are managed on the **Account management (Account Management)** page.
 
 ## Add an account
 
@@ -11,11 +11,14 @@ Click **Accounts** in the sidebar, then **Add account**, and choose a login meth
 
 | Login method | Description |
 | :--- | :--- |
-| **Microsoft** | Official Microsoft login (Microsoft sign-in)via the Microsoft OAuth flow; you authorize in your browser |
-| **Offline** | Sign in with just a username, for singleplayer or offline servers |
-| **Unified Pass** | The extchu Unified Pass (Unified Pass) |
-| **LittleSkin** | The LittleSkin skin site, using External login (Yggdrasil) (External login) |
-| **Custom Yggdrasil** | Your own or a third-party auth server; just enter the server address (API Root) |
+| **Microsoft** | Official account login through the Microsoft OAuth flow; you authorize in your browser |
+| **Offline** | Sign in with just a username, for singleplayer or offline servers (you can optionally enter a UUID; one is generated if you leave it empty) |
+| **Yggdrasil** | External login. **Preset server** shortcuts (LittleSkin, Blessing Skin) are provided, or you can enter a custom server address; both OAuth and password modes are supported |
+| **Unified Pass** | An authentication system used by some Minecraft servers; enter the server ID (for example `lilu`) |
+
+<Note>
+In some interface languages you must **sign in to at least one Microsoft account first** before you can add offline or third-party accounts; in that case the corresponding tabs are greyed out.
+</Note>
 
 ## Set a default account
 
@@ -25,11 +28,12 @@ The first time you launch the game, a wizard asks you to select or add an accoun
 
 ## Skins and capes
 
-- **Microsoft / Yggdrasil accounts**: skins and capes load from the auth server; view and change them on the account details page (upload from a skin site or from a local file)
-- **Offline accounts**: pick a skin from the skin library or upload a local skin file
+- **Microsoft accounts**: the most complete options — upload a skin (with a choice of classic or slim arms model), reset your skin, and switch official capes. Skins are also refreshed automatically.
+- **Yggdrasil / Unified Pass accounts**: only **Refresh skin** is available. If the account has a server address configured, a **Visit skin site** button also appears to manage skins on the external skin site. Uploading from inside the launcher is not offered.
+- **Offline accounts**: the account details page offers no skin or cape actions.
 
 ## FAQ (FAQ)
 
-- **Microsoft login (Microsoft sign-in)says the token expired**: the account card is marked as expired. Click it to sign in again. If this happens at launch, a re-authorization window appears.
+- **Microsoft login says the token expired**: when an expired token is hit at launch or on entering the game, a Microsoft re-authorization window appears — sign in again as prompted. You can also sign in again manually from the account page for an expired account.
 - **An offline account can't join an official server**: offline login can't join servers that require official authentication. Use Microsoft login instead.
 - **Message says the account data file is corrupted**: a change in your machine ID can make the encrypted data undecryptable. Follow the prompt to add the account again.

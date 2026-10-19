@@ -119,7 +119,7 @@ Starts a local plugin debugging environment in one of two modes:
 ```bash
 qomicex pack                          # with package.json → pnpm run build; otherwise skip the build and package directly
 qomicex pack --version 0.2.0          # override the manifest version
-qomicex pack --key ./dev-key.pem      # attach a signature (signature.json only; use publish for the full certificate chain)
+qomicex pack --key ./dev-key.pem      # attach a signature (signature.json + signature.cert.json; the self-signed certificate cannot pass verify, so use publish for official releases)
 qomicex pack --skip-build             # skip the build (reuse the existing dist)
 qomicex pack --out-dir ./dist-releases # specify the output directory (defaults to release/)
 ```
@@ -130,7 +130,7 @@ A `.qplugin` is a zip with `manifest.json` at the root plus `dist/**` (or `plugi
 
 ```bash
 qomicex pack                                    # development self-test package
-qomicex pack --key ./dev-key.pem                # offline package with a self-signed signature (verifiable locally with verify)
+qomicex pack --key ./dev-key.pem                # offline package with a self-signed certificate (verify rejects it because root-key validation fails; only for local install / web upload to obtain a certificate)
 qomicex pack --version 0.3.0 --skip-build       # bump the version and package directly (reuse dist)
 ```
 
@@ -144,7 +144,7 @@ qomicex verify --package ./release/x.qplugin   # package mode: manifest + signat
 - **Manifest validity**: id (reverse domain / safe characters), name, version (semver), minLauncherVersion, layers, permissions, entry, contributes
 - **Least privilege**: compares `manifest.permissions` with the bridge methods the source actually calls (the `METHOD_PERMISSIONS` table). Both declared-but-unused and used-but-undeclared raise errors
 - **Long-loop warnings**: `while(true)`, `for(;;)`, and unbounded `setInterval` polling (it suggests moving the work to a Worker / WASM / backend) — a heuristic text scan, so false positives and misses are possible
-- **Signature check**: in package mode it verifies with the bundled store root public key (ADR-050); an unsigned package reports "unsigned" rather than being rejected
+- **Signature check**: in package mode it verifies with the bundled store root public key (ADR-050); an unsigned package reports "unsigned" rather than being rejected; a failed verification (including a **self-signed certificate** produced by `pack --key` being rejected by the root key) exits non-zero
 
 **Examples** (pre-publish quick check plus re-verifying a signed package):
 
@@ -311,6 +311,8 @@ openssl genpkey -algorithm Ed25519 -out dev-key.pem
 # raw seed extraction (publish also accepts PEM; usually unnecessary)
 openssl pkey -in dev-key.pem -outform DER | tail -c 32 | base64
 ```
+
+You can also generate a key pair with the repository script `node scripts/plugin-keygen.mjs`. The script has **no `generate` subcommand**; the available flags are `--out <path>`, `--json`, and `--force`, and it writes to `plugin-key.json` by default.
 
 ## AI-assisted development
 

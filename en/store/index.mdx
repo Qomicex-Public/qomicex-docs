@@ -35,17 +35,17 @@ Backend API specification for the Qomicex Launcher plugin store (Plugin store)(`
 
 | HTTP | code | Scenario |
 | :--- | :--- | :--- |
-| 400 | `bad_request` / `bad_json` | Missing parameter / body is not valid JSON |
+| 400 | `bad_request` / `bad_json` / `invalid_token` / `expired_token` / `state_mismatch` | Missing parameter / body is not valid JSON / invalid email or reset token / device session expired / invalid bind session |
 | 401 | `unauthorized` / `invalid_credentials` / `invalid_api_key` / `invalid_refresh_token` | Not authenticated or invalid credentials |
-| 403 | `forbidden` / `account_disabled` / `email_unverified` / `not_org_member` / `membership_pending` / `need_org_admin` | No permission |
+| 403 | `forbidden` / `account_disabled` / `email_unverified` / `not_installed` | No permission |
 | 404 | `not_found` / `invalid_invite` | Resource not found |
-| 409 | `slug_taken` / `account_exists` / `version_exists` / `cannot_delete_latest` / `no_published_version` / `already_member` / `invite_exhausted` / `github_already_bound` / `github_org_taken`, etc. | Conflict |
+| 409 | `slug_taken` / `account_exists` / `email_taken` / `code_collision` / `version_exists` / `cannot_delete_latest` / `no_published_version` / `already_member` / `invite_exhausted` / `github_already_bound` / `github_org_taken` / `not_eligible` / `key_revoked` / `qomicex_already_bound`, etc. | Conflict |
 | 410 | `invite_expired` | Invite link expired |
 | 413 | `too_large` | Package exceeds 50MB |
 | 422 | `validation_error` / `invalid_package` / `unsafe_package` / `version_mismatch` / `missing_dependency` / `signature_invalid` | Validation failed |
 | 429 | `rate_limited` | Rate limit triggered |
-| 500 | `internal` / `mail_send_failed` | Server internal error / mail delivery failed |
-
+| 500 | `internal` / `mail_send_failed` / `root_key_unconfigured` | Server internal error / mail delivery failed / the store signing root key is not configured (so developer certificates cannot be issued) |
+| 503 | `sso_disabled` | Qomicex Account sign-in is not configured |
 ## Authentication `/auth`
 
 ### Register and log in
@@ -99,7 +99,7 @@ Simplified RFC 8628, no WebView authentication needed:
 | Method | Path | Description |
 | :--- | :--- | :--- |
 | POST | `/auth/device/code` | Initiate: → 201 `{deviceCode, userCode:"XXXX-XXXX", verificationUri, verificationUriComplete, expiresIn:600, interval:5}`; rate limited per IP |
-| POST | `/device/token` | Poll `{deviceCode}` → `{"status":"pending"}` while pending; after approval `{"status":"ok", user, accessToken, refreshToken, expiresIn}` (same shape as login, the session is consumed once); 400 `expired_token` means you must start over |
+| POST | `/auth/device/token` | Poll `{deviceCode}` → `{"status":"pending"}` while pending; after approval `{"status":"ok", user, accessToken, refreshToken, expiresIn}` (same shape as login, the session is consumed once); 400 `expired_token` means you must start over |
 | POST | `/auth/device/approve` | 🔒 Web confirmation `{userCode}` (8 characters, hyphens and case ignored) → `{ok}`; 404 `invalid_user_code`. Confirmation page: `https://plugins.qomicex.top/auth/device?code=...` |
 
 ## Plugins `/plugins`
@@ -111,7 +111,7 @@ Simplified RFC 8628, no WebView authentication needed:
 | GET | `/plugins?q&category&tags&sort&page&pageSize&minLauncherVersion` | Plugin marketplace list (published only). `q` fuzzy-searches name/description/slug; `category` ∈ `tool\|launcher\|theme\|integration`; `tags` filters by a single tag; `sort=downloads` sorts by download count (default is newest); `minLauncherVersion` filters out incompatible plugins. → `{total, page, pageSize, items[Plugin]}` |
 | GET | `/plugins/:slug` | Plugin detail → Plugin + `versions[]` (published only: `{id, version, changelog?, minLauncherVersion, layers[], permissions[], sha256, sizeBytes, downloadCount, createdAt}`). 404 if unpublished or missing |
 | GET | `/plugins/:slug/reviews?page&pageSize` | Review list → `{items[{id, rating, content, createdAt, updatedAt?, username, developerLevel, avatarUrl?}]}` |
-| POST | `/plugins/check-updates` | **Core launcher endpoint**: batch update check. Body `{launcherVersion:'x.y.z', installed:[{slug, version}] ≤200}` → `{updates[{slug, currentVersion, latestVersion, changelog?, sha256, permissions[], layers[], download:{url, mirrorUrl?}, rolloutPercent?}]}`. `rolloutPercent` is the staged rollout percentage (absent/100 = full rollout, `<100` means the client decides with a random value whether to roll out). Plugins already up to date or incompatible with the current launcher version are not returned |
+| POST | `/plugins/check-updates` | **Core launcher endpoint**: batch update check. Body `{launcherVersion:'x.y.z', installed:[{slug, version}] ≤200}` → `{updates[{slug, currentVersion, latestVersion, changelog?, sha256, permissions[], layers[], download:{url, mirrorUrl?}, rolloutPercent?}]}`. `rolloutPercent` is the staged rollout percentage (absent/100 = full rollout). Plugins already up to date or incompatible with the current launcher version are not returned |
 | GET | `/plugins/:slug/versions/:version/download` | Dual-channel download info. `:version` may be `latest` → `{url, mirrorUrl?, sha256, size}`; the client downloads from both channels in a race and verifies the SHA-256. Rate limited to 60/min/IP |
 
 Common fields of the Plugin object: `{id, slug, developerId, name, description, category, tags[], iconUrl?, status, latestVersion?, downloadsCount, ratingAverage?, ratingCount, developerName?, developerLevel?, orgId?/orgSlug?/orgName?, officialComment?, officialCommentAt?, createdAt, publishedAt?}`.
@@ -123,7 +123,7 @@ Permission model: the original uploader = full control; organization owner/admin
 | Method | Path | Permission | Description |
 | :--- | :--- | :--- | :--- |
 | GET | `/plugins/mine` | Signed in | Plugins I take part in (personal + organization) with all version statuses, latest review comments, and rejection reasons → `{items[]}` |
-| POST | `/plugins/` | Signed in | Create a plugin `{orgId?, slug(3-64 lowercase alphanumeric and hyphens), name(≤64), description?(≤2000), category?, tags?(≤10), iconUrl?}` → 201 `{plugin}`; initially pending review; 409 `slug_taken` |
+| POST | `/plugins/` | Signed in | Create a plugin `{orgId?, slug(3-128 lowercase alphanumeric, dots and hyphens, reverse-domain style, no consecutive dots), name(≤64), description?(≤2000), category?, tags?(≤10), iconUrl?}` → 201 `{plugin}`; initially pending review; 409 `slug_taken` |
 | PUT | `/plugins/:id` | full | Update metadata (same fields as creation, all optional) → `{plugin}` |
 | DELETE | `/plugins/:id` | full | Delete the plugin (soft delete) → `{ok:true}` |
 | POST | `/plugins/:id/versions` | full / member | Upload a new version, multipart/form-data: `file` (.qplugin ≤50MB, required), `changelog?` (≤4000), `version?` (must match the manifest). Validation chain: zip structure → root-level manifest.json → zip-slip → **signature verification (Ed25519; missing signature or failed verification → 422 `signature_invalid`)** → dependency existence → version deduplication. Packages that are purely L3 with no danger permissions are published automatically, otherwise they go to manual review. → 201 `{id, version, sha256, size, reviewStatus:'published'\|'pending'}` |

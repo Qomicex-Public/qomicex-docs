@@ -18,9 +18,9 @@ title: "外部唤起（qomicex-launcher://）"
 
 | 动作 | URL 形态 | 效果 | 需要确认弹窗 |
 | :--- | :--- | :--- | :--- |
-| 启动实例 | `qomicex-launcher://launch/<实例ID / 实例名 / 目录:实例名>` | 直接启动该实例 | 否 |
+| 启动实例 | `qomicex-launcher://launch?target=<实例ID / 实例名 / 目录:实例名>` | 直接启动该实例 | 否 |
 | 打开页面 | `qomicex-launcher://open/<路由>` | 跳转到启动器内页面 | 否 |
-| 加入房间 | `qomicex-launcher://join/<房间码>` | 加入多人联机房间 | 是 |
+| 加入房间 | `qomicex-launcher://join?code=<房间码>` | 加入多人联机房间 | 是 |
 | 装插件（商店） | `qomicex-launcher://install/plugin?slug=<slug>` | 从插件商店安装 | 是（恒需） |
 | 装插件（直链） | `qomicex-launcher://install/plugin?url=<https 地址>` | 下载 `.qplugin` 并安装 | 官方域免确认，其余需确认 |
 | 装整合包 | `qomicex-launcher://install/modpack?type=…&projectId=…&fileId=…` | 从 Modrinth / CurseForge / FTB 安装整合包 | 是 |
@@ -32,7 +32,7 @@ title: "外部唤起（qomicex-launcher://）"
 链接的结构固定为：
 
 ```text
-qomicex-launcher://<动作>/<参数…>?<查询参数>
+qomicex-launcher://<动作>?<查询参数>
 ```
 
 - **动作名写在 `//` 之后的第一段**，大小写不敏感（浏览器会把这一段统一转成小写）。
@@ -44,18 +44,18 @@ qomicex-launcher://<动作>/<参数…>?<查询参数>
 ## 启动实例
 
 ```text
-qomicex-launcher://launch/1.20.1-Forge
-qomicex-launcher://launch/%E6%88%91%E7%9A%84%E6%95%B4%E5%90%88%E5%8C%85
-qomicex-launcher://launch/C%3A%5Cmc%5Cinst%3AMyPack
+qomicex-launcher://launch?target=1.20.1-Forge
+qomicex-launcher://launch?target=%E6%88%91%E7%9A%84%E6%95%B4%E5%90%88%E5%8C%85
+qomicex-launcher://launch?target=C%3A%5Cmc%5Cinst%3AMyPack
 ```
 
-`launch/` 后面可以填三种写法，启动器按下述顺序匹配：
+`target` 参数可以填三种写法，启动器按下述顺序匹配：
 
 | 写法 | 例子 | 匹配依据 | 何时用 |
 | :--- | :--- | :--- | :--- |
-| 实例 ID | `launch/a1b2c3d4` | 后端生成的唯一 ID | 最可靠；在实例详情页的地址栏 `/instances/<ID>` 里就能看到 |
-| 实例名 | `launch/1.20.1-Forge` | 实例名 | 手写方便，但**重名时会失败**（见下） |
-| 目录:实例名 | `launch/C:\mc\inst:MyPack` | 游戏目录 + 实例名 | 存在同名实例时必须用这种 |
+| 实例 ID | `launch?target=a1b2c3d4` | 后端生成的唯一 ID | 最可靠；在实例详情页的地址栏 `/instances/<ID>` 里就能看到 |
+| 实例名 | `launch?target=1.20.1-Forge` | 实例名 | 手写方便，但**重名时会失败**（见下） |
+| 目录:实例名 | `launch?target=C:\mc\inst:MyPack` | 游戏目录 + 实例名 | 存在同名实例时必须用这种 |
 
 如果你在不同游戏目录下建了同名实例，只写名字是**无法确定**要启动哪个的——启动器会明确拒绝并提示你改用 `目录:实例名`，而不会猜一个。
 
@@ -98,10 +98,10 @@ qomicex-launcher://open/instances/1.20.1-Forge
 ## 加入联机房间
 
 ```text
-qomicex-launcher://join/482913
+qomicex-launcher://join?code=482913
 ```
 
-`join/` 后面就是房主给你的**房间码**。触发后启动器会先切到「联机」页，再发起加入，并弹窗让你确认。
+`code` 参数就是房主给你的**房间码**（形如 `U/XXXX-XXXX-XXXX-XXXX`，需 URL 编码）。触发后启动器会先切到「联机」页，再发起加入，并弹窗让你确认。
 
 ## 安装插件
 
@@ -142,13 +142,13 @@ qomicex-launcher://install/modpack?type=curseforge&projectId=123456&fileId=7890&
 
 | 参数 | 必填 | 说明 |
 | :--- | :--- | :--- |
-| `type` | 是 | `modrinth`（或 `mr`）/ `curseforge`（或 `cf`）/ `ftb` |
+| `type` | 是 | `modrinth`（或 `mr`）/ `curseforge`（或 `cf`）/ `ftb` / `technic` |
 | `projectId` | 是 | 平台上的整合包项目 ID |
-| `fileId` | 是 | 平台上的**具体文件版本 ID** |
+| `fileId` | technic 之外必填 | 平台上的**具体文件版本 ID**；`technic` 不需要 |
 | `name` | 否 | 安装后的实例名。不填时自动取整合包的官方名称 |
 
-- `projectId` 与 `fileId` **必须同时提供**——只给项目 ID 无法确定要装哪个版本。
-- 触发后会弹窗确认，确认后开始后台安装，可在**下载中心**查看进度。
+- `projectId` 与 `fileId` 通常**必须同时提供**（只给项目 ID 无法确定要装哪个版本）；`type=technic` 是例外，**只需要 `projectId`**，不要传 `fileId`。
+- 触发后会弹窗确认，确认后开始后台安装并自动跳到**实例页**，页面提示「**已开始安装**」——安装进度**不会**显示在下载中心。
 - 出于安全考虑，**不支持**用链接指定本地文件路径。
 
 ## 安全须知
@@ -175,6 +175,8 @@ qomicex-launcher://install/modpack?type=curseforge&projectId=123456&fileId=7890&
 - **协议被别的程序占用**。检查系统里是否有其他程序注册了 `qomicex-launcher`。
 - **确认协议名拼写**。必须是 `qomicex-launcher://`，不是 `qomicex://`。
 
+> 协议注册可以在 **设置 → 网络设置 → 系统集成** 中开关。如果这里被关闭，重启启动器后也不会再自动注册，链接同样会「点了没反应」。
+
 ### 弹窗问「此请求来自 xxx」
 
 这是**预期行为**，不是错误：该链接的来源不在官方域白名单里。核对来源后再决定。
@@ -197,7 +199,7 @@ open 'qomicex-launcher://open/settings'
 ```
 
 
-Windows 上也可以在「运行」对话框或 CMD 里直接执行 `start qomicex-launcher://launch/1.20.1-Forge`。
+Windows 上也可以在「运行」对话框或 CMD 里直接执行 `start qomicex-launcher://launch?target=1.20.1-Forge`。
 
 ## 平台注册机制
 
@@ -229,7 +231,7 @@ Windows 上也可以在「运行」对话框或 CMD 里直接执行 `start qomic
 
 如果你在做资源站、启动器联动或插件分发，可以直接构造上面的链接，无需任何 SDK 或权限申请：
 
-- 想要「一键启动某实例」→ 用 `launch/<实例ID>` 或 `launch/<目录:实例名>`，但实例是用户本地的，**应引导用户自己去看自己的实例**（详情页地址栏的 ID），而不是替他拼名字——用户可能有重名实例，纯名字会启动失败。
+- 想要「一键启动某实例」→ 用 `launch?target=<实例ID>` 或 `launch?target=<目录:实例名>`，但实例是用户本地的，**应引导用户自己去看自己的实例**（详情页地址栏的 ID），而不是替他拼名字——用户可能有重名实例，纯名字会启动失败。
 - 想要「一键装你的插件」→ 首选**上架插件商店**后用 `install/plugin?slug=…`（有签名校验，用户信任度更高）。
 - 想要「不经过商店直链分发」→ 用 `install/plugin?url=…`，但**每次都会弹窗**要求用户确认来源，请把包托管在稳定的 https 地址上，并尽量提供有效签名。
 - 想要「整合包一键安装」→ 用 `install/modpack?type=…&projectId=…&fileId=…`。

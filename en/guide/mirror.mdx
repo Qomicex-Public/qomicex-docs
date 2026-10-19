@@ -50,22 +50,11 @@ https://mirror.qomicex.dpdns.org/files/8685/162/jei-26.2-neoforge-30.24.0.176.ja
 
 ### Source domains that can be replaced
 
-- `cdn.modrinth.com`
+- `cdn.modrinth.com` / `cdn-alt.modrinth.com`
 - `mediafilez.forgecdn.net` / `edge.forgecdn.net`
-- `files.minecraftforge.net` / `maven.minecraftforge.net`
 
-## Force proxy mode (optional)
+## How the launcher actually picks a source
 
-When the default route is unavailable (in some cases it may not go through the Proxy), you can force it:
-
-```text
-https://modrinth.lenmei233.dpdns.org/data/.../file.jar?qml_proxy=true
-```
-
-Or via a request header:
-
-```bash
-curl -H "X-QML-Force-Proxy: true" https://modrinth.lenmei233.dpdns.org/data/.../file.jar
-```
+By default the launcher prefers the public MCIM mirror (`mod.mcimirror.top`) and falls back to the QML mirror nodes and then the official sources when it is unavailable. This fallback chain is what **Settings → Download settings → Resource download source** controls — you never have to assemble URLs by hand.
 
 > For learning and exchange only. Please follow the relevant terms of service.

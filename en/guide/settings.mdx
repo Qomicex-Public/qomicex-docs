@@ -3,70 +3,114 @@ title: "Settings reference"
 ---
 ## Settings reference
 
-The settings page lives under **Settings (Settings)** in the sidebar, with category navigation on the left. This page explains each setting and its recommended value, category by category.
+The settings page lives under **Settings** in the sidebar, with category navigation on the left. There are 13 categories: Launcher settings, Basics, Launch settings, Download settings, Storage & Cache, Network settings, Java runtime, Plugins, Appearance, Toolbox, Logs, About, and Debug.
 
-- **Global settings vs instance settings**: the launch settings on this page (memory, Java, JVM arguments) are **global defaults**; an individual instance can override them in Instance details → Settings (see [Instance management](/en/guide/instances)).
+- **Global settings vs instance settings**: the memory, Java, and JVM arguments on this page are **global defaults**; an individual instance can override them in Instance details → Settings (see [Instance management](/en/guide/instances)).
 - The performance tuning deep dive (how much memory to give, which Java to pick, download acceleration) is in [Performance tuning](/en/guide/optimize).
+- The **Debug** category is hidden by default; it appears only after you unlock it on the About page.
 
-## Launcher settings (Launcher settings) (basics)
+## Launcher settings (Launcher settings)
+
+| Setting | Description | Recommendation |
+| :--- | :--- | :--- |
+| Data directory | Where launcher data is stored; **changing it requires a launcher restart** | Do not change unless you know what you are doing |
+
+## Basics (Basics)
 
 | Setting | Description | Recommendation |
 | :--- | :--- | :--- |
 | Language | Interface display language | — |
-| Data directory | Where launcher configuration and data are stored | Do not change unless you know what you are doing |
-| Version isolation (Version isolation) | Store each instance's data separately (recommended) | ✅ On |
-| Close launcher after start | Minimize or exit the launcher once the game starts | Your preference |
-| Automatically report critical errors | Sends crash logs automatically to help improve the launcher (no personal content) | ✅ Recommended |
-| Telemetry | Anonymous feature-usage statistics (opt-in, off by default) | Your choice |
+| Translation service | Service used to translate resource descriptions: MyMemory (default) / Google Translate (needs a VPN) / Bing (requires an Azure Translator API key) | Leave it at the default |
+| Automatically report critical error logs | Reports error logs plus device information (system and hardware); ordinary launch failures and download or install errors are not reported | ✅ Recommended |
+| Anonymous plugin error telemetry | Reports only the plugin ID, version, and error type; off by default | Your choice |
+| Log level | How verbose the console and log files are; the default is **Info** | Raise it while troubleshooting |
 
 ## Launch settings (Launch settings)
 
-- **Memory allocation (Memory allocation)**: `auto` lets the launcher compute it from physical memory, or you can set a maximum manually. **On machines with 8GB or less, prefer auto**; for large modpacks you can hand out 6–8GB
-- **Default Java**: the global default Java runtime (instances can override it individually); if Java is not installed, use the one-click download in the Java section
-- **JVM arguments (JVM arguments)**: extra launch arguments; you usually do not need to fill these in for a Large Modpack
+| Setting | Description | Recommendation |
+| :--- | :--- | :--- |
+| Version isolation (Version isolation) | Keep mods / config / saves separate per version | ✅ On |
+| Close launcher after start | Exit the launcher automatically once the game starts | Your preference |
 
 ## Download settings (Download settings)
 
-See [Download center](/en/guide/downloads#download-acceleration). Open it from the **Download center (Download Center)** page in the launcher.
+| Setting | Description |
+| :--- | :--- |
+| Download threads | **How many files download at the same time** (1–512, default 64). Higher is faster but uses more bandwidth |
+| Chunk threads | Parallel chunked download of large files: off / auto / 1–16 |
+| Download timeout (seconds) | Retry a file automatically when it stops responding for this long (0 = no timeout, 1–120) |
+| Enable HTTP/3 downloads (experimental) | Enables HTTP/3 for CDNs that support it |
+| Force HTTP/1.1 parallel connections | Compatibility with some proxies |
+| Skip JAR-level version probing | Speeds up version scanning |
+| Resource file naming | `[localized name]original name-version` / `[original name]localized name-version` / `localized name-original name-version` / `localized name-version` / `original name-version` / `localized name` / `original name` |
+
+Download settings also contain three download source groups, each with its own **auto-select** switch and latency test:
+
+| Download source | Options |
+| :--- | :--- |
+| Download source (game itself) | Official / BMCLAPI mirror + automatically pick the fastest source |
+| File download source | Official / mirror + automatically pick a source |
+| Resource download source | Modrinth / CurseForge official vs the MCIM mirror + automatically pick the fastest resource source |
 
 ## Storage and cache (Storage & Cache)
 
-- **Version list cache duration**: how long CurseForge / NeoForge version lists are cached; shorter = fresher, longer = fewer requests
-- **Concurrency and TTL**: CurseForge request concurrency and cache lifetime; leave them alone in general
+- **Data directory**: where launcher data is stored; changing it requires a restart to take effect.
+- **Version list cache**: clears the HTML cache files of the Forge version list.
+- **CurseForge version list concurrency**: how many pages are fetched at once (1–20, default 10).
+- **CurseForge version list cache TTL (seconds)**: 0 = cache forever (until a restart or a manual clear); default 300 seconds.
+- **NeoForge / FTB version cache, mod list cache, mod update cache, modpack import temporary files**: each has its own clear button.
 
 ## Network settings (Network settings)
 
 | Setting | Description |
 | :--- | :--- |
-| Proxy mode (Proxy mode) | Off / Follow system / HTTP(S) proxy / SOCKS5 proxy |
-| Proxy address (Proxy address) | `host:port`, e.g. `127.0.0.1:7890` |
-| Ignore SSL certificates (Ignore SSL certificates) | Skip certificate verification (fixes certificate hijacking by some proxies; it is a security risk, so enable it temporarily only while troubleshooting) |
-| Parallel HTTP/1.1 (HTTP/1.1 parallel) | Force parallel downloads to use HTTP/1.1 for compatibility with some proxies |
+| Proxy type | Off / Follow system / HTTP(S) proxy / SOCKS5 proxy |
+| Proxy server address | `host:port`, e.g. `127.0.0.1:7890` |
+| Ignore SSL certificates | Skip certificate verification (fixes certificate hijacking by some proxies; it is a security risk, so enable it temporarily only while troubleshooting) |
+| Multiplayer relay | Custom EasyTier relay nodes; supports protocols such as `tcp/udp/wg/quic/ws/wss`. Custom nodes take priority; leave the field empty to use official nodes only |
+| System integration | Associate or disassociate `qomicex-launcher://` links |
 
 The proxy here applies to **the launcher's own requests** (resource search, downloads, and so on) and does not change in-game networking.
 
 ## Java runtime (Java runtime) {#java-runtime}
 
-- The list of scanned Java installations and the selection of the default runtime
-- **Download Java (Download Java)**: downloads a matching JDK automatically (the official Mojang source is recommended), so you do not install Java by hand
-- **Add manually (Add manually)**: point to a Java path already on your machine
+- **Quick scan / Deep scan / Refresh list**: detects the Java runtimes on your machine; use **Show invalid entries** to inspect unusable ones.
+- **Download Java**: in the download dialog, pick a distribution (those marked "Recommended"), the Java major version, platform, architecture, and target directory.
+- **Add manually**: point to the full path of a Java executable already on your machine.
+- **Default configuration** (further down this category): the default Java runtime (auto-selection available), memory allocation, and extra JVM arguments — these three are the [Memory and JVM arguments](#memory-and-jvm-arguments) below.
+
+### Memory and JVM arguments
+
+- **Memory allocation**: **Auto** computes it as 70% of available memory (minimum 512 MiB); you can also drag it manually, from 512 MiB up to the available memory in 256 MiB steps.
+- **Extra JVM arguments**: JVM arguments appended when Minecraft starts. Fill these in only if the modpack author provides recommended values.
+
+<Warning>
+Do not change JVM arguments unless you know what you are doing — wrong arguments can prevent the game from starting.
+</Warning>
 
 ## Appearance (Appearance)
 
 | Setting | Description |
 | :--- | :--- |
-| Theme mode / Preset / Accent color (Theme mode / preset / accent color) | Light or dark, theme presets (Default/Latte/Smoothie…), accent color (can follow background with Monet color extraction) |
-| Component material (Component material) | default / Frosted glass / Acrylic / Aero / Liquid glass; the texture of cards |
-| Background (Background) | Custom background image (random supported), overlay opacity, blur |
-| Animation (Animation) | UI animation toggle and speed, maximum frame rate limit |
-| Window corners (Window corners) | Window corner toggle and radius (Windows) |
-| Font (Font) | Global UI font |
-| Watermark (Watermark) | Home watermark text toggle and content |
+| Theme mode / Theme preset / Accent color | Light or dark; presets are Qomicex Default and Catppuccin (Latte / Frappé / Macchiato / Mocha); the accent color can be set manually or **follow the background (Monet color extraction)** |
+| Component material | Default / Frosted glass / Acrylic / Aero / Liquid glass (preview). Enabling Liquid glass asks for confirmation and warns about the performance cost; any non-default material adds a blur strength slider |
+| Card opacity / Card border color / Card border width | With the default material: the opacity of category cards (default 50), plus border color and thickness (0–4px, where 0 means no border) |
+| Dialog opacity | Background opacity of dialogs, independent of the component material (default 75) |
+| Page animations / GPU hardware acceleration / Animation speed | Page transition and dialog animations, the hardware acceleration switch (only shown while page animations are on), and animation speed from 0.25x to 2x |
+| Frame rate limit | Unlimited / 30 / 60 / 120 / 144 |
+| Window corners | Corner toggle and radius (square / default 8px / large); applies only when the system frame is not used |
+| Interface font | Pick an installed system font; it applies to the whole UI immediately |
+| Background | Background image (can pick a random one on each start, play animated images, or play video), overlay opacity, blur |
+| Watermark | Home page watermark text and subtitle |
 
 ## Toolbox (Toolbox)
 
-A collection of built-in tools: log export, network request log toggle, game log analysis, and other diagnostics.
+The toolbox currently has a single capability: **Custom file download** — paste a list of URLs and download them in bulk to a folder you choose.
+
+## Logs (Logs)
+
+Log management: keeps the 10 most recent log files, with search, filtering by level, and export of all logs or export as `.gz`.
 
 ## About (About)
 
-Version information, contributors, the dependency license list, and **License and privacy (Copyright & privacy)** (copyright notice, open-source licenses, and the full privacy policy — see the dedicated [License and privacy](/en/guide/legal) page).
+Version information, **License** (channel / expiry date / machine ID / activate license), **Updates** (including automatically downloading and installing updates), developers, acknowledgements, reference projects, backend dependencies, frontend dependencies, open-source licenses, and **Copyright & privacy** (the full copyright notice, user agreement, and privacy policy), plus sponsor acknowledgements.

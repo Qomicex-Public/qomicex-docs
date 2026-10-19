@@ -90,6 +90,7 @@ Permission denied: requires <权限id>
 | `filesystem:write` | 写入文件系统 | 危险 |
 | `hook:register` | 钩住启动器方法（拦截/修改参数、阻止执行） | 危险 |
 | `download:manage` | 管理下载中心任务 | 警告 |
+| `plugin:log` | 输出插件日志 | 普通 |
 
 「风险」用于安装详情弹窗的视觉提示：普通=蓝、警告=黄、危险=红。声明权限时遵循**最小权限原则**，只声明你真正用到的。
 
@@ -471,6 +472,17 @@ await __PLUGIN_API__.call('showToast', '操作成功', 'success')
 - 权限：`ui:toast`
 - 参数：`(message: string, type?: 'info' | 'error' | 'success')`，默认 `info`
 
+### log — 输出插件日志
+
+把日志写入启动器日志，便于在「设置 → 日志」中统一排查。
+
+```js
+await __PLUGIN_API__.call('log', 'info', '插件初始化完成')
+```
+- 权限：`plugin:log`
+- 参数：`(level: string, message: string)`
+
+
 ### 文件拖放事件（file-drop）
 
 把文件拖入启动器窗口时，主窗口广播 `file-drop` 事件，payload 为拖入文件的**绝对路径数组**。前端（主界面）可用 `@tauri-apps/api/event` 监听：
@@ -584,7 +596,7 @@ __PLUGIN_API__.addMenuItem({
   action: 'page'
 })
 ```
-- 权限：无（无需在 manifest 声明）
+- 权限：`ui:inject_sidebar`
 - 参数：`PluginMenuItem`（同 `contributes.menuItems` 元素）
 - 插件停用时自动移除动态注册的菜单项
 
