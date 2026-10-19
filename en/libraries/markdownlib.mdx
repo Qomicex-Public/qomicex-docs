@@ -87,14 +87,14 @@ Removes HTML tags and returns plain text.
 Call through `__PLUGIN_API__.callPlugin`:
 
 ```js
-await __PLUGIN_API__.callPlugin(插件Id, 方法名, ...参数)
+await __PLUGIN_API__.callPlugin(pluginId, methodName, ...args)
 ```
 
 ```js
 const html = await __PLUGIN_API__.callPlugin(
-  'top.qomicex.markdown',  // 插件 ID
-  'renderMarkdown',        // 方法名
-  '# 标题\n\n**加粗** 和 `代码`'
+  'top.qomicex.markdown',  // plugin ID
+  'renderMarkdown',        // method name
+  '# Heading\n\n**bold** and `code`'
 )
 ```
 
@@ -110,11 +110,11 @@ const html = await __PLUGIN_API__.callPlugin(
       const html = await __PLUGIN_API__.callPlugin(
         'top.qomicex.markdown',
         'renderMarkdown',
-        '## 标题\n\n**加粗**、*斜体*、`行内代码`'
+        '## Heading\n\n**bold**、*italic*、`inline code`'
       )
       document.getElementById('out').innerHTML = html
     } catch (e) {
-      document.getElementById('out').textContent = '渲染失败: ' + e.message
+      document.getElementById('out').textContent = 'render failed: ' + e.message
     }
   }
   render()
@@ -124,8 +124,8 @@ const html = await __PLUGIN_API__.callPlugin(
 ### Inline rendering + stripping tags
 
 ```js
-const inline = await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdownInline', '**你好** 世界')
-// → '<strong>你好</strong> 世界'
+const inline = await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdownInline', '**Hello** world')
+// → '<strong>Hello</strong> world'
 
 const text = await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'stripHtml', '<p>Hello <b>World</b></p>')
 // → 'Hello World'
@@ -138,10 +138,10 @@ Overlay windows expose `callPlugin` on `__PLUGIN_API__` too, with the same usage
 ### Handling a missing dependency
 
 ```js
-if (await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdown', '**测试**')) {
-  // 正常渲染
+if (await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdown', '**test**')) {
+  // renders normally
 } else {
-  // 依赖缺失或未激活，走降级逻辑
+  // dependency missing or inactive; fall back
 }
 ```
 
@@ -177,13 +177,13 @@ await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdown', md)
 Call flow:
 
 ```text
-调用方插件 ──callPlugin──▶ 主窗口 __pluginRegistry 中转
+consumer plugin ──callPlugin──▶ main window __pluginRegistry relays the call
                               │
                               ▼
-                         MarkdownLib (activated)执行 renderMarkdown
+                         MarkdownLib (activated)run renderMarkdown
                               │
                               ▼
-                    返回渲染结果 (Promise value)
+                    returns the rendered result (Promise value)
 ```
 
 ### Why embed instead of using a CDN
@@ -201,9 +201,9 @@ MarkdownLib **embeds** `marked.min.js` in the plugin package instead of referenc
 Dependencies are declared in the `dependencies` array of `manifest.json` and validated by the backend at install and startup:
 
 ```text
-安装时：检查必装前置是否已安装且版本符合 → 否则拒绝安装 (PLUGIN_MISSING_DEPENDENCY)
-启动时：按依赖拓扑排序激活 (dependencies activate before dependents)
-运行中：可选前置缺失不影响启用，调用其方法时才报错
+install time: check required dependencies are installed with matching versions, otherwise refuse the install (PLUGIN_MISSING_DEPENDENCY)
+startup: activate in dependency topological order (dependencies activate before dependents)
+at runtime: a missing optional dependency does not block enabling; it only errors when you call its methods
 ```
 
 Dependent plugins register methods with `registerMethod` on `__PLUGIN_API__`, and the methods are stored in the main window's `__pluginRegistry`. Disabling a plugin removes its methods automatically.
@@ -212,12 +212,12 @@ Dependent plugins register methods with `registerMethod` on `__PLUGIN_API__`, an
 
 ```text
 registerMethod(name, fn)
-  ──▶ 主窗口 __pluginRegistry[name] = fn
+  ──▶ main window __pluginRegistry[name] = fn
 
 callPlugin(pluginId, name, ...args)
-  ──▶ 查找 pluginId 注册的 name 方法
-       ├── 找到 → 执行 fn(...args)，返回结果 (value or Promise)
-       └── 未找到 → reject (plugin missing, not activated, or method not registered)
+  ──▶ look up pluginId registered as name 
+       ├── found → run fn(...args)，return the result (value or Promise)
+       └── not found → reject (plugin missing, not activated, or method not registered)
 ```
 
 ### Error handling

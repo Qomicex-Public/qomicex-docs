@@ -10,19 +10,19 @@ The plugin debugging harness lets you debug plugin logic in a plain browser (Chr
 **Recommended: just use `qomicex dev`** (plugins inside the repo automatically use harness mode):
 
 ```bash
-qomicex dev    # 在插件仓库内运行，自动检测并启动 harness
+qomicex dev    # run inside the plugin repo; detects and starts the harness
 ```
 
 Or call the harness script directly:
 
 ```bash
-# 前置：插件依赖已装好、plugin-ui 已构建
+# prerequisites: plugin dependencies installed, plugin-ui built
 pnpm --filter @qomicex/plugin-ui build
 
-# 跑 hello-plugin 调试 (headless)
+# run hello-plugin debugging (headless)
 pnpm run harness -- hello-plugin
 
-# 有头模式 (visible browser, works with DevTools breakpoints)
+# headed mode (visible browser, works with DevTools breakpoints)
 pnpm run harness -- hello-plugin --headed
 ```
 
@@ -38,12 +38,12 @@ pnpm exec playwright install chromium
 ## Architecture
 
 ```text
-Node 脚本 scripts/harness/run.mjs (main controller)
-  · 起 stub mock server (child process, defaults to :5100)
-  · 起 Vite dev (defaults to :1420 if not running)
-  · Playwright 开 Chromium，addInitScript 注入 Tauri mock
-  · page.route 把 127.0.0.1:5000/api/** → 转发到 stub :5100
-  · fs.watch 插件 src → 重建 → page.reload
+Node script scripts/harness/run.mjs (main controller)
+  · starts the stub mock server (child process, defaults to :5100)
+  · starts the Vite dev server (defaults to :1420 if not running)
+  · Playwright launches Chromium and injects the Tauri mock via addInitScript
+  · page.route forwards 127.0.0.1:5000/api/** -> to the stub :5100
+  · fs.watch on plugin src -> rebuild -> page.reload
 ```
 
 ## Components
@@ -79,9 +79,9 @@ pnpm run harness -- hello-plugin --mock mock-hello.json
 
 ```json
 {
-  "settings": { "greeting": "自定义假配置", "foo": 1 },
+  "settings": { "greeting": "custom mock config", "foo": 1 },
   "systemInfo": { "os": "Linux", "arch": "x86_64" },
-  "execCommand": { "exitCode": 0, "stdout": "mock echo 输出", "stderr": "" }
+  "execCommand": { "exitCode": 0, "stdout": "mock echo output", "stderr": "" }
 }
 ```
 
@@ -117,7 +117,7 @@ pnpm run harness -- hello-plugin --build-cmd "pnpm run build"
 Inside the repo, `qomicex dev` detects the harness and invokes it (see [qomicex CLI reference](/en/plugins/cli)):
 
 ```bash
-qomicex dev    # 自动启动 harness 模式，监听 plugins-dev/{id} 源码
+qomicex dev    # starts harness mode and watches plugins-dev/{id} sources
 ```
 
 ## Limitations and caveats

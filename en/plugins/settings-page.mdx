@@ -12,7 +12,7 @@ Plugins often need their own configuration UI (toggles, API keys, default behavi
 ```json
 {
   "id": "top.qomicex.weather",
-  "name": "天气",
+  "name": "Weather",
   "version": "1.0.0",
   "layers": ["l2"],
   "entry": { "frontend": "dist/index.html" },
@@ -41,27 +41,27 @@ Plugins often need their own configuration UI (toggles, API keys, default behavi
 <body>
   <div class="row">
     <div>
-      <div>城市</div>
-      <div class="hint">天气组件显示的城市名</div>
+      <div>City</div>
+      <div class="hint">The city shown by the weather widget</div>
     </div>
-    <input id="city" type="text" placeholder="北京" />
+    <input id="city" type="text" placeholder="Beijing" />
   </div>
   <div class="row">
     <div>
-      <div>自动刷新</div>
-      <div class="hint">每 10 分钟刷新一次天气数据</div>
+      <div>Auto refresh</div>
+      <div class="hint">Refresh the weather data every 10 minutes</div>
     </div>
     <input id="autoRefresh" type="checkbox" />
   </div>
 
   <script>
     const api = window.__PLUGIN_API__
-    // 初始化：读已有配置
+    // init: read the existing settings
     api.call('getSettings').then((s) => {
       document.getElementById('city').value = s.city ?? ''
       document.getElementById('autoRefresh').checked = s.autoRefresh === true
     })
-    // 修改即保存 (setSettings merges by key, so there is no need to write the whole file)
+    // save on change (setSettings merges by key, so there is no need to write the whole file)
     document.getElementById('city').addEventListener('change', (e) =>
       api.call('setSettings', 'city', e.target.value))
     document.getElementById('autoRefresh').addEventListener('change', (e) =>
@@ -87,7 +87,7 @@ When you provide a **Settings** button on a plugin page or inside an Overlay win
 ```js
 await __PLUGIN_API__.call('openPluginSettings')
 
-// 或定位到其他插件的设置 tab
+// or focus another plugin's settings tab
 await __PLUGIN_API__.call('openPluginSettings', 'top.qomicex.weather')
 ```
 

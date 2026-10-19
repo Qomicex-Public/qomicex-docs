@@ -12,7 +12,7 @@ Declare a `dashboard:widgets` Slot (slot) in `contributes.slots` of `manifest.js
 ```json
 {
   "id": "top.qomicex.weather",
-  "name": "天气",
+  "name": "Weather",
   "version": "1.0.0",
   "minLauncherVersion": "0.1.0",
   "layers": ["l2"],
@@ -49,13 +49,13 @@ Widget content renders inside an iframe, and the grid **stretches the iframe to 
 <html>
 <head>
   <style>
-    /* 启动器注入的 .p-* 基础样式已把 body/#root 设为 100% 高度 */
+    /* the launcher-injected .p-* base styles already set body/#root to 100% height */
     body { margin: 0; }
     .widget {
       height: 100%;
       display: flex;
       flex-direction: column;
-      justify-content: center; /* 垂直居中，矮格位也好看 */
+      justify-content: center; /* center vertically so it looks right in short cells too */
       padding: 12px;
       box-sizing: border-box;
     }
@@ -63,7 +63,7 @@ Widget content renders inside an iframe, and the grid **stretches the iframe to 
 </head>
 <body>
   <div class="widget" id="root">
-    <strong>天气</strong>
+    <strong>Weather</strong>
     <span id="temp">--°C</span>
   </div>
   <script src="./widget.js"></script>
@@ -83,7 +83,7 @@ const root = document.getElementById('root')
 
 const ro = new ResizeObserver(([entry]) => {
   const { width, height } = entry.contentRect
-  // iframe 的 viewport 即容器大小，直接按物理尺寸分档
+  // the iframe viewport equals the container size, so branch on physical size
   root.classList.toggle('widget--compact', height < 120)
   root.classList.toggle('widget--large', width > 500)
 })
@@ -91,10 +91,10 @@ ro.observe(document.body)
 ```
 
 ```css
-/* 简略模式：只显示标题和关键数值 */
+/* compact mode: show only the heading and key values */
 .widget--compact .detail { display: none; }
 
-/* 大尺寸：追加摘要、图表等 */
+/* large size: add summary, charts, and so on */
 .widget .extra { display: none; }
 .widget--large .extra { display: block; }
 ```

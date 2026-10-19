@@ -28,12 +28,12 @@ Priority (`plugin-loader.tsx` `useWebview`): `render === 'webview' || layers.inc
 An l4 window is not an ordinary child window opened with `window.open`; it is a **separate WebView window** created through Tauri IPC `WebviewWindow` (`opener` is `null`), so you cannot rely on `window.opener.postMessage`. Cross-window communication uses the **Tauri event system** (`emitTo` / `listen`; `core:event` is allowed by default):
 
 ```text
-┌─────────────── 主窗口 (main) ───────────────┐        ┌──────── l4 窗口 (plugin-webview-{id}) ────────┐
-│ plugin-loader: createRemoteWebview()          │        │ App 轻量模式 → PluginWebviewPage             │
-│   ├─ 打开 WebviewWindow(/plugins/p/:id?…)     │──────▶ │   ├─ iframe(sandbox) 加载插件 HTML+桥脚本    │
-│   └─ initL4Bridge() 监听 plugin-l4-api-call   │        │   └─ 插件 __plugin_api_call 消息             │
-│        handleApiCall(权限校验+执行)            │◀───────│        ├─ emitTo('main', plugin-l4-api-call) │
-│        └─ emitTo(l4label, plugin-l4-api-response) ───▶ │        └─ postMessage 回插件 iframe          │
+┌─────────────── main window (main) ───────────────┐        ┌──────── l4 window (plugin-webview-{id}) ────────┐
+│ plugin-loader: createRemoteWebview()          │        │ App lightweight mode -> PluginWebviewPage             │
+│   ├─ open WebviewWindow(/plugins/p/:id?…)     │──────▶ │   ├─ iframe (sandbox) loads plugin HTML + bridge script    │
+│   └─ initL4Bridge() listens for plugin-l4-api-call   │        │   └─ plugin __plugin_api_call message             │
+│        handleApiCall (permission check + run)            │◀───────│        ├─ emitTo('main', plugin-l4-api-call) │
+│        └─ emitTo(l4label, plugin-l4-api-response) ───▶ │        └─ postMessage back to the plugin iframe          │
 └──────────────────────────────────────────────┘        └──────────────────────────────────────────────┘
 ```
 

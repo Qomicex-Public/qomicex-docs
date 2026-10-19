@@ -10,8 +10,8 @@ The complete flow from packaging a `.qplugin` to listing it in the store. For AP
 A `.qplugin` is just a **zip archive**, with one hard rule: **`manifest.json` must be at the root of the archive**.
 
 ```text
-my-plugin.zip          ← 重命名为 .qplugin
-├── manifest.json      ← 必须在根目录！
+my-plugin.zip          <- rename to .qplugin
+├── manifest.json      <- must be at the root!
 ├── index.html
 └── assets/
     └── main.js
@@ -22,7 +22,7 @@ my-plugin.zip          ← 重命名为 .qplugin
 ```text
 my-plugin.zip
 └── dist/
-    ├── manifest.json   ← 商店找不到它
+    ├── manifest.json   <- the store cannot find it
     └── index.html
 ```
 
@@ -31,7 +31,7 @@ my-plugin.zip
 ```json
 {
   "id": "dev.example.my-plugin",
-  "name": "我的插件",
+  "name": "My Plugin",
   "version": "1.0.0",
   "minLauncherVersion": "1.0.0",
   "layers": ["l2"],
@@ -54,7 +54,7 @@ my-plugin.zip
 **This is the most common packaging failure on Windows**, and the error looks like this:
 
 ```text
-包含不安全路径: dist\index.html
+unsafe path:  dist\index.html
 ```
 
 ### Cause
@@ -77,55 +77,55 @@ param(
     [string]$FolderPath
 )
 
-# 如果没有参数，则弹出文件夹选择对话框
+# Without arguments, show a folder picker dialog
 if (-not $FolderPath) {
     Add-Type -AssemblyName System.Windows.Forms
     $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-    $dialog.Description = "请选择要打包的文件夹"
+    $dialog.Description = "Choose the folder to package"
     if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         $FolderPath = $dialog.SelectedPath
     } else {
-        Write-Host "未选择文件夹，退出。"
+        Write-Host "No folder selected, exiting."
         exit
     }
 }
 
-# 验证路径
+# Validate the path
 if (-not (Test-Path $FolderPath -PathType Container)) {
-    Write-Host "错误：无效的文件夹路径！"
+    Write-Host "Error: invalid folder path!"
     exit 1
 }
 
-# 生成ZIP文件名 (place them in the same directory)
+# Build the ZIP file name (place them in the same directory)
 $parent = Split-Path $FolderPath -Parent
 $folderName = Split-Path $FolderPath -Leaf
 $zipPath = Join-Path $parent "$folderName.zip"
 
-# 如果ZIP已存在，询问是否覆盖
+# If the ZIP exists, ask whether to overwrite
 if (Test-Path $zipPath) {
-    $choice = Read-Host "ZIP文件已存在，是否覆盖？(y/n)"
+    $choice = Read-Host "The ZIP already exists. Overwrite? (y/n)"
     if ($choice -ne 'y') { exit }
     Remove-Item $zipPath -Force
 }
 
-# 创建ZIP
+# Create the ZIP
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zip = [System.IO.Compression.ZipFile]::Open($zipPath, 'Create')
 
-# 遍历所有文件，添加到ZIP，并强制将路径中的 \ 替换为 /
+# Add every file to the ZIP, forcing backslashes in paths to \ forward slashes
 Get-ChildItem -Path $FolderPath -Recurse -File | ForEach-Object {
     $relativePath = $_.FullName.Substring($FolderPath.Length + 1)
-    $entryPath = $relativePath -replace '\\', '/'   # 关键替换
+    $entryPath = $relativePath -replace '\\', '/'   # key replacement
     [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $entryPath) | Out-Null
 }
 
 $zip.Dispose()
 
-Write-Host "✅ 打包成功！ZIP文件位于：$zipPath"
-Write-Host "✅ 内部路径已全部使用正斜杠 /"
+Write-Host "✅ Packaged successfully! ZIP written to: $zipPath"
+Write-Host "✅ All internal paths use forward slashes /"
 
-# 暂停以查看结果 (if you launched it by double-clicking in File Explorer)
-Read-Host "按回车键退出..."
+# Pause so the result stays visible (if you launched it by double-clicking in File Explorer)
+Read-Host "Press Enter to exit..."
 ```
 
 The script packages **the contents of the folder you select**. Select the directory containing your build output (such as `dist`) and make sure `manifest.json` is at the root of that directory.
@@ -141,7 +141,7 @@ The script packages **the contents of the folder you select**. Select the direct
 ### PowerShell 7+
 
 ```powershell
-# PS7 的 Compress-Archive 已使用正斜杠；注意要压缩的是内容而非父文件夹
+# PS7 Compress-Archive already uses forward slashes; compress the contents, not the parent folder
 Compress-Archive -Path ./dist/* -DestinationPath my-plugin.zip
 ```
 
@@ -163,8 +163,8 @@ The output should contain no `\`.
 The CLI uses the RFC 8628 device flow, so everything happens on the command line:
 
 ```bash
-export QOMICEX_SIGN_KEY=<私钥 base64/PEM>   # 或 --key ./key.pem
-qomicex publish --changelog "修复 X"
+export QOMICEX_SIGN_KEY=<private key base64/PEM>   # or --key ./key.pem
+qomicex publish --changelog "fix X"
 ```
 
 Flow: device flow login (prints the authorization code and verification URL, confirmed in the browser) → `POST /developer/keys` to upload the developer public key and obtain a certificate → the private key signs the package body (`signature.json` + `signature.cert.json` packed into the `.qplugin`) → find or create the plugin record → `POST /plugins/:id/versions` multipart upload. See the [qomicex CLI tool reference](/en/plugins/cli) for details.
@@ -176,7 +176,7 @@ Flow: device flow login (prints the authorization code and verification URL, con
 - **You must sign with the CLI before uploading** (the store **enforces signature verification**):
 
 ```bash
-qomicex pack --key ./dev-key.pem    # 产出带 signature.json 的 .qplugin
+qomicex pack --key ./dev-key.pem    # produce a .qplugin containing signature.json
 ```
 
 - Plugin management page → "Upload new version" → select the signed `.qplugin` (rename the zip extension to `.qplugin`)

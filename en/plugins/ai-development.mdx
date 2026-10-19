@@ -11,16 +11,16 @@ The Skill package (Skill package)is maintained separately in the **[qomicex-plug
 
 ```text
 skills/qomicex-plugin-dev/
-├── SKILL.md           # 主入口：何时使用、文件导航、完整流程、起步提示词
-├── refs/              # 12 个专题参考 (loaded on demand)
-│   ├── cli.md         # CLI 命令速查 (create/dev/verify/pack/publish)
-│   ├── manifest.md    # manifest.json 全字段 + layers + dependencies + contributes
-│   ├── plugin-api.md  # 桥 API (__PLUGIN_API__)签名速查
-│   ├── theme.md       # 主题语义 token 三级体系 + var() 消费约定
-│   ├── publishing.md  # Ed25519 签名流程 (generate key → pack --key → publish)
-│   ├── debugging.md   # harness 热重载调试
-│   └── ...            # 其余专题
-└── templates/         # 13 个可复用模板 (React, manifest, overlay, and more)
+├── SKILL.md           # entry point: when to use, file map, full workflow, starter prompt
+├── refs/              # 12 topic references (loaded on demand)
+│   ├── cli.md         # CLI command reference (create/dev/verify/pack/publish)
+│   ├── manifest.md    # manifest.json all fields + layers + dependencies + contributes
+│   ├── plugin-api.md  # bridge API (__PLUGIN_API__) signature reference
+│   ├── theme.md       # three-tier theme tokens + var() consumption rules
+│   ├── publishing.md  # Ed25519 signing flow (generate key → pack --key → publish)
+│   ├── debugging.md   # harness hot-reload debugging
+│   └── ...            # other topics
+└── templates/         # 13 reusable templates (React, manifest, overlay, and more)
 ```
 
 These files track the code (`src/plugins/types.ts`, the CLI's `src/lib/*`, and the public docs). **When field meanings are in doubt, the code wins; if you are unsure, flag it rather than inventing an API.**
@@ -32,23 +32,23 @@ These files track the code (`src/plugins/types.ts`, the CLI's `src/lib/*`, and t
 Copy the following to any AI assistant and it will complete the installation:
 
 ```text
-请帮我安装 Qomicex 插件开发 skill。步骤：
-1. 执行 `git clone https://github.com/Qomicex-Public/qomicex-plugin-skills.git /tmp/qomicex-plugin-skills` (or any temporary directory)
-2. 创建目录 `~/.agents/skills/` (if missing)
-3. 把仓库里的 `skills/qomicex-plugin-dev/` 整个目录复制到 `~/.agents/skills/`
-4. 确认 `~/.agents/skills/qomicex-plugin-dev/SKILL.md` 存在，并删除临时 clone 目录
-5. 告诉我已安装完成，重启 AI 工具 (opencode / Claude Code)后生效
+Please install the Qomicex plugin development skill for me. Steps:
+1. run `git clone https://github.com/Qomicex-Public/qomicex-plugin-skills.git /tmp/qomicex-plugin-skills` (or any temporary directory)
+2. create the directory `~/.agents/skills/` (if missing)
+3. Copy the whole `skills/qomicex-plugin-dev/` directory into `~/.agents/skills/`
+4. Verify `~/.agents/skills/qomicex-plugin-dev/SKILL.md` exists, then delete the temporary clone
+5. Tell me installation is done; it takes effect after restarting the AI tool (opencode / Claude Code)
 ```
 
 On Windows (PowerShell):
 
 ```text
-请帮我安装 Qomicex 插件开发 skill。步骤：
-1. 执行 `git clone https://github.com/Qomicex-Public/qomicex-plugin-skills.git $env:TEMP\qomicex-plugin-skills`
-2. 创建目录 `$HOME\.agents\skills\` (if missing)
-3. 把 `skills\qomicex-plugin-dev\` 整个目录复制到 `$HOME\.agents\skills\`
-4. 确认 `$HOME\.agents\skills\qomicex-plugin-dev\SKILL.md` 存在，删除临时 clone 目录
-5. 告诉我已安装完成，重启 AI 工具后生效
+Please install the Qomicex plugin development skill for me. Steps:
+1. run `git clone https://github.com/Qomicex-Public/qomicex-plugin-skills.git $env:TEMP\qomicex-plugin-skills`
+2. create the directory `$HOME\.agents\skills\` (if missing)
+3. Copy the `skills\qomicex-plugin-dev\` directory into `$HOME\.agents\skills\`
+4. Verify `$HOME\.agents\skills\qomicex-plugin-dev\SKILL.md` exists, then delete the temporary clone directory
+5. Tell me installation is done; it takes effect after restarting the AI tool
 ```
 
 ### Option 2: run the install script manually
@@ -91,14 +91,14 @@ rm -rf ~/.agents/skills/qomicex-plugin-dev
 Used together with the CLI, the Skill package lets an AI produce a publishable plugin end to end:
 
 ```bash
-qomicex create com.example.myplugin   # 1. 脚手架生成项目
+qomicex create com.example.myplugin   # 1. scaffold the project
 cd com.example.myplugin
-pnpm install                          # 2. 装依赖
-qomicex dev                           # 3. 热重载调试 (use the harness inside the repo)
-# ... AI 实现功能 ...
-qomicex verify                        # 4. 静态校验 (manifest, permissions, long loops)，0 error
-qomicex pack --key ./dev-key.pem      # 5. 构建 + 打包 (can be signed)
-qomicex publish --changelog "..."     # 6. 发布商店 (device flow sign-in → signing → upload)
+pnpm install                          # 2. install dependencies
+qomicex dev                           # 3. hot-reload debugging (use the harness inside the repo)
+# ... AI implements the feature ...
+qomicex verify                        # 4. static validation (manifest, permissions, long loops), 0 errors
+qomicex pack --key ./dev-key.pem      # 5. build + package (can be signed)
+qomicex publish --changelog "..."     # 6. publish to the store (device flow sign-in → signing → upload)
 ```
 
 For the full command reference, see [CLI reference](/en/plugins/cli).
@@ -123,8 +123,8 @@ The complete rules are in the Skill package's `refs/pitfalls.md`; the above is o
 An AI-generated plugin **must pass `qomicex verify`** (0 error counts as passing):
 
 ```bash
-qomicex verify                        # 目录模式：manifest + 权限最小化 + 长循环
-qomicex verify --package ./release/xxx.qplugin   # 包模式：manifest + 签名验签
+qomicex verify                        # directory mode: manifest + permission minimality + long loops
+qomicex verify --package ./release/xxx.qplugin   # package mode: manifest + signature verification
 ```
 
 Validation covers manifest validity, least privilege (comparing against the bridge methods the source actually calls), and long-loop warnings (`while(true)` / unbounded `setInterval`). Warnings are acceptable but should ideally be removed.

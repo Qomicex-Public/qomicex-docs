@@ -55,8 +55,8 @@ Plugin API calls across windows use `postMessage` (structured clone), and **func
 
 ```js
 await __PLUGIN_API__.proxyFetchStream(req, {
-  onChunk(c) { /* 处理 SSE data 行 */ },
-  onError(e) { /* 流中断 */ }
+  onChunk(c) { /* handle an SSE data line */ },
+  onError(e) { /* stream aborted */ }
 })
 ```
 - The returned Promise resolves when the stream ends, but **chunk callbacks may still fire after it resolves**
@@ -216,7 +216,7 @@ const js = bundle
 Use `split().join()` instead, which performs no replacement expansion:
 
 ```js
-const html = tpl.split('<!--占位符-->').join('<script>' + js + '</script>')
+const html = tpl.split('<!--placeholder-->').join('<script>' + js + '</script>')
 ```
 
 ### Plugin management/list icons: library plugins use top-level `manifest.icon`

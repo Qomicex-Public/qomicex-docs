@@ -12,7 +12,7 @@ Generating a valid manifest skeleton with `qomicex create <id>` is recommended (
 ```json
 {
   "id": "top.qomicex.assistant",
-  "name": "AI 助手",
+  "name": "AI Assistant",
   "version": "1.2.0",
   "minLauncherVersion": "0.1.0",
   "layers": ["l3"],
@@ -27,11 +27,11 @@ Generating a valid manifest skeleton with `qomicex create <id>` is recommended (
   },
   "contributes": {
     "menuItems": [
-      { "path": "/plugins/p/top.qomicex.assistant", "label": "AI 助手", "icon": "A", "action": "overlay" }
+      { "path": "/plugins/p/top.qomicex.assistant", "label": "AI Assistant", "icon": "A", "action": "overlay" }
     ],
     "overlay": {
       "file": "dist/overlay.html",
-      "title": "AI 助手",
+      "title": "AI Assistant",
       "width": 380,
       "height": 500,
       "minimizable": false,
@@ -128,15 +128,15 @@ Collect a plugin's settings UI into the launcher, so settings entry points are n
 ### icon examples
 
 ```json
-// ① emoji / 纯文本
-{ "path": "/plugins/p/xxx", "label": "AI 助手", "icon": "🤖" }
+// 1) emoji / plain text
+{ "path": "/plugins/p/xxx", "label": "AI Assistant", "icon": "🤖" }
 
-// ② 绝对 URL
-{ "path": "/plugins/p/xxx", "label": "AI 助手", "icon": "https://example.com/icon.png" }
+// 2) absolute URL
+{ "path": "/plugins/p/xxx", "label": "AI Assistant", "icon": "https://example.com/icon.png" }
 
-// ③ 包内相对路径 (recommended)
-// 文件放在插件包 dist/icon.png，manifest 写相对路径
-{ "path": "/plugins/p/xxx", "label": "AI 助手", "icon": "dist/icon.png" }
+// 3) relative path inside the package (recommended)
+// put the file at dist/icon.png in the plugin package and reference a relative path in the manifest
+{ "path": "/plugins/p/xxx", "label": "AI Assistant", "icon": "dist/icon.png" }
 ```
 
 Relative paths inside the package are resolved by the launcher to `http://localhost:5000/api/plugins/{id}/files/dist/icon.png`, with nothing extra needed on the plugin side.

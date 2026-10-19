@@ -166,17 +166,17 @@ The Open Registry Protocol's signing requirements concern **package integrity** 
 ### 6.1 In-package signature chain structure
 
 ```text
-.qplugin 包内
-├── manifest.json            # 规范化后参与 signedHash
-├── signature.json           # Ed25519 签名
+inside the .qplugin package
+├── manifest.json            # canonicalised, included in signedHash
+├── signature.json           # Ed25519 signature
 │   ├── alg: "Ed25519"
-│   ├── signedHash: SHA-256(规范化 manifest + 文件清单)
+│   ├── signedHash: SHA-256(canonical manifest + file manifest)
 │   ├── signerKeyId: "<key id>"
 │   └── signature: "<base64 ed25519 sig>"
-├── signature.cert.json      # 开发者证书 (issued by the root key)
+├── signature.cert.json      # developer certificate (issued by the root key)
 │   ├── algorithm: "Ed25519"
 │   ├── keyId / publicKey
-│   ├── issuer: { keyId: "<根钥 id>" }
+│   ├── issuer: { keyId: "<root key id>" }
 │   └── signature: "<base64 root sig>"
 └── dist/…
 ```
@@ -221,25 +221,25 @@ Run your own review/organization/authentication flows:
 ### 7.4 Verify mirror compatibility
 
 ```bash
-# 1. 元数据端点
-curl https://你的镜像/api/v1/registry
-# 应返回: { apiVersion: "1.0", pluginCount: ..., capabilities: [...] }
+# 1. Registry metadata endpoint
+curl https://your-mirror/api/v1/registry
+# expected: { apiVersion: "1.0", pluginCount: ..., capabilities: [...] }
 
-# 2. 列表
-curl https://你的镜像/api/v1/plugins?page=1&pageSize=5
-# 应返回: { total, page, pageSize, items: [...] }
+# 2. Listing
+curl https://your-mirror/api/v1/plugins?page=1&pageSize=5
+# expected: { total, page, pageSize, items: [...] }
 
-# 3. 详情
-curl https://你的镜像/api/v1/plugins/<slug>
-# 应返回 Plugin + versions[]
+# 3. Detail
+curl https://your-mirror/api/v1/plugins/<slug>
+# expected: Plugin + versions[]
 
-# 4. 下载信息
-curl https://你的镜像/api/v1/plugins/<slug>/versions/latest/download
-# 应返回: { url, sha256, size }
+# 4. Download info
+curl https://your-mirror/api/v1/plugins/<slug>/versions/latest/download
+# expected: { url, sha256, size }
 
-# 5. 包体校验
+# 5. Package validation
 curl -o test.qplugin <url>
-qomicex verify --package test.qplugin   # Ed25519 验签，主源镜像应同样通过
+qomicex verify --package test.qplugin   # Ed25519 signature check; a mirror of the main source should pass too
 ```
 
 ---

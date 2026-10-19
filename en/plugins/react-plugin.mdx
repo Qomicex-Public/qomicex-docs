@@ -25,18 +25,18 @@ The generated project structure (Vite + React 19 + TS + Tailwind + `@qomicex/plu
 
 ```text
 my-plugin/
-├── manifest.json        # 插件清单 (placed in the .qplugin root when publishing)
-├── index.html           # Vite 入口
-├── vite.config.ts       # 已设 base: './'
-├── tailwind.config.js   # 已引用 @qomicex/plugin-ui/tailwind-preset
+├── manifest.json        # plugin manifest (placed in the .qplugin root when publishing)
+├── index.html           # Vite entry
+├── vite.config.ts       # base: './' already set
+├── tailwind.config.js   # already references @qomicex/plugin-ui/tailwind-preset
 ├── postcss.config.js
 ├── tsconfig.json
 ├── package.json         # scripts: dev/build/package
 └── src/
-    ├── main.tsx         # React 入口，挂载 #root
-    ├── api.ts           # window.__PLUGIN_API__ 的类型化封装
-    ├── App.tsx          # 插件页面
-    └── index.css        # Tailwind 指令
+    ├── main.tsx         # React entry, mounts #root
+    ├── api.ts           # typed wrapper around window.__PLUGIN_API__
+    ├── App.tsx          # plugin page
+    └── index.css        # Tailwind directives
 ```
 
 The scaffold template comes from the built-in template of `qomicex create` (`packages/qomicex-cli/templates/`). Add or remove from it when it does not fit your needs.
@@ -46,9 +46,9 @@ The scaffold template comes from the built-in template of `qomicex create` (`pac
 ```bash
 mkdir my-plugin && cd my-plugin
 npm init -y
-# 依赖
+# dependencies
 npm i react react-dom @qomicex/plugin-ui@file:../../packages/plugin-ui
-# 开发依赖
+# dev dependencies
 npm i -D typescript vite @vitejs/plugin-react @types/react @types/react-dom tailwindcss autoprefixer postcss
 ```
 
@@ -77,7 +77,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  // 必须为 './'：否则产物中的 /assets/xxx 会被解析成站点根路径，沙箱内 404
+  // Must be './': otherwise /assets/* in the build resolves to the site root and 404s inside the sandbox
   base: './',
   build: { outDir: 'dist' },
 })
@@ -93,7 +93,7 @@ export default {
   content: [
     './index.html',
     './src/**/*.{ts,tsx}',
-    // 关键：必须扫描 plugin-ui 源码，否则其内部类 (such as bg-card)不会生成
+    // Important: scan plugin-ui sources, otherwise its internal classes (such as bg-card)are not generated
     '../../packages/plugin-ui/src/**/*.{ts,tsx}',
   ],
   presets: [preset],
@@ -172,7 +172,7 @@ export interface PluginApi {
   proxyFetchStream: (req: unknown, handlers: { onChunk: (c: string) => void; onError: (e: Error) => void }) => Promise<void>
 }
 
-/** 沙箱注入的插件 API 桥；独立 dev (open directly in a browser)时返回 null */
+/** Plugin API bridge injected by the sandbox; returns null in standalone dev (open directly in a browser) */
 export function getApi(): PluginApi | null {
   return window.__PLUGIN_API__ ?? null
 }
@@ -211,15 +211,15 @@ export default function App() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>未检测到插件 API 桥</CardTitle>
-          <CardDescription>当前以普通浏览器直接打开页面，`window.__PLUGIN_API__` 未注入。</CardDescription>
+          <CardTitle>Plugin API bridge not detected</CardTitle>
+          <CardDescription>The page was opened directly in a normal browser, so `window.__PLUGIN_API__` was not injected.</CardDescription>
         </CardHeader>
       </Card>
     )
   }
 
   const handleToast = async () => {
-    await api.call('showToast', '来自 React 插件的问候', 'success')
+    await api.call('showToast', 'Hello from the React plugin', 'success')
   }
 
   return (
@@ -227,13 +227,13 @@ export default function App() {
       <Card>
         <CardHeader>
           <CardTitle>Hello, Qomicex!</CardTitle>
-          <CardDescription>基于 React + Vite + @qomicex/plugin-ui</CardDescription>
+          <CardDescription>Built with React + Vite + @qomicex/plugin-ui</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={handleToast}>showToast</Button>
-            <Badge>默认</Badge>
-            <Badge variant="destructive">危险</Badge>
+            <Badge>Default</Badge>
+            <Badge variant="destructive">Danger</Badge>
           </div>
         </CardContent>
       </Card>
@@ -256,11 +256,11 @@ export default function App() {
 ```html
 <script>
   (function () {
-    // 不要在这里写 var api = window.__PLUGIN_API__ —— 此时桥尚未注入，值为 undefined
+    // Do not capture var api = window.__PLUGIN_API__ here - the bridge is not injected yet and the value is undefined
     function api() { return window.__PLUGIN_API__ }
 
     document.getElementById('btn').addEventListener('click', function () {
-      api().call('showToast', '来自悬浮窗', 'success')
+      api().call('showToast', 'From the overlay', 'success')
     })
   })()
 </script>
@@ -272,8 +272,8 @@ export default function App() {
 
 ```bash
 qomicex pack                      # tsc && vite build → release/<id>-<version>.qplugin
-qomicex pack --key ./dev-key.pem  # 附 Ed25519 签名 (verifiable offline)
-qomicex pack --version 0.2.0      # 覆盖版本号
+qomicex pack --key ./dev-key.pem  # attach an Ed25519 signature (verifiable offline)
+qomicex pack --version 0.2.0      # override the version
 ```
 
 `qomicex pack` handles everything automatically: it builds the frontend, copies the root `overlay.html` / `theme.css` into `dist/`, and assembles the zip (`manifest.json` at the root plus `dist/**`). If `entry.theme` or `contributes.overlay.file` reference files under `dist/` while the source sits in the root directory, they are copied in automatically.
@@ -291,19 +291,19 @@ cd "$ROOT"
 VERSION="${1:-0.1.0}"
 PLUGIN_ID="my-plugin"
 
-echo "==> 构建前端"
+echo "==> build the frontend"
 npm run build
 
-echo "==> 整理 dist"
+echo "==> prepare dist"
 cp "$ROOT/overlay.html" "$ROOT/dist/overlay.html"
 cp "$ROOT/theme.css" "$ROOT/dist/theme.css"
 
-echo "==> 组装 .qplugin"
+echo "==> assemble .qplugin"
 STAGING="$ROOT/.staging"
 rm -rf "$STAGING" "$ROOT/release"
 mkdir -p "$STAGING/dist" "$ROOT/release"
 
-# 关键：manifest 引用的是 dist/ 下相对路径，zip 内必须保留 dist/ 子目录
+# important: the manifest references relative paths under dist/; the zip must keep the dist/ subdirectory
 cp "$ROOT/dist/index.html" "$STAGING/dist/"
 cp -r "$ROOT/dist/assets" "$STAGING/dist/assets"
 cp "$ROOT/dist/overlay.html" "$STAGING/dist/"
@@ -317,16 +317,16 @@ else
   powershell -NoProfile -Command "Compress-Archive -Path '*' -DestinationPath '$ROOT/release/${PLUGIN_ID}-${VERSION}.qplugin' -Force"
 fi
 cd "$ROOT" && rm -rf "$STAGING"
-echo "==> 完成: $ROOT/release/${PLUGIN_ID}-${VERSION}.qplugin"
+echo "==> done: $ROOT/release/${PLUGIN_ID}-${VERSION}.qplugin"
 ```
 
 ### Package structure after packaging
 
 ```text
 my-plugin.qplugin (plain zip)
-└── manifest.json          # 根目录
+└── manifest.json          # root
 └── dist/
-    ├── index.html         # Vite 产物 (references relative ./assets/... paths)
+    ├── index.html         # Vite build output (references relative ./assets/... paths)
     ├── overlay.html
     ├── theme.css
     └── assets/

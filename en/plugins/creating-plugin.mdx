@@ -12,7 +12,7 @@ This tutorial walks you through creating a minimal working Qomicex plugin from s
 
 ```bash
 pnpm --filter @qomicex/cli build
-pnpm --filter @qomicex/cli link   # 链接到 PATH，之后可直接用 qomicex
+pnpm --filter @qomicex/cli link   # link into PATH so you can call qomicex directly
 ```
 
 Before your first use, run `qomicex doctor` to check whether Node / pnpm / the plugin project environment are ready (read-only, it modifies no files).
@@ -23,7 +23,7 @@ Before your first use, run `qomicex doctor` to check whether Node / pnpm / the p
 qomicex create dev.example.helloworld
 cd dev.example.helloworld
 pnpm install
-qomicex verify     # 立即校验，确认 0 error
+qomicex verify     # validate immediately and confirm 0 errors
 ```
 
 The generated project uses a Vite + React 19 + TS + Tailwind project-based setup (see [React + Vite plugin development](/en/plugins/react-plugin)), with `manifest.json` already in place:
@@ -59,14 +59,14 @@ Create `src/App.tsx` (React) or modify it as needed. For plain HTML, write direc
 <body>
   <div class="p-card">
     <div class="p-card-title">Hello, Qomicex!</div>
-    <div class="p-card-desc">这是我的第一个插件。</div>
-    <button id="btn" class="p-btn p-btn--primary">点我</button>
+    <div class="p-card-desc">This is my first plugin.</div>
+    <button id="btn" class="p-btn p-btn--primary">Click me</button>
   </div>
 
   <script>
     document.getElementById('btn').addEventListener('click', async function () {
       const settings = await window.__PLUGIN_API__.call('getSettings')
-      window.__PLUGIN_API__.call('showToast', '设置项数量: ' + Object.keys(settings).length, 'success')
+      window.__PLUGIN_API__.call('showToast', 'Setting count: ' + Object.keys(settings).length, 'success')
     })
   </script>
 </body>
@@ -83,7 +83,7 @@ Create `src/App.tsx` (React) or modify it as needed. For plain HTML, write direc
 
 ```bash
 qomicex pack                # tsc && vite build → release/<id>-<version>.qplugin
-qomicex pack --key ./dev-key.pem    # 附签名 (verifiable offline)
+qomicex pack --key ./dev-key.pem    # attach a signature (verifiable offline)
 ```
 
 A `.qplugin` file is a zip with `manifest.json` at the root plus `dist/**`. If `entry.theme` or `contributes.overlay.file` reference files under `dist/` while the source sits in the root directory, `pack` copies them in automatically.
@@ -97,7 +97,7 @@ A `.qplugin` file is a zip with `manifest.json` at the root plus `dist/**`. If `
 - Rename the extension to `.qplugin`
 
 ```text
-my-plugin.qplugin          # 即 zip，manifest.json 在根
+my-plugin.qplugin          # i.e. a zip with manifest.json at the root
 ```
 
 ## 4. Install and test

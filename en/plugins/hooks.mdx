@@ -10,7 +10,7 @@ Through the Hook system (Hook system)a plugin can inject logic **before and afte
 Each hook is a middleware function `(ctx, next) => Promise<void>`, executed as an **onion model**:
 
 ```text
-插件A hook ─► 插件B hook ─► 默认实现(impl) ─► 插件B hook ─► 插件A hook
+Plugin A hook ─► Plugin B hook ─► default implementation (impl) ─► Plugin B hook ─► Plugin A hook
    before                before                        after         after
 ```
 
@@ -45,13 +45,13 @@ The declaration documents intent and supports permission pre-checks; the actual 
 
 ```js
 __PLUGIN_API__.registerHook('scanVersions', async (ctx, next) => {
-  // before：next() 前修改参数
+  // before: modify arguments before next()
   ctx.args[0] = ctx.args[0] + '/custom'
 
-  // 继续默认实现 (impl receives the modified args)
+  // continue to the default implementation (impl receives the modified args)
   await next()
 
-  // after：next() 后修改返回值
+  // after:fter: modify the return value after next()
   ctx.result = [...ctx.result, {
     name: 'virtual-1.20.1',
     gameVersion: '1.20.1',
@@ -94,7 +94,7 @@ __PLUGIN_API__.registerHook('launchInstance', async (ctx) => {
   const [id] = ctx.args
   if (id === 'blocked-instance') {
     ctx.prevent()
-    ctx.result = { success: false, error: '被插件阻止启动' }
+    ctx.result = { success: false, error: 'launch blocked by the plugin' }
   }
 })
 ```
@@ -114,7 +114,7 @@ __PLUGIN_API__.registerHook('scanVersions', async (ctx) => {
 
 ```js
 __PLUGIN_API__.registerHook('launchInstanceFlow', async (ctx, next) => {
-  // 前端编排阶段在 javaInfo 上附加参数 (exact fields depend on the launcher version)
+  // the frontend orchestration stage attaches fields to javaInfo (exact fields depend on the launcher version)
   await next()
 })
 ```
@@ -124,12 +124,12 @@ __PLUGIN_API__.registerHook('launchInstanceFlow', async (ctx, next) => {
 Plugin hook functions run inside the **plugin iframe sandbox**, while the default implementation (impl) runs in the main window. The two communicate over a two-phase bridge (before → impl → after), which preserves onion semantics across windows:
 
 ```text
-主窗口 hookable 调用
+main window hookable call
   └─ HookRegistry.run(method, args, impl)
-       ├─ hook(iframe): __plugin_hook_invoke → 改 args → before_done
+       ├─ hook(iframe): __plugin_hook_invoke → modify args → before_done
        ├─ impl(...args) → ctx.result
-       ├─ __plugin_hook_continue(result) → 恢复 hook after → 改 result → after_done
-       └─ 返回最终 result
+       ├─ __plugin_hook_continue(result) → resume hook after → modify result → after_done
+       └─ return the final result
 ```
 
 ## Known limitations

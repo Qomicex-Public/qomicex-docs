@@ -42,7 +42,7 @@ Declare them in the `dependencies` field of the manifest:
 try {
   const result = await __PLUGIN_API__.callPlugin('top.qomicex.themes', 'applyTheme', 'dark')
 } catch (e) {
-  // 可选前置缺失或未激活
+  // optional dependency missing or inactive
 }
 ```
 
@@ -80,11 +80,11 @@ The depended-on plugin registers methods in its page script after activation:
 <!DOCTYPE html>
 <html>
 <head>
-（marked 必须随包分发 (CSP blocks external CDN scripts; see Development notes and pitfalls)）
+(marked must ship with the package (CSP blocks external CDN scripts; see Development notes and pitfalls)）
   <script src="marked.min.js"></script>
 </head>
 <body>
-  <div id="root">MarkdownLib 已加载</div>
+  <div id="root">MarkdownLib loaded</div>
   <script>
     __PLUGIN_API__.registerMethod('renderMarkdown', function (md) {
       return marked.parse(md || '')
@@ -116,10 +116,10 @@ The depended-on plugin registers methods in its page script after activation:
   <script>
     async function render() {
       try {
-        const html = await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdown', '**加粗**')
+        const html = await __PLUGIN_API__.callPlugin('top.qomicex.markdown', 'renderMarkdown', '**bold**')
         document.getElementById('out').innerHTML = html
       } catch (e) {
-        document.getElementById('out').textContent = '渲染失败: ' + e.message
+        document.getElementById('out').textContent = 'render failed: ' + e.message
       }
     }
     render()

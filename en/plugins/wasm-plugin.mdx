@@ -8,7 +8,7 @@ The Launcher (Launcher)runs L3 plugins as **WASM modules** inside its Rust layer
 ## 1. How it works
 
 ```text
-后端(C#) ──HTTP──→ 插件网关(localhost:动态端口) ──→ Tauri Rust(wasmtime) ──→ WASM 插件
+Backend (C#) ──HTTP──→ plugin gateway (localhost: dynamic port) ──→ Tauri Rust(wasmtime) ──→ WASM plugin
 ```
 
 - When the Launcher starts, the Rust gateway scans `plugins/{plugin id}/plugin.wasm` (the Manifest `layers` must include `l3`)
@@ -20,8 +20,8 @@ The Launcher (Launcher)runs L3 plugins as **WASM modules** inside its Rust layer
 
 ```text
 my-wasm-plugin/
-├── manifest.json        # layers 需含 "l3"
-└── plugin.wasm          # 核心 wasm 模块 (build output)
+├── manifest.json        # layers must include "l3"
+└── plugin.wasm          # core wasm module (build output)
 ```
 
 Example Manifest:
@@ -55,13 +55,13 @@ Plugins reach Launcher capabilities by importing functions from the `qomicex` mo
 ```rust
 #[link(wasm_import_module = "qomicex")]
 extern "C" {
-    fn log(level: i32, msg_ptr: i32, msg_len: i32);                          // 输出日志
+    fn log(level: i32, msg_ptr: i32, msg_len: i32);                          // write a log
     fn http_fetch(url_ptr: i32, url_len: i32, method_ptr: i32, method_len: i32,
-                  body_ptr: i32, body_len: i32, out_ptr: i32) -> i32;        // HTTP 请求 (reserved)
-    fn instance_list(out_ptr: i32) -> i32;                                   // 实例列表 (reserved)
-    fn db_set(key_ptr: i32, key_len: i32, val_ptr: i32, val_len: i32);       // 写键值
-    fn db_get(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32; // 读键值
-    fn get_plugin_id(out_ptr: i32, out_cap: i32) -> i32;                     // 获取插件 id
+                  body_ptr: i32, body_len: i32, out_ptr: i32) -> i32;        // HTTP request (reserved)
+    fn instance_list(out_ptr: i32) -> i32;                                   // instance list (reserved)
+    fn db_set(key_ptr: i32, key_len: i32, val_ptr: i32, val_len: i32);       // set a key/value
+    fn db_get(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32; // get a key/value
+    fn get_plugin_id(out_ptr: i32, out_cap: i32) -> i32;                     // get the plugin id
 }
 ```
 
@@ -138,7 +138,7 @@ extern "C" {
 ```bash
 rustup target add wasm32-unknown-unknown
 cargo build --release --target wasm32-unknown-unknown
-# 产物：target/wasm32-unknown-unknown/release/my_wasm_plugin.wasm → 重命名 plugin.wasm
+# output: target/wasm32-unknown-unknown/release/my_wasm_plugin.wasm -> rename to plugin.wasm
 ```
 
 ### 2. C / C++ (feasible)
@@ -146,14 +146,14 @@ cargo build --release --target wasm32-unknown-unknown
 **plugin.c:**
 
 ```c
-// 导入 qomicex 模块的 host 函数
+// import host functions from the qomicex module
 __attribute__((import_module("qomicex"), import_name("log")))
 extern void qomicex_log(int level, int ptr, int len);
 
 __attribute__((import_module("qomicex"), import_name("db_set")))
 extern void qomicex_db_set(int key_ptr, int key_len, int val_ptr, int val_len);
 
-// 导出给网关调用
+// export for the gateway to call
 __attribute__((export_name("on_load")))
 void on_load(void) {
     static char msg[] = "hello from C";
@@ -183,7 +183,7 @@ clang --target=wasm32-unknown-unknown -O2 -nostdlib \
 **entry.ts:**
 
 ```ts
-// 导入 qomicex 模块的 host 函数
+// import host functions from the qomicex module
 @external("qomicex", "log")
 declare function log(level: i32, ptr: i32, len: i32): void;
 
@@ -209,7 +209,7 @@ AssemblyScript exports memory as `memory` by default, which matches the gateway 
 **plugin.zig:**
 
 ```zig
-// 导入 qomicex 模块的 host 函数
+// import host functions from the qomicex module
 extern "qomicex" fn log(level: i32, ptr: i32, len: i32) void;
 
 export fn on_load() void {
@@ -238,7 +238,7 @@ func log(level, ptr, len uint32)
 //go:wasmexport on_load
 func onLoad() {}
 
-func main() {} // wasip1 必须有 main
+func main() {} // wasip1 requires main
 ```
 
 ```bash
@@ -255,7 +255,7 @@ GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o plugin.wasm .
 ## 6. Calling from a plugin or the frontend
 
 ```js
-// 前端页面 / 悬浮窗 / L2 脚本中
+// in a frontend page, overlay window, or L2 script
 const res = await __PLUGIN_API__.callWasm('dev.example.wasmplugin', 'on_load')
 // res = { ok: true, result: ... }
 

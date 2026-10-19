@@ -9,9 +9,9 @@ The Qomicex Theme system (theme system)uses a **three-tier primitive → semanti
 
 ```text
 primitives (raw palette, optional for theme packages)
-  └─ 具体色值 (HSL/hex)，仅供派生
+  └─ concrete color values (HSL/hex), for derivation only
 semantic (semantic layer, authored by .qtheme authors)
-  └─ 语义角色：background/foreground/accent/status… (dot-separated naming)
+  └─ semantic roles: background/foreground/accent/status… (dot-separated naming)
 component (component layer equals CSS variables, the only layer read by var())
   └─ --background / --accent-foreground … (flat, mapping one-to-one with index.css)
 ```
@@ -55,11 +55,11 @@ Dot-separated naming, where `.` normalizes to `-` (`background.emphasis` → `--
 
 ```text
 .qtheme (zip or directory)
-  theme.json        ← 颜色主题 (v1, see the schema below)
-  theme.css         ← 可选，命名空间注入 (--qtx- prefix / scoped)，v2
-  theme.mjs         ← 可选，CSS-in-JS 计算层 (Sandbox)，v2
-  icon-theme.json   ← 图标主题 (v1.5, see below)
-  fonts/            ← 字体贡献，v1.5 (injected via contributes.fontLinks)
+  theme.json        <- color theme (v1, see the schema below)
+  theme.css         <- optional, namespaced injection (--qtx- prefix / scoped), v2
+  theme.mjs         <- optional, CSS-in-JS computation layer (Sandbox), v2
+  icon-theme.json   <- icon theme (v1.5, see below)
+  fonts/            <- font contribution，v1.5 (injected via contributes.fontLinks)
 ```
 
 ### theme.json schema v1
@@ -189,7 +189,7 @@ Plugin manifests declare font resources through the `contributes` field:
 The launcher predefines the `.font-ligatures` class (the plugin-internal equivalent is `.p-font-ligatures`); apply it to areas that need font ligatures (such as console logs or version diffs):
 
 ```html
-<div class="font-ligatures">-> => <!-- 连字生效 --></div>
+<div class="font-ligatures">-> => <!-- ligatures active --></div>
 ```
 
 The corresponding CSS:
@@ -220,7 +220,7 @@ Plugins can dynamically override the launcher UI's CSS variables through `__PLUG
 ```text
 themeColor inline style (--primary/--ring/--primary-foreground, highest)
   └─ applyThemeOverride (:root:root, selector specificity 0,2,0)
-    └─ .qtheme 主题 (:root)
+    └─ .qtheme theme (:root)
       └─ index.css @layer base (lowest)
 ```
 
@@ -240,13 +240,13 @@ themeColor inline style (--primary/--ring/--primary-foreground, highest)
 ```js
 const __PLUGIN_API__ = window.__PLUGIN_API__
 
-// 获取当前主题色，调整插件 UI
+// read the current accent color and adjust the plugin UI
 const seedColor = await __PLUGIN_API__.call('getThemeColor')
 if (seedColor) {
   document.getElementById('my-plugin-card').style.borderColor = seedColor
 }
 
-// 应用自定义主题覆盖
+// apply a custom theme override
 await __PLUGIN_API__.call('applyThemeOverride', {
   'background': '240 23% 9%',
   'foreground': '220 20% 93%',
@@ -254,7 +254,7 @@ await __PLUGIN_API__.call('applyThemeOverride', {
   'accent': '262 83% 58%'
 })
 
-// 用户取消自定义主题时清除
+// clear it when the user cancels the custom theme
 await __PLUGIN_API__.call('clearThemeOverride')
 ```
 

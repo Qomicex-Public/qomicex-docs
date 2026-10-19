@@ -15,11 +15,11 @@ Declare both `contributes.menuItems` (the entry point) and `contributes.overlay`
   "entry": { "frontend": "dist/index.html" },
   "contributes": {
     "menuItems": [
-      { "path": "/plugins/p/top.qomicex.assistant", "label": "AI 助手", "icon": "A", "action": "overlay" }
+      { "path": "/plugins/p/top.qomicex.assistant", "label": "AI Assistant", "icon": "A", "action": "overlay" }
     ],
     "overlay": {
       "file": "dist/overlay.html",
-      "title": "AI 助手",
+      "title": "AI Assistant",
       "width": 380,
       "height": 500,
       "minimizable": false,
@@ -49,16 +49,16 @@ Key points:
 </head>
 <body>
   <div class="p-card">
-    <div class="p-card-title">快速操作</div>
+    <div class="p-card-title">Quick actions</div>
     <div class="p-row">
-      <button id="btn" class="p-btn p-btn--primary">刷新</button>
+      <button id="btn" class="p-btn p-btn--primary">Refresh</button>
     </div>
   </div>
 
   <script>
     document.getElementById('btn').addEventListener('click', async function () {
       const res = await __PLUGIN_API__.call('callBackend', '/instance')
-      __PLUGIN_API__.call('showToast', '实例数: ' + (res || []).length, 'success')
+      __PLUGIN_API__.call('showToast', 'Instances: ' + (res || []).length, 'success')
     })
   </script>
 </body>
@@ -81,9 +81,9 @@ Inside an Overlay window, a `.p-swiper` switch with `data-p-switch` shows and hi
 <label class="p-swiper">
   <input type="checkbox" checked data-p-switch="settingsPanel">
   <span class="p-swiper-track"></span>
-  显示设置
+  Show settings
 </label>
-<div id="settingsPanel">...设置内容...</div>
+<div id="settingsPanel">...settings content...</div>
 ```
 
 ## 3. Create Overlay windows dynamically
@@ -92,19 +92,19 @@ Instead of going through the sidebar, plugin scripts can also create Overlay win
 
 ```js
 const overlayId = await __PLUGIN_API__.call('overlay.create', {
-  title: '我的悬浮窗',
-  html: '<div class="p-card">动态内容</div>',
+  title: 'My overlay',
+  html: '<div class="p-card">Dynamic content</div>',
   x: 120, y: 80,
   width: 320, height: 240,
   minimizable: true,
   resizable: true
 })
 
-await __PLUGIN_API__.call('overlay.setHtml', overlayId, '<p>更新内容</p>')
+await __PLUGIN_API__.call('overlay.setHtml', overlayId, '<p>Updated content</p>')
 await __PLUGIN_API__.call('overlay.setPosition', overlayId, 300, 200)
-await __PLUGIN_API__.call('overlay.hide', overlayId)     // 最小化
-await __PLUGIN_API__.call('overlay.show', overlayId)     // 恢复
-await __PLUGIN_API__.call('overlay.destroy', overlayId)  // 销毁
+await __PLUGIN_API__.call('overlay.hide', overlayId)     // minimize
+await __PLUGIN_API__.call('overlay.show', overlayId)     // restore
+await __PLUGIN_API__.call('overlay.destroy', overlayId)  // destroy
 ```
 
 ### `overlay.*` methods
@@ -125,8 +125,8 @@ Permission: `ui:sub_window`
 The Overlay window HTML must ship with the package (`overlay.file` points to a path inside the package). When you package with the CLI, `qomicex pack` copies `overlay.html` from the project root into `dist/` automatically:
 
 ```bash
-qomicex pack                # dist/overlay.html 自动入包
-qomicex pack --key ./dev-key.pem    # 附签名
+qomicex pack                # dist/overlay.html is packaged automatically
+qomicex pack --key ./dev-key.pem    # attach a signature
 ```
 
 If `overlay.file` references `dist/overlay.html` but the source `overlay.html` sits in the project root, `qomicex pack` copies it in for you; if you package by hand, copy it yourself (see the packaging section of [React + Vite plugin development](/en/plugins/react-plugin)).

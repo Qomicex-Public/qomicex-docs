@@ -19,11 +19,11 @@ MarkItDown (`top.qomicex.markitdown`) converts local documents into Markdown tex
 
 ```js
 const res = await __PLUGIN_API__.callPlugin('top.qomicex.markitdown', 'convertFile', {
-  base64: '...',            // 文件内容 base64 (use readBytes to get contentBase64 for binary files)
-  fileName: 'a.pdf',        // 文件名 (used to detect the format)
-  mime: 'application/pdf'   // 可选
+  base64: '...',            // file content, base64 (use readBytes to get contentBase64 for binary files)
+  fileName: 'a.pdf',        // file name (used to detect the format)
+  mime: 'application/pdf'   // optional
 })
-// => { title, markdown, text_content, format } 或 { error }
+// => { title, markdown, text_content, format } or { error }
 ```
 
 - `getConfig()`: read the plugin's LLM settings (baseUrl / apiKey / visionModel / audioModel / prompt)

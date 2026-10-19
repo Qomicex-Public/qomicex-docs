@@ -35,51 +35,51 @@ Reference them in your plugin styles:
 
 ```html
 <div class="p-card">
-  <div class="p-card-title">标题</div>
-  <div class="p-card-desc">描述文字</div>
-  <div>内容...</div>
+  <div class="p-card-title">Heading</div>
+  <div class="p-card-desc">Description text</div>
+  <div>Content...</div>
 </div>
 ```
 
 ### Button
 
 ```html
-<button class="p-btn p-btn--primary">主要</button>
-<button class="p-btn p-btn--default">默认</button>
-<button class="p-btn p-btn--ghost">幽灵</button>
-<button class="p-btn p-btn--danger">危险</button>
-<button class="p-btn p-btn--outline">描边</button>
-<button class="p-btn p-btn--sm">小按钮</button>
+<button class="p-btn p-btn--primary">Primary</button>
+<button class="p-btn p-btn--default">Default</button>
+<button class="p-btn p-btn--ghost">Ghost</button>
+<button class="p-btn p-btn--danger">Danger</button>
+<button class="p-btn p-btn--outline">Outline</button>
+<button class="p-btn p-btn--sm">Small</button>
 ```
 Variants: `--primary` `--default` `--ghost` `--danger` `--outline`; size: `--sm`
 
 ### Input / Textarea
 
 ```html
-<label class="p-label">API 地址</label>
-<input class="p-input" placeholder="请输入">
+<label class="p-label">API address</label>
+<input class="p-input" placeholder="Enter a value">
 <textarea class="p-textarea"></textarea>
 ```
 
 ### Badge
 
 ```html
-<span class="p-badge p-badge--green">成功</span>
-<span class="p-badge p-badge--red">失败</span>
-<span class="p-badge p-badge--yellow">警告</span>
-<span class="p-badge p-badge--blue">信息</span>
-<span class="p-badge p-badge--default">默认</span>
+<span class="p-badge p-badge--green">Success</span>
+<span class="p-badge p-badge--red">Failed</span>
+<span class="p-badge p-badge--yellow">Warning</span>
+<span class="p-badge p-badge--blue">Info</span>
+<span class="p-badge p-badge--default">Default</span>
 ```
 
 ### Tabs
 
 ```html
 <div class="p-tabs">
-  <button class="p-tab active" data-p-tab="a">标签A</button>
-  <button class="p-tab" data-p-tab="b">标签B</button>
+  <button class="p-tab active" data-p-tab="a">Tab A</button>
+  <button class="p-tab" data-p-tab="b">Tab B</button>
 </div>
-<div class="p-panel active" id="panel-a">A 的内容</div>
-<div class="p-panel" id="panel-b">B 的内容</div>
+<div class="p-panel active" id="panel-a">Content of A</div>
+<div class="p-panel" id="panel-b">Content of B</div>
 ```
 - `data-p-tab` points to a panel with `id="panel-{name}"`.
 - Click-to-switch is handled automatically by the injected script; you do not need to write any JS.
@@ -91,7 +91,7 @@ Variants: `--primary` `--default` `--ghost` `--danger` `--outline`; size: `--sm`
 <label class="p-swiper">
   <input type="checkbox" checked>
   <span class="p-swiper-track"></span>
-  启用功能
+  Enable feature
 </label>
 ```
 - In an Overlay window, to use a Switch to show or hide a panel, add `data-p-switch="panelId"` to the input and the script toggles the matching `id` element automatically.
@@ -101,7 +101,7 @@ Variants: `--primary` `--default` `--ghost` `--danger` `--outline`; size: `--sm`
 ```html
 <label class="p-check-field">
   <input type="checkbox">
-  记住选择
+  Remember choice
 </label>
 ```
 
@@ -125,25 +125,25 @@ Modifiers: `--indeterminate` indeterminate, `--danger` danger, `--warn` warning
 ```html
 <div class="p-empty">
   <div class="p-empty__icon">📭</div>
-  <div class="p-empty__text">暂无数据</div>
+  <div class="p-empty__text">No data</div>
 </div>
 ```
 
 ### Alert
 
 ```html
-<div class="p-alert p-alert--info">信息</div>
-<div class="p-alert p-alert--success">成功</div>
-<div class="p-alert p-alert--warn">警告</div>
-<div class="p-alert p-alert--error">错误</div>
+<div class="p-alert p-alert--info">Info</div>
+<div class="p-alert p-alert--success">Success</div>
+<div class="p-alert p-alert--warn">Warning</div>
+<div class="p-alert p-alert--error">Error</div>
 ```
 
 ### Table
 
 ```html
 <table class="p-table">
-  <tr><th>名称</th><th>值</th></tr>
-  <tr><td>示例</td><td>123</td></tr>
+  <tr><th>Name</th><th>Value</th></tr>
+  <tr><td>Example</td><td>123</td></tr>
 </table>
 ```
 
@@ -152,8 +152,8 @@ Modifiers: `--indeterminate` indeterminate, `--danger` danger, `--warn` warning
 ```html
 <div class="p-select">
   <select>
-    <option>选项A</option>
-    <option>选项B</option>
+    <option>Option A</option>
+    <option>Option B</option>
   </select>
 </div>
 ```
@@ -162,29 +162,29 @@ Modifiers: `--indeterminate` indeterminate, `--danger` danger, `--warn` warning
 
 ```html
 <div class="p-menu">
-  <div class="p-menu-item">普通项</div>
-  <div class="p-menu-item p-menu-item--danger">危险项</div>
+  <div class="p-menu-item">Normal item</div>
+  <div class="p-menu-item p-menu-item--danger">Dangerous item</div>
 </div>
 ```
 
 ### Tooltip
 
 ```html
-<span class="p-tooltip" data-tip="提示文字">悬停我</span>
+<span class="p-tooltip" data-tip="Tooltip text">Hover me</span>
 ```
 
 ### Color picker
 
 ```html
-<div class="p-color-picker"><span class="p-color-picker__swatch" style="background:#f00"></span> 颜色</div>
+<div class="p-color-picker"><span class="p-color-picker__swatch" style="background:#f00"></span> Color</div>
 ```
 
 ### Layout and utilities
 
 ```html
-<div class="p-row"><span>横向排列</span></div>
-<div class="p-row p-row--between">两端对齐</div>
-<div class="p-col">纵向排列</div>
+<div class="p-row"><span>Horizontal row</span></div>
+<div class="p-row p-row--between">Space between</div>
+<div class="p-col">Vertical column</div>
 ```
 - `.p-row` `--wrap` `--between`, `.p-col`
 - `.p-icon` `--lg`, `.p-divider` `.p-hr` `.p-separator`, `.p-status-dot --up/--down/--warn`, `.p-pre`
@@ -196,17 +196,17 @@ Modifiers: `--indeterminate` indeterminate, `--danger` danger, `--warn` warning
 
 ```html
 <div class="p-card">
-  <div class="p-card-title">下载状态</div>
+  <div class="p-card-title">Download status</div>
   <div class="p-row p-row--between">
-    <span>安装中</span>
-    <span class="p-badge p-badge--blue">进行中</span>
+    <span>Installing</span>
+    <span class="p-badge p-badge--blue">In progress</span>
   </div>
   <div class="p-progress"><div class="p-progress__bar" style="width:45%"></div></div>
   <div class="p-tabs" style="margin-top:12px">
-    <button class="p-tab active" data-p-tab="log">日志</button>
-    <button class="p-tab" data-p-tab="info">详情</button>
+    <button class="p-tab active" data-p-tab="log">Log</button>
+    <button class="p-tab" data-p-tab="info">Details</button>
   </div>
-  <div class="p-panel active" id="panel-log"><pre class="p-pre">下载中...</pre></div>
-  <div class="p-panel" id="panel-info">版本 1.2.0</div>
+  <div class="p-panel active" id="panel-log"><pre class="p-pre">Downloading...</pre></div>
+  <div class="p-panel" id="panel-info">Version 1.2.0</div>
 </div>
 ```
