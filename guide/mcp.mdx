@@ -19,8 +19,8 @@ https://qomicex.mintlify.site/mcp
 
 | 工具 | 作用 | 参数 |
 | :--- | :--- | :--- |
-| `search_qomicex_docs_qml启动器` | 跨本站检索文档、代码示例、API 参考与指南，返回带标题和直链的片段 | `query`（字符串，必填） |
-| `query_docs_filesystem_qomicex_docs_qml启动器` | 在一个只读的虚拟文件系统里执行类 shell 命令，用于读取整页或精确匹配 | `command`（字符串，必填） |
+| `search_qomicex_docs_qml_launcher` | 跨本站检索文档、代码示例、API 参考与指南，返回带标题和直链的片段 | `query`（字符串，必填） |
+| `query_docs_filesystem_qomicex_docs_qml_launcher` | 在一个只读的虚拟文件系统里执行类 shell 命令，用于读取整页或精确匹配 | `command`（字符串，必填） |
 
 ### 读取整页内容
 
@@ -136,7 +136,7 @@ Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $list `
 
 **问：工具名为什么和我看到的不一样？**
 
-工具名由站点名派生。本站改过站点名（现为 `Qomicex Docs - QML启动器`），所以实际名称是 `search_qomicex_docs_qml启动器` 这类带中文的名字。请始终用 `tools/list` 的结果。
+工具名由站点名派生。本站改过站点名（现为 `Qomicex Docs - QML Launcher`），所以实际名称是 `search_qomicex_docs_qml_launcher` 这类带下划线的名字。请始终用 `tools/list` 的结果。
 
 **问：能通过 MCP 让 AI 修改文档吗？**
 

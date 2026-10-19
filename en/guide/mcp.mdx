@@ -19,8 +19,8 @@ After connecting, `tools/list` reports three tools. **Tool names are derived fro
 
 | Tool | Purpose | Parameters |
 | :--- | :--- | :--- |
-| `search_qomicex_docs_qml启动器` | Search docs, code examples, API references, and guides. Returns snippets with titles and direct links. | `query` (string, required) |
-| `query_docs_filesystem_qomicex_docs_qml启动器` | Run read-only shell-like commands against a virtual filesystem to read full pages or match keywords exactly. | `command` (string, required) |
+| `search_qomicex_docs_qml_launcher` | Search docs, code examples, API references, and guides. Returns snippets with titles and direct links. | `query` (string, required) |
+| `query_docs_filesystem_qomicex_docs_qml_launcher` | Run read-only shell-like commands against a virtual filesystem to read full pages or match keywords exactly. | `command` (string, required) |
 | `submit_feedback` | Report a page that is wrong, outdated, or missing. Delivered to the docs maintainers. | `path` (page path without `.mdx`), `feedback` (description); both required |
 
 ### Read a full page
@@ -131,7 +131,7 @@ Invoke-WebRequest 'https://qomicex.mintlify.site/mcp' -Method POST -Body $list `
 
 **Why don't the tool names match what I expected?**
 
-Tool names are derived from the site name. This site was renamed to `Qomicex Docs - QML启动器`, so the actual names look like `search_qomicex_docs_qml启动器`. Always use the output of `tools/list`.
+Tool names are derived from the site name. This site was renamed to `Qomicex Docs - QML Launcher`, so the actual names look like `search_qomicex_docs_qml_launcher`. Always use the output of `tools/list`.
 
 **Can an AI change the docs through MCP?**
 
