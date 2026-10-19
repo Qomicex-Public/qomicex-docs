@@ -90,6 +90,7 @@ Permission denied: requires <permissionId>
 | `filesystem:write` | Write to the filesystem | Dangerous |
 | `hook:register` | Hook launcher methods (intercept or modify arguments, block execution) | Dangerous |
 | `download:manage` | Manage download tasks | Warning |
+| `plugin:log` | Write plugin logs | Normal |
 
 The **risk** level drives the colour hint in the install details dialog: Normal = blue, Warning = yellow, Dangerous = red. Follow the **principle of least privilege** and request only the permissions you actually use.
 
@@ -471,6 +472,16 @@ await __PLUGIN_API__.call('showToast', 'Operation succeeded', 'success')
 - Permission: `ui:toast`
 - Parameters: `(message: string, type?: 'info' | 'error' | 'success')`, defaults to `info`
 
+### log — Write plugin logs
+
+Write a log line into the launcher log so it shows up in **Settings → Logs**.
+
+```js
+await __PLUGIN_API__.call('log', 'info', 'Plugin initialized')
+```
+- Permission: `plugin:log`
+- Parameters: `(level: string, message: string)`
+
 ### File drag-and-drop event (file-drop)
 
 When files are dropped onto the launcher window, the main window emits a `file-drop` event whose payload is the **array of absolute paths** of the dropped files. The frontend (main UI) can listen with `@tauri-apps/api/event`:
@@ -584,7 +595,7 @@ __PLUGIN_API__.addMenuItem({
   action: 'page'
 })
 ```
-- Permission: none (no manifest declaration needed)
+- Permission: `ui:inject_sidebar`
 - Parameters: `PluginMenuItem` (the same element as `contributes.menuItems`)
 - Dynamically registered menu items are removed automatically when the plugin is disabled
 

@@ -267,5 +267,5 @@ await __PLUGIN_API__.call('clearThemeOverride')
 ### Lifecycle
 
 - `applyThemeOverride` can be called repeatedly; the latest call overrides earlier ones
-- **Overrides are not cleared automatically when the plugin is disabled** (tokens may be bound to the plugin UI); call `clearThemeOverride` yourself in the disable hook or on user action
+- **Overrides ARE cleared automatically when the plugin is disabled**: the disable path unconditionally calls `clearThemeOverride`, so the theme falls back to the active `.qtheme` or the built-in light/dark theme. You do not need to clean up in a disable hook; call `clearThemeOverride` explicitly only if you want to drop the override while the plugin stays enabled
 - `clearThemeOverride` removes only the override styles; it does not affect `.qtheme` or the built-in light/dark themes
