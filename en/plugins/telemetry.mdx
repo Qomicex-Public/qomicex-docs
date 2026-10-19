@@ -25,14 +25,14 @@ Anonymous plugin error **telemetry** (opt-in, off by default) drives the store's
 ```text
 插件运行期错误
   → 前端 lib/telemetry.ts reportPluginError()
-       ├─ 开关关闭 → 直接返回（不触发）
-       └─ 60s 内存去重（同 pluginId@version@errorType 只报一次）
-  → POST /api/telemetry/plugin-error      （前端 api/telemetry.ts，失败静默 catch）
+       ├─ 开关关闭 → 直接返回 (not triggered)
+       └─ 60s 内存去重 (reported once per pluginId@version@errorType)
+  → POST /api/telemetry/plugin-error       (frontend api/telemetry.ts; failures are silently caught)
   → 后端 endpoints/telemetry.rs
        ├─ 校验非空 + 错误类别白名单
        └─ 注入 launcherVersion → 转发 store
-  → store POST /api/v1/telemetry/plugin-error   （src/telemetry.ts）
-  → 写入 D1 表 plugin_error_reports（migration 0008）
+  → store POST /api/v1/telemetry/plugin-error    (src/telemetry.ts)
+  → 写入 D1 表 plugin_error_reports (migration 0008)
 ```
 
 **Currently connected reporting points** (the code is the source of truth):

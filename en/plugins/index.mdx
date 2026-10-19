@@ -3,33 +3,33 @@ title: "Plugin development guide"
 ---
 ## Plugin development guide
 
-This section is for ecosystem developers. It covers the architecture of the Qomicex plugin system（插件系统）, the development workflow, and every interface.
+This section is for ecosystem developers. It covers the architecture of the Qomicex plugin system (plugin system), the development workflow, and every interface.
 
 ## What a plugin is
 
-A Qomicex plugin（插件）(`.qplugin`) is essentially a **ZIP archive** containing a `manifest.json` manifest and the plugin's frontend assets (HTML / JS / CSS). After installation the Launcher（启动器）renders and executes it in a controlled sandbox or inline environment, where it can call the plugin API（插件 API）exposed by the launcher to read and write settings, operate on instances, make network requests, and inject UI.
+A Qomicex plugin (Plugins)(`.qplugin`) is essentially a **ZIP archive** containing a `manifest.json` manifest and the plugin's frontend assets (HTML / JS / CSS). After installation the Launcher (Launcher)renders and executes it in a controlled sandbox or inline environment, where it can call the plugin API (plugin API)exposed by the launcher to read and write settings, operate on instances, make network requests, and inject UI.
 
 ## Plugin capabilities
 
 | Capability | Description |
 |------|------|
 | Inject sidebar entries | Create entries at the bottom of the sidebar through `contributes.menuItems` (navigate to a page or open an overlay window) |
-| Dashboard widget（主页小组件） | Declare the `dashboard:widgets` slot through `contributes.slots` to add UI to the editable dashboard widget grid |
-| Plugin settings page（插件设置页） | Declare through `contributes.settingsPages`; settings UI is collected under Settings → Plugins → Plugin settings |
-| Overlay window（悬浮窗） | Declare through `contributes.overlay` to create a draggable standalone mini window |
+| Dashboard widget (Dashboard widget) | Declare the `dashboard:widgets` slot through `contributes.slots` to add UI to the editable dashboard widget grid |
+| Plugin settings page (Plugin Settings) | Declare through `contributes.settingsPages`; settings UI is collected under Settings → Plugins → Plugin settings |
+| Overlay window (Overlay window) | Declare through `contributes.overlay` to create a draggable standalone mini window |
 | Plugin page | Serve a full page through `entry.frontend`, mounted at `/plugins/p/:id` |
 | Settings read/write | Read and write the plugin's own `settings.json` (`getSettings` / `setSettings`) |
 | Plugin cache | Read and write the plugin's own `cache.json` (`setCache` / `getCache`, with TTL expiry) |
-| Network requests | Call the Backend（后端）API directly (`callBackend`) or reach the internet through the CORS proxy (`proxyFetch` / `proxyFetchStream`) |
+| Network requests | Call the Backend (Backend)API directly (`callBackend`) or reach the internet through the CORS proxy (`proxyFetch` / `proxyFetchStream`) |
 | Plugin-to-plugin calls | Register methods for other plugins to call (`registerMethod` / `callPlugin`) |
 | Intercept launcher methods | Inject logic before and after launcher methods through the Hook system (modify arguments or return values, block execution, replace entirely) |
 | Theme following | Follow the launcher's light and dark themes automatically (CSS variable injection) |
 
-## Library plugins（前置插件）
+## Library plugins (Library plugin)
 
 Some plugins provide no UI and exist only as **capability libraries** that other plugins depend on (for example, MarkdownLib provides `renderMarkdown`). These plugins declare no `contributes`, so they **create no sidebar entry**. See [Plugin dependencies and inter-plugin calls](/en/plugins/dependencies).
 
-## Contents（目录）
+## Contents (contents)
 
 **Getting started**
 

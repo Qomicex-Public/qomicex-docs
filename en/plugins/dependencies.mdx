@@ -76,11 +76,11 @@ See [layers](/en/plugins/manifest#layers-layer-definitions).
 The depended-on plugin registers methods in its page script after activation:
 
 ```html
-（MarkdownLib dist/index.html）
+ (MarkdownLib dist/index.html)
 <!DOCTYPE html>
 <html>
 <head>
-（marked 必须随包分发（CSP 会拦截外部 CDN 脚本，见「开发要点与避坑指南」））
+（marked 必须随包分发 (CSP blocks external CDN scripts; see Development notes and pitfalls)）
   <script src="marked.min.js"></script>
 </head>
 <body>
@@ -108,7 +108,7 @@ The depended-on plugin registers methods in its page script after activation:
 ## 6. Consumer: call methods
 
 ```html
-（AI 助手 dist/index.html）
+ (AI Assistant dist/index.html)
 <!DOCTYPE html>
 <html>
 <body>
@@ -140,7 +140,7 @@ On startup the launcher **activates depended-on plugins first** (topological sor
 
 | Scenario | Error message |
 |------|---------|
-| Target plugin not installed / not active / method not registered | `插件 xxx 未提供方法 yyy（可能未安装或未激活）` |
+| Target plugin not installed / not active / method not registered | `插件 xxx 未提供方法 yyy (may not be installed or activated)` |
 | Optional dependency missing | Same as above, but the plugin itself is enabled normally |
 | Error thrown inside the method | `插件 xxx 方法 yyy 执行失败: <具体错误>` |
 

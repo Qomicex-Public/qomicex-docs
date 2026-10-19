@@ -3,11 +3,11 @@ title: "Build your first plugin from scratch"
 ---
 ## Build your first plugin from scratch
 
-This tutorial walks you through creating a minimal working Qomicex plugin from scratch. **Starting from the `qomicex` CLI scaffold（脚手架）is recommended** (it generates a valid project structure automatically). You can also write everything by hand; see the alternative below.
+This tutorial walks you through creating a minimal working Qomicex plugin from scratch. **Starting from the `qomicex` CLI scaffold (Scaffold)is recommended** (it generates a valid project structure automatically). You can also write everything by hand; see the alternative below.
 
 ## Prerequisites
 
-- Qomicex Launcher（启动器）is installed (for testing)
+- Qomicex Launcher (Launcher)is installed (for testing)
 - [qomicex CLI](/en/plugins/cli) (Node.js ≥ 20):
 
 ```bash
@@ -83,7 +83,7 @@ Create `src/App.tsx` (React) or modify it as needed. For plain HTML, write direc
 
 ```bash
 qomicex pack                # tsc && vite build → release/<id>-<version>.qplugin
-qomicex pack --key ./dev-key.pem    # 附签名（离线可验）
+qomicex pack --key ./dev-key.pem    # 附签名 (verifiable offline)
 ```
 
 A `.qplugin` file is a zip with `manifest.json` at the root plus `dist/**`. If `entry.theme` or `contributes.overlay.file` reference files under `dist/` while the source sits in the root directory, `pack` copies them in automatically.
@@ -103,7 +103,7 @@ my-plugin.qplugin          # 即 zip，manifest.json 在根
 ## 4. Install and test
 
 - Open Qomicex Launcher → Settings → Plugins
-- Click **Install plugin（安装插件）** and select your `.qplugin` file
+- Click **Install plugin (Install plugin)** and select your `.qplugin` file
 - After a successful install, the card appears in the plugin list; toggle it on to enable it (a launcher restart is required for it to take effect)
 - After the restart, a "Hello" entry appears in the sidebar; click it to open the plugin page
 

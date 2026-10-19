@@ -3,17 +3,17 @@ title: "Theme system"
 ---
 ## Theme system
 
-The Qomicex Theme system（主题系统）uses a **three-tier primitive → semantic → component semantic token** structure, carried by `.qtheme` theme packages, so the launcher and plugin UI reskin instantly and completely, **with no plugin-ui dist rebuild**.
+The Qomicex Theme system (theme system)uses a **three-tier primitive → semantic → component semantic token** structure, carried by `.qtheme` theme packages, so the launcher and plugin UI reskin instantly and completely, **with no plugin-ui dist rebuild**.
 
 ## The three-tier semantic model
 
 ```text
-primitives（原始色板，主题包可选）
-  └─ 具体色值（HSL/hex），仅供派生
-semantic（语义层，.qtheme 作者书写）
-  └─ 语义角色：background/foreground/accent/status…（点分命名）
-component（组件消费层 = CSS 变量，唯一被 var() 读取）
-  └─ --background / --accent-foreground …（平铺，与 index.css 一一对应）
+primitives (raw palette, optional for theme packages)
+  └─ 具体色值 (HSL/hex)，仅供派生
+semantic (semantic layer, authored by .qtheme authors)
+  └─ 语义角色：background/foreground/accent/status… (dot-separated naming)
+component (component layer equals CSS variables, the only layer read by var())
+  └─ --background / --accent-foreground … (flat, mapping one-to-one with index.css)
 ```
 
 - **v1 scope**: `.qtheme` expresses the semantic/component tiers directly (the flat `--*` variables); primitive derivation and the `theme.mjs` computation tier are deferred to v2
@@ -54,12 +54,12 @@ Dot-separated naming, where `.` normalizes to `-` (`background.emphasis` → `--
 ## `.qtheme` package format
 
 ```text
-.qtheme（zip 或目录）
-  theme.json        ← 颜色主题（v1，见下 schema）
-  theme.css         ← 可选，命名空间注入（--qtx- 前缀 / scoped），v2
-  theme.mjs         ← 可选，CSS-in-JS 计算层（沙箱），v2
-  icon-theme.json   ← 图标主题（v1.5，见下）
-  fonts/            ← 字体贡献，v1.5（经 contributes.fontLinks 注入）
+.qtheme (zip or directory)
+  theme.json        ← 颜色主题 (v1, see the schema below)
+  theme.css         ← 可选，命名空间注入 (--qtx- prefix / scoped)，v2
+  theme.mjs         ← 可选，CSS-in-JS 计算层 (Sandbox)，v2
+  icon-theme.json   ← 图标主题 (v1.5, see below)
+  fonts/            ← 字体贡献，v1.5 (injected via contributes.fontLinks)
 ```
 
 ### theme.json schema v1
@@ -95,7 +95,7 @@ An invalid theme.json is rejected by `src/theme/schema.ts` with a friendly error
 
 ## Theme manager
 
-The theme manager（`src/theme/manager.ts`）provides:
+The theme manager (`src/theme/manager.ts`)provides:
 
 - **`applyTheme(json)`**: validate, then inject CSS variables into `:root` → every component reskins instantly; persists the theme id to `localStorage`
 - **`clearTheme()`**: remove the custom theme and fall back to the settings layer light/dark/preset
@@ -115,7 +115,7 @@ Plugins and theme packages can declare three kinds of contributions through mani
 
 ## Icon theme (icon-theme.json)
 
-The Icon theme（图标主题）is a new file in the `.qtheme` package, alongside `theme.json`, that provides override mappings for icons such as plugin sidebar entries and menu items.
+The Icon theme (icon theme)is a new file in the `.qtheme` package, alongside `theme.json`, that provides override mappings for icons such as plugin sidebar entries and menu items.
 
 ### Format
 
@@ -209,7 +209,7 @@ Inside plugins, use `.p-font-ligatures` for the same effect.
 
 ## Preset theme
 
-The launcher bundles four Catppuccin Preset theme（预设主题）packages (latte / frappe / macchiato / mocha), already migrated to the new token naming. When you switch presets or apply a custom `.qtheme`, every UI component that consumes `var(--*)` responds immediately.
+The launcher bundles four Catppuccin Preset theme (preset theme)packages (latte / frappe / macchiato / mocha), already migrated to the new token naming. When you switch presets or apply a custom `.qtheme`, every UI component that consumes `var(--*)` responds immediately.
 
 ## Plugin-driven Theme override
 
@@ -218,10 +218,10 @@ Plugins can dynamically override the launcher UI's CSS variables through `__PLUG
 ### Priority levels
 
 ```text
-themeColor inline style（--primary/--ring/--primary-foreground，最高）
-  └─ applyThemeOverride（:root:root，选择器特异性 0,2,0）
-    └─ .qtheme 主题（:root）
-      └─ index.css @layer base（最低）
+themeColor inline style (--primary/--ring/--primary-foreground, highest)
+  └─ applyThemeOverride (:root:root, selector specificity 0,2,0)
+    └─ .qtheme 主题 (:root)
+      └─ index.css @layer base (lowest)
 ```
 
 - The `<style>` injected by `applyThemeOverride` has higher specificity than `.qtheme` and `@layer base`

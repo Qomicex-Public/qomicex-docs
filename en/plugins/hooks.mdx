@@ -3,7 +3,7 @@ title: "Hook system — Intercept and extend launcher methods"
 ---
 ## Hook system — Intercept and extend launcher methods
 
-Through the Hook system（Hook 系统）a plugin can inject logic **before and after a launcher method runs**: modify arguments, modify the return value, block execution, or replace the implementation entirely. This suits feature enhancements, performance tuning, and logic reworking (for example: injecting custom JVM arguments at launch, adding virtual versions to version scanning, intercepting downloads).
+Through the Hook system (Hook system)a plugin can inject logic **before and after a launcher method runs**: modify arguments, modify the return value, block execution, or replace the implementation entirely. This suits feature enhancements, performance tuning, and logic reworking (for example: injecting custom JVM arguments at launch, adding virtual versions to version scanning, intercepting downloads).
 
 ## Execution model: a Koa-style onion pipeline
 
@@ -48,7 +48,7 @@ __PLUGIN_API__.registerHook('scanVersions', async (ctx, next) => {
   // before：next() 前修改参数
   ctx.args[0] = ctx.args[0] + '/custom'
 
-  // 继续默认实现（impl 使用修改后的 args）
+  // 继续默认实现 (impl receives the modified args)
   await next()
 
   // after：next() 后修改返回值
@@ -114,7 +114,7 @@ __PLUGIN_API__.registerHook('scanVersions', async (ctx) => {
 
 ```js
 __PLUGIN_API__.registerHook('launchInstanceFlow', async (ctx, next) => {
-  // 前端编排阶段在 javaInfo 上附加参数（具体字段取决于启动器版本）
+  // 前端编排阶段在 javaInfo 上附加参数 (exact fields depend on the launcher version)
   await next()
 })
 ```

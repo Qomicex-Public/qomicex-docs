@@ -5,7 +5,7 @@ title: "React + Vite plugin development tutorial"
 
 For **real plugins with a UI**, use project-based development with React 19 + Vite 7 + TypeScript + Tailwind, together with the launcher's built-in component library `@qomicex/plugin-ui`. Compared with hand-written plain HTML, you get component reuse, type checking, HMR, and on-demand packaging.
 
-**Generate the project with the `qomicex create` scaffold（脚手架）** (it configures everything for you). This tutorial explains what the scaffold produces and what each config does, so you can adjust as needed.
+**Generate the project with the `qomicex create` scaffold (Scaffold)** (it configures everything for you). This tutorial explains what the scaffold produces and what each config does, so you can adjust as needed.
 
 ## 1. Why Vite
 
@@ -25,7 +25,7 @@ The generated project structure (Vite + React 19 + TS + Tailwind + `@qomicex/plu
 
 ```text
 my-plugin/
-├── manifest.json        # 插件清单（发布时打进 .qplugin 根目录）
+├── manifest.json        # 插件清单 (placed in the .qplugin root when publishing)
 ├── index.html           # Vite 入口
 ├── vite.config.ts       # 已设 base: './'
 ├── tailwind.config.js   # 已引用 @qomicex/plugin-ui/tailwind-preset
@@ -93,7 +93,7 @@ export default {
   content: [
     './index.html',
     './src/**/*.{ts,tsx}',
-    // 关键：必须扫描 plugin-ui 源码，否则其内部类（bg-card 等）不会生成
+    // 关键：必须扫描 plugin-ui 源码，否则其内部类 (such as bg-card)不会生成
     '../../packages/plugin-ui/src/**/*.{ts,tsx}',
   ],
   presets: [preset],
@@ -172,7 +172,7 @@ export interface PluginApi {
   proxyFetchStream: (req: unknown, handlers: { onChunk: (c: string) => void; onError: (e: Error) => void }) => Promise<void>
 }
 
-/** 沙箱注入的插件 API 桥；独立 dev（浏览器直开）时返回 null */
+/** 沙箱注入的插件 API 桥；独立 dev (open directly in a browser)时返回 null */
 export function getApi(): PluginApi | null {
   return window.__PLUGIN_API__ ?? null
 }
@@ -272,7 +272,7 @@ export default function App() {
 
 ```bash
 qomicex pack                      # tsc && vite build → release/<id>-<version>.qplugin
-qomicex pack --key ./dev-key.pem  # 附 Ed25519 签名（离线可验）
+qomicex pack --key ./dev-key.pem  # 附 Ed25519 签名 (verifiable offline)
 qomicex pack --version 0.2.0      # 覆盖版本号
 ```
 
@@ -323,10 +323,10 @@ echo "==> 完成: $ROOT/release/${PLUGIN_ID}-${VERSION}.qplugin"
 ### Package structure after packaging
 
 ```text
-my-plugin.qplugin（即 zip）
+my-plugin.qplugin (plain zip)
 └── manifest.json          # 根目录
 └── dist/
-    ├── index.html         # Vite 产物（引用 ./assets/... 相对路径）
+    ├── index.html         # Vite 产物 (references relative ./assets/... paths)
     ├── overlay.html
     ├── theme.css
     └── assets/
@@ -334,7 +334,7 @@ my-plugin.qplugin（即 zip）
         └── main-xxx.css
 ```
 
-The Backend（后端）resolves files as `plugins/{id}/{path}`, so `entry.frontend: "dist/index.html"` fetches `plugins/{id}/dist/index.html`. **The `dist/` subdirectory must stay inside the zip**: if you hoist the files from `dist` to the zip root, then after installation `dist/index.html`, `dist/theme.css`, and `dist/overlay.html` all return 404 (blank page, no styles, overlay window will not open).
+The Backend (Backend)resolves files as `plugins/{id}/{path}`, so `entry.frontend: "dist/index.html"` fetches `plugins/{id}/dist/index.html`. **The `dist/` subdirectory must stay inside the zip**: if you hoist the files from `dist` to the zip root, then after installation `dist/index.html`, `dist/theme.css`, and `dist/overlay.html` all return 404 (blank page, no styles, overlay window will not open).
 
 ## 7. Install and test
 

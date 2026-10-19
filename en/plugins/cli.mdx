@@ -21,7 +21,7 @@ You can also publish it straight to npm:
 ```bash
 cd packages/qomicex-cli
 npm login
-npm version patch   # bump 版本（版本号单一来源 package.json，src 自动读取）
+npm version patch   # bump 版本 (package.json is the single source of the version; src reads it automatically)
 npm publish
 ```
 
@@ -37,7 +37,7 @@ npm publish
 | Variable | Purpose |
 |------|------|
 | `QOMICEX_SIGN_KEY` | Signing private key (PKCS#8 PEM or raw base64 seed); required by `publish` |
-| `QOMICEX_API_KEY` | Plugin store（插件商店）API key (CI mode skips device-flow login and confirms uploads automatically) |
+| `QOMICEX_API_KEY` | Plugin store (Plugin store)API key (CI mode skips device-flow login and confirms uploads automatically) |
 | `QOMICEX_STORE_API` | Store API base (defaults to `https://plugins.qomicex.top/api/v1`) |
 | `QOMICEX_LAUNCHER_PATH` | Lets `debug` locate the launcher executable |
 | `QOMICEX_HOME` | Data directory for `debug` (log file location; QOMICEX_HOME → `.qomicex-bootstrap` → default directory) |
@@ -62,9 +62,9 @@ npm publish
 
 ```bash
 qomicex create com.example.demo                  # 默认 react 模板
-qomicex create com.example.html --template html   # 纯 HTML/CSS/JS（-t html 短参数也可）
-qomicex create com.example.lib -t lib             # 纯库插件（无 UI，registerMethod 供调用）
-qomicex create com.example.wasm --template wasm   # L3 WASM 插件（Rust + wasmtime）
+qomicex create com.example.html --template html   # 纯 HTML/CSS/JS (the short -t html flag also works)
+qomicex create com.example.lib -t lib             # 纯库插件 (no UI; exposes registerMethod for callers)
+qomicex create com.example.wasm --template wasm   # L3 WASM 插件 (Rust + wasmtime)
 ```
 
 Generates a valid plugin project from a built-in template, automatically substituting the id in `manifest.json` / `package.json` / `Cargo.toml` / `src/lib.rs`. Four templates:
@@ -84,7 +84,7 @@ Generates a valid plugin project from a built-in template, automatically substit
 **Examples**:
 
 ```bash
-# 生成一个漫画汉化小组的连字插件项目（react 默认）
+# 生成一个漫画汉化小组的连字插件项目 (react by default)
 qomicex create com.acgstudio.ligatures
 cd com.acgstudio.ligatures
 pnpm install
@@ -93,10 +93,10 @@ qomicex verify    # 立即校验，确认 0 error
 # 生成纯 html 插件
 qomicex create dev.example.noui --template html
 
-# 生成纯库插件（提供方法供其他插件调用）
+# 生成纯库插件 (exposes methods for other plugins to call)
 qomicex create top.example.markdownlib -t lib
 
-# 生成 L3 WASM 插件（Rust）
+# 生成 L3 WASM 插件 (Rust)
 qomicex create dev.example.wasmplugin --template wasm
 ```
 
@@ -119,9 +119,9 @@ Starts a local plugin debugging environment in one of two modes:
 ```bash
 qomicex pack                          # 有 package.json → pnpm run build；无则跳过构建直接打包
 qomicex pack --version 0.2.0          # 覆盖 manifest 版本号
-qomicex pack --key ./dev-key.pem      # 附签名（仅 signature.json；完整证书链请用 publish）
-qomicex pack --skip-build             # 跳过构建（复用现有 dist）
-qomicex pack --out-dir ./dist-releases # 指定输出目录（默认 release/）
+qomicex pack --key ./dev-key.pem      # 附签名 (signature.json only; use publish for the full certificate chain)
+qomicex pack --skip-build             # 跳过构建 (reuse the existing dist)
+qomicex pack --out-dir ./dist-releases # 指定输出目录 (defaults to release/)
 ```
 
 A `.qplugin` is a zip with `manifest.json` at the root plus `dist/**` (or `plugin.wasm`). Build detection is automatic: if the project has a `package.json` with `scripts.build`, it runs `pnpm run build` (react/html/lib); if it has a `Cargo.toml`, it runs `scripts/build.sh` / `build.ps1` (wasm); if it has neither, the build is skipped (purely static project). Without a `dist/` it falls back to collecting the root files referenced by the manifest plus `plugin.wasm`. If `entry.theme` / `contributes.overlay.file` reference files under `dist/` while the source sits at the root, they are copied in automatically.
@@ -130,8 +130,8 @@ A `.qplugin` is a zip with `manifest.json` at the root plus `dist/**` (or `plugi
 
 ```bash
 qomicex pack                                    # 开发自测包
-qomicex pack --key ./dev-key.pem                # 带自签名的离线包（本地 verify 可验）
-qomicex pack --version 0.3.0 --skip-build       # 改版本号后直接出包（复用 dist）
+qomicex pack --key ./dev-key.pem                # 带自签名的离线包 (verifiable locally with verify)
+qomicex pack --version 0.3.0 --skip-build       # 改版本号后直接出包 (reuse dist)
 ```
 
 ## verify
@@ -157,7 +157,7 @@ qomicex verify --package ./release/com.acgstudio.ligatures-0.3.0.signed.qplugin
 
 ```bash
 qomicex lint               # manifest/权限/长循环 + 相对 import 扩展名 + 资源引用
-qomicex lint --json        # 结构化输出（{ok, errors, warnings, findings}），供 CI 消费
+qomicex lint --json        # 结构化输出 ({ok, errors, warnings, findings})，供 CI 消费
 ```
 
 A stricter pre-publish static gate than `verify`, with two extra checks:
@@ -168,7 +168,7 @@ A stricter pre-publish static gate than `verify`, with two extra checks:
 **Examples** (CI gate):
 
 ```bash
-# CI 脚本：lint 不过（exit 1）即阻断构建
+# CI 脚本：lint 不过 (exit 1)即阻断构建
 qomicex lint --json | jq -e '.ok'
 ```
 
@@ -176,7 +176,7 @@ qomicex lint --json | jq -e '.ok'
 
 ```bash
 qomicex bump patch     # 1.0.0 → 1.0.1
-qomicex bump minor     # 1.0.0 → 1.1.0（默认，不传参数 = minor）
+qomicex bump minor     # 1.0.0 → 1.1.0 (default; omitting the argument means minor)
 qomicex bump major     # 1.0.0 → 2.0.0
 qomicex bump --version 2.5.0   # 直接指定目标版本
 ```
@@ -194,8 +194,8 @@ qomicex publish --changelog "新增 xxx 功能"
 ## login / logout
 
 ```bash
-qomicex login              # 设备流登录，会话持久化到 ~/.qomicex/auth.json（0600）
-qomicex login --api http://127.0.0.1:8787/api/v1   # 指定商店（本地 wrangler dev 调试）
+qomicex login              # 设备流登录，会话持久化到 ~/.qomicex/auth.json (0600)
+qomicex login --api http://127.0.0.1:8787/api/v1   # 指定商店 (debug locally with wrangler dev)
 qomicex logout             # 清除本地会话
 ```
 
@@ -215,7 +215,7 @@ qomicex publish --api http://127.0.0.1:8787/api/v1 # 自动用本地商店会话
 export QOMICEX_SIGN_KEY=<私钥 base64/PEM>   # 或 --key ./key.pem
 qomicex publish                            # 设备流登录 → 签名 → 上传
 qomicex publish --changelog "修复 X" --yes
-qomicex publish --api http://127.0.0.1:8787/api/v1   # 本地商店（wrangler dev）调试
+qomicex publish --api http://127.0.0.1:8787/api/v1   # 本地商店 (wrangler dev)调试
 ```
 
 The flow (matching the store contract; see [Publishing guidelines](/en/plugins/publishing) and ADR-050):
@@ -252,7 +252,7 @@ qomicex publish --changelog "修复了 xxx 崩溃问题"
 ## doctor
 
 ```bash
-qomicex doctor             # 环境诊断（纯只读，零副作用）
+qomicex doctor             # 环境诊断 (read-only with no side effects)
 qomicex doctor --json      # 结构化输出供脚本消费
 ```
 
@@ -262,8 +262,8 @@ Checks each item: Node ≥ 20, pnpm, the plugin project and manifest validity, `
 
 ```bash
 qomicex doctor
-# ✗ @qomicex/plugin-ui: 未安装（pnpm install 后使用）
-# ✗ openssl: 不可用（签名密钥生成需要）
+# ✗ @qomicex/plugin-ui: 未安装 (available after pnpm install)
+# ✗ openssl: 不可用 (required to generate signing keys)
 ```
 
 ## debug
@@ -308,7 +308,7 @@ Generate an Ed25519 key pair (PKCS#8 PEM or a raw 32-byte seed in base64):
 
 ```bash
 openssl genpkey -algorithm Ed25519 -out dev-key.pem
-# raw seed 提取（publish 也接受 PEM，通常不必）
+# raw seed 提取 (publish also accepts PEM; usually unnecessary)
 openssl pkey -in dev-key.pem -outform DER | tail -c 32 | base64
 ```
 

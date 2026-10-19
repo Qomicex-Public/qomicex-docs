@@ -9,46 +9,46 @@ Terms that recur throughout the launcher documentation, explained in one place.
 
 | Term | Explanation |
 | :--- | :--- |
-| **Instance（实例）** | A self-contained copy of the game (game files + mods + saves + settings). One instance corresponds to one version directory under `versions/` |
-| **Game directory（游戏目录）** | Commonly known as `.minecraft`; the root directory holding game files. The launcher can manage several game directories at once |
-| **Data directory（数据目录）** | Where the launcher stores its own configuration, cache, and logs; separate from the game directory |
-| **Version isolation（版本隔离）** | A mechanism that isolates each instance's mods, saves, resource packs, and other data so multiple instances do not mix files |
-| **Complete missing files（补全文件）** | Scans an instance for missing game files (libraries, assets, client.jar) and downloads them automatically |
+| **Instance (Instance)** | A self-contained copy of the game (game files + mods + saves + settings). One instance corresponds to one version directory under `versions/` |
+| **Game directory (Game directory)** | Commonly known as `.minecraft`; the root directory holding game files. The launcher can manage several game directories at once |
+| **Data directory (Data directory)** | Where the launcher stores its own configuration, cache, and logs; separate from the game directory |
+| **Version isolation (Version isolation)** | A mechanism that isolates each instance's mods, saves, resource packs, and other data so multiple instances do not mix files |
+| **Complete missing files (Repair files)** | Scans an instance for missing game files (libraries, assets, client.jar) and downloads them automatically |
 
 ## Loaders and modpacks
 
 | Term | Explanation |
 | :--- | :--- |
-| **Vanilla（原版）** | The official game with no Loader（加载器） |
-| **Loader（加载器）** | A framework that loads mods on top of vanilla: **Forge**, **Fabric**, **NeoForge**, **Quilt**. Mods for different loaders are generally not interchangeable |
+| **Vanilla (Vanilla)** | The official game with no Loader (Loader) |
+| **Loader (Loader)** | A framework that loads mods on top of vanilla: **Forge**, **Fabric**, **NeoForge**, **Quilt**. Mods for different loaders are generally not interchangeable |
 | **Mod** | A modification that changes game behavior, installed per loader |
-| **Modpack（整合包）** | A fully preconfigured game environment: game version + loader + a full set of mods + settings, installed in one click |
-| **Resource pack（资源包）** | Replaces the game's visuals and sounds (formerly called "texture pack") |
-| **Shader pack（光影包）** | Works with a shader loader to add lighting and shadow effects |
-| **Data pack（数据包）** | Vanilla data extensions at the world level; they travel with the save |
-| **Schematic（原理图）** | A building blueprint file for the Litematica mod |
+| **Modpack (Modpack)** | A fully preconfigured game environment: game version + loader + a full set of mods + settings, installed in one click |
+| **Resource pack (Resource packs)** | Replaces the game's visuals and sounds (formerly called "texture pack") |
+| **Shader pack (Shader packs)** | Works with a shader loader to add lighting and shadow effects |
+| **Data pack (Data packs)** | Vanilla data extensions at the world level; they travel with the save |
+| **Schematic (Schematic)** | A building blueprint file for the Litematica mod |
 
 ## Accounts and authentication
 
 | Term | Explanation |
 | :--- | :--- |
-| **Microsoft login（微软登录）** | OAuth authorization with a genuine Microsoft account |
-| **Offline login（离线登录）** | Verifies only the username; used for singleplayer or offline servers |
-| **External login (Yggdrasil)（外置登录）** | Third-party authentication services (such as LittleSkin or Tongyitong) that emulate official verification with their own account systems |
-| **Tongyitong（统一通）** | The name of one Yggdrasil external login service |
+| **Microsoft login (Microsoft sign-in)** | OAuth authorization with a genuine Microsoft account |
+| **Offline login (Offline login)** | Verifies only the username; used for singleplayer or offline servers |
+| **External login (Yggdrasil) (External login)** | Third-party authentication services (such as LittleSkin or Tongyitong) that emulate official verification with their own account systems |
+| **Tongyitong (Unified Pass)** | The name of one Yggdrasil external login service |
 
 ## Multiplayer
 
 | Term | Explanation |
 | :--- | :--- |
-| **Host（房主）** | The player who creates a multiplayer room and manages players and the mod list |
-| **Room code（房间码）** | A short code the host shares with friends; it is used to join the room |
+| **Host (Host)** | The player who creates a multiplayer room and manages players and the mod list |
+| **Room code (Room code)** | A short code the host shares with friends; it is used to join the room |
 | **NAT** | The address translation type of the router, which determines how easy a direct P2P connection is; strict NAT may require relaying |
-| **Mod consistency（Mod 一致性）** | Before joining, the launcher compares the host's mod list with your local one so the game does not crash over mismatched mods |
+| **Mod consistency (Mod consistency)** | Before joining, the launcher compares the host's mod list with your local one so the game does not crash over mismatched mods |
 
 ## Diagnostics
 
 | Term | Explanation |
 | :--- | :--- |
 | **mclo.gs** | A public log sharing service that turns long logs into short links you can paste into issues or chats |
-| **JVM arguments（JVM 参数）** | Launch arguments passed to the Java virtual machine, often used to adjust memory and garbage collection |
+| **JVM arguments (JVM arguments)** | Launch arguments passed to the Java virtual machine, often used to adjust memory and garbage collection |

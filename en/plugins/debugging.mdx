@@ -19,10 +19,10 @@ Or call the harness script directly:
 # 前置：插件依赖已装好、plugin-ui 已构建
 pnpm --filter @qomicex/plugin-ui build
 
-# 跑 hello-plugin 调试（headless）
+# 跑 hello-plugin 调试 (headless)
 pnpm run harness -- hello-plugin
 
-# 有头模式（看得见浏览器，配合 DevTools 断点）
+# 有头模式 (visible browser, works with DevTools breakpoints)
 pnpm run harness -- hello-plugin --headed
 ```
 
@@ -38,9 +38,9 @@ pnpm exec playwright install chromium
 ## Architecture
 
 ```text
-Node 脚本 scripts/harness/run.mjs（主控）
-  · 起 stub mock server（子进程，默认 :5100）
-  · 起 Vite dev（若未在跑，默认 :1420）
+Node 脚本 scripts/harness/run.mjs (main controller)
+  · 起 stub mock server (child process, defaults to :5100)
+  · 起 Vite dev (defaults to :1420 if not running)
   · Playwright 开 Chromium，addInitScript 注入 Tauri mock
   · page.route 把 127.0.0.1:5000/api/** → 转发到 stub :5100
   · fs.watch 插件 src → 重建 → page.reload

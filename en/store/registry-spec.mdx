@@ -173,7 +173,7 @@ The Open Registry Protocol's signing requirements concern **package integrity** 
 │   ├── signedHash: SHA-256(规范化 manifest + 文件清单)
 │   ├── signerKeyId: "<key id>"
 │   └── signature: "<base64 ed25519 sig>"
-├── signature.cert.json      # 开发者证书（根钥签发）
+├── signature.cert.json      # 开发者证书 (issued by the root key)
 │   ├── algorithm: "Ed25519"
 │   ├── keyId / publicKey
 │   ├── issuer: { keyId: "<根钥 id>" }

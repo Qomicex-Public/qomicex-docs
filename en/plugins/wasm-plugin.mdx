@@ -3,7 +3,7 @@ title: "WASM plugin (L3)"
 ---
 ## WASM plugin (L3)
 
-The Launcher（启动器）runs L3 plugins as **WASM modules** inside its Rust layer (wasmtime engine) in a Sandbox（沙箱）. They suit agents, protocol parsers, and other complex logic. Unlike L2 (frontend script), L3 runs in an **independent runtime** and does not depend on a browser environment.
+The Launcher (Launcher)runs L3 plugins as **WASM modules** inside its Rust layer (wasmtime engine) in a Sandbox (Sandbox). They suit agents, protocol parsers, and other complex logic. Unlike L2 (frontend script), L3 runs in an **independent runtime** and does not depend on a browser environment.
 
 ## 1. How it works
 
@@ -21,7 +21,7 @@ The Launcher（启动器）runs L3 plugins as **WASM modules** inside its Rust l
 ```text
 my-wasm-plugin/
 ├── manifest.json        # layers 需含 "l3"
-└── plugin.wasm          # 核心 wasm 模块（编译产物）
+└── plugin.wasm          # 核心 wasm 模块 (build output)
 ```
 
 Example Manifest:
@@ -57,8 +57,8 @@ Plugins reach Launcher capabilities by importing functions from the `qomicex` mo
 extern "C" {
     fn log(level: i32, msg_ptr: i32, msg_len: i32);                          // 输出日志
     fn http_fetch(url_ptr: i32, url_len: i32, method_ptr: i32, method_len: i32,
-                  body_ptr: i32, body_len: i32, out_ptr: i32) -> i32;        // HTTP 请求（预留）
-    fn instance_list(out_ptr: i32) -> i32;                                   // 实例列表（预留）
+                  body_ptr: i32, body_len: i32, out_ptr: i32) -> i32;        // HTTP 请求 (reserved)
+    fn instance_list(out_ptr: i32) -> i32;                                   // 实例列表 (reserved)
     fn db_set(key_ptr: i32, key_len: i32, val_ptr: i32, val_len: i32);       // 写键值
     fn db_get(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32; // 读键值
     fn get_plugin_id(out_ptr: i32, out_cap: i32) -> i32;                     // 获取插件 id

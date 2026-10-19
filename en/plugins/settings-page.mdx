@@ -3,11 +3,11 @@ title: "Plugin settings pages (settingsPages)"
 ---
 ## Plugin settings pages (settingsPages)
 
-Plugins often need their own configuration UI (toggles, API keys, default behavior). Instead of scattering **Settings** buttons across plugin pages, put the settings UI **inside the Launcher**: in **Settings → Plugins → Plugin settings（设置 → 插件 → 插件设置）** the left side lists one vertical tab per plugin and the right side shows the settings UI that plugin provides. Users can find it and do not get lost.
+Plugins often need their own configuration UI (toggles, API keys, default behavior). Instead of scattering **Settings** buttons across plugin pages, put the settings UI **inside the Launcher**: in **Settings → Plugins → Plugin settings (Settings → Plugins → Plugin Settings)** the left side lists one vertical tab per plugin and the right side shows the settings UI that plugin provides. Users can find it and do not get lost.
 
 ## Quick start
 
-**Step 1**: Declare a Plugin settings page（插件设置页） in `contributes.settingsPages` of `manifest.json` (the relative path of an HTML file inside the `.qplugin` package):
+**Step 1**: Declare a Plugin settings page (Plugin Settings) in `contributes.settingsPages` of `manifest.json` (the relative path of an HTML file inside the `.qplugin` package):
 
 ```json
 {
@@ -61,7 +61,7 @@ Plugins often need their own configuration UI (toggles, API keys, default behavi
       document.getElementById('city').value = s.city ?? ''
       document.getElementById('autoRefresh').checked = s.autoRefresh === true
     })
-    // 修改即保存（setSettings 按 key 合并，无需整包写入）
+    // 修改即保存 (setSettings merges by key, so there is no need to write the whole file)
     document.getElementById('city').addEventListener('change', (e) =>
       api.call('setSettings', 'city', e.target.value))
     document.getElementById('autoRefresh').addEventListener('change', (e) =>
@@ -95,7 +95,7 @@ await __PLUGIN_API__.call('openPluginSettings', 'top.qomicex.weather')
 - If the target plugin declares no `settingsPages`, the plugin settings area still opens (at its default position)
 - If one plugin declares several settings pages, the first one is selected
 
-## Rules and Lifecycle（生命周期）
+## Rules and Lifecycle (lifecycle)
 
 | Rule | Description |
 |------|------|

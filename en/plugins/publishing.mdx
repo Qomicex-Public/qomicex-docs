@@ -12,10 +12,10 @@ We recommend running the whole package → sign → publish flow with the `qomic
 A `.qplugin` is really a **ZIP archive**, and `manifest.json` must sit at the **root**.
 
 ```text
-my-plugin.qplugin（即 zip）
+my-plugin.qplugin (plain zip)
 ├── manifest.json          # 必须在根目录
-├── signature.json         # 签名（上传商店必须，见 §四）
-├── signature.cert.json    # 开发者证书（商店发布时附带）
+├── signature.json         # 签名 (required to upload to the store; see section 4)
+├── signature.cert.json    # 开发者证书 (attached when publishing to the store)
 └── dist/
     ├── index.html
     ├── app.js
@@ -32,9 +32,9 @@ my-plugin.qplugin（即 zip）
 Plugins with L3 capabilities must ship `plugin.wasm` (a wasmtime core module) inside the package:
 
 ```text
-my-wasm-plugin.qplugin（即 zip）
+my-wasm-plugin.qplugin (plain zip)
 ├── manifest.json          # 必须在根目录，layers 含 "l3"
-└── plugin.wasm            # wasm 编译产物（wasm32-unknown-unknown）
+└── plugin.wasm            # wasm 编译产物 (wasm32-unknown-unknown)
 ```
 
 - Build: `rustup target add wasm32-unknown-unknown && cargo build --release --target wasm32-unknown-unknown`
@@ -156,7 +156,7 @@ Plugins can read and write their own data (isolated per plugin id):
 
 ```text
 {数据目录}/plugins/{插件id}/
-├── manifest.json      # 你的插件文件（安装时解包）
+├── manifest.json      # 你的插件文件 (unpacked at install time)
 ├── settings.json      # getSettings/setSettings 读写
 └── cache.json         # setCache/getCache 读写
 ```

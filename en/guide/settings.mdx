@@ -3,70 +3,70 @@ title: "Settings reference"
 ---
 ## Settings reference
 
-The settings page lives under **Settings（设置）** in the sidebar, with category navigation on the left. This page explains each setting and its recommended value, category by category.
+The settings page lives under **Settings (Settings)** in the sidebar, with category navigation on the left. This page explains each setting and its recommended value, category by category.
 
 - **Global settings vs instance settings**: the launch settings on this page (memory, Java, JVM arguments) are **global defaults**; an individual instance can override them in Instance details → Settings (see [Instance management](/en/guide/instances)).
 - The performance tuning deep dive (how much memory to give, which Java to pick, download acceleration) is in [Performance tuning](/en/guide/optimize).
 
-## Launcher settings（启动器设置） (basics)
+## Launcher settings (Launcher settings) (basics)
 
 | Setting | Description | Recommendation |
 | :--- | :--- | :--- |
 | Language | Interface display language | — |
 | Data directory | Where launcher configuration and data are stored | Do not change unless you know what you are doing |
-| Version isolation（版本隔离） | Store each instance's data separately (recommended) | ✅ On |
+| Version isolation (Version isolation) | Store each instance's data separately (recommended) | ✅ On |
 | Close launcher after start | Minimize or exit the launcher once the game starts | Your preference |
 | Automatically report critical errors | Sends crash logs automatically to help improve the launcher (no personal content) | ✅ Recommended |
 | Telemetry | Anonymous feature-usage statistics (opt-in, off by default) | Your choice |
 
-## Launch settings（启动设置）
+## Launch settings (Launch settings)
 
-- **Memory allocation（内存分配）**: `auto` lets the launcher compute it from physical memory, or you can set a maximum manually. **On machines with 8GB or less, prefer auto**; for large modpacks you can hand out 6–8GB
+- **Memory allocation (Memory allocation)**: `auto` lets the launcher compute it from physical memory, or you can set a maximum manually. **On machines with 8GB or less, prefer auto**; for large modpacks you can hand out 6–8GB
 - **Default Java**: the global default Java runtime (instances can override it individually); if Java is not installed, use the one-click download in the Java section
-- **JVM arguments（JVM 参数）**: extra launch arguments; you usually do not need to fill these in for a Large Modpack
+- **JVM arguments (JVM arguments)**: extra launch arguments; you usually do not need to fill these in for a Large Modpack
 
-## Download settings（下载设置）
+## Download settings (Download settings)
 
-See [Download center](/en/guide/downloads#download-acceleration). Open it from the **Download center（下载中心）** page in the launcher.
+See [Download center](/en/guide/downloads#download-acceleration). Open it from the **Download center (Download Center)** page in the launcher.
 
-## Storage and cache（储存与缓存）
+## Storage and cache (Storage & Cache)
 
 - **Version list cache duration**: how long CurseForge / NeoForge version lists are cached; shorter = fresher, longer = fewer requests
 - **Concurrency and TTL**: CurseForge request concurrency and cache lifetime; leave them alone in general
 
-## Network settings（网络设置）
+## Network settings (Network settings)
 
 | Setting | Description |
 | :--- | :--- |
-| Proxy mode（代理模式） | Off / Follow system / HTTP(S) proxy / SOCKS5 proxy |
-| Proxy address（代理地址） | `host:port`, e.g. `127.0.0.1:7890` |
-| Ignore SSL certificates（忽略 SSL 证书） | Skip certificate verification (fixes certificate hijacking by some proxies; it is a security risk, so enable it temporarily only while troubleshooting) |
-| Parallel HTTP/1.1（HTTP/1.1 并行） | Force parallel downloads to use HTTP/1.1 for compatibility with some proxies |
+| Proxy mode (Proxy mode) | Off / Follow system / HTTP(S) proxy / SOCKS5 proxy |
+| Proxy address (Proxy address) | `host:port`, e.g. `127.0.0.1:7890` |
+| Ignore SSL certificates (Ignore SSL certificates) | Skip certificate verification (fixes certificate hijacking by some proxies; it is a security risk, so enable it temporarily only while troubleshooting) |
+| Parallel HTTP/1.1 (HTTP/1.1 parallel) | Force parallel downloads to use HTTP/1.1 for compatibility with some proxies |
 
 The proxy here applies to **the launcher's own requests** (resource search, downloads, and so on) and does not change in-game networking.
 
-## Java runtime（Java 运行时） {#java-runtime}
+## Java runtime (Java runtime) {#java-runtime}
 
 - The list of scanned Java installations and the selection of the default runtime
-- **Download Java（下载 Java）**: downloads a matching JDK automatically (the official Mojang source is recommended), so you do not install Java by hand
-- **Add manually（手动添加）**: point to a Java path already on your machine
+- **Download Java (Download Java)**: downloads a matching JDK automatically (the official Mojang source is recommended), so you do not install Java by hand
+- **Add manually (Add manually)**: point to a Java path already on your machine
 
-## Appearance（外观）
+## Appearance (Appearance)
 
 | Setting | Description |
 | :--- | :--- |
-| Theme mode / Preset / Accent color（主题模式 / 预设 / 主题色） | Light or dark, theme presets (Default/Latte/Smoothie…), accent color (can follow background with Monet color extraction) |
-| Component material（组件材质） | default / Frosted glass / Acrylic / Aero / Liquid glass; the texture of cards |
-| Background（背景） | Custom background image (random supported), overlay opacity, blur |
-| Animation（动画） | UI animation toggle and speed, maximum frame rate limit |
-| Window corners（窗口圆角） | Window corner toggle and radius (Windows) |
-| Font（字体） | Global UI font |
-| Watermark（水印） | Home watermark text toggle and content |
+| Theme mode / Preset / Accent color (Theme mode / preset / accent color) | Light or dark, theme presets (Default/Latte/Smoothie…), accent color (can follow background with Monet color extraction) |
+| Component material (Component material) | default / Frosted glass / Acrylic / Aero / Liquid glass; the texture of cards |
+| Background (Background) | Custom background image (random supported), overlay opacity, blur |
+| Animation (Animation) | UI animation toggle and speed, maximum frame rate limit |
+| Window corners (Window corners) | Window corner toggle and radius (Windows) |
+| Font (Font) | Global UI font |
+| Watermark (Watermark) | Home watermark text toggle and content |
 
-## Toolbox（工具箱）
+## Toolbox (Toolbox)
 
 A collection of built-in tools: log export, network request log toggle, game log analysis, and other diagnostics.
 
-## About（关于）
+## About (About)
 
-Version information, contributors, the dependency license list, and **License and privacy（版权与隐私）** (copyright notice, open-source licenses, and the full privacy policy — see the dedicated [License and privacy](/en/guide/legal) page).
+Version information, contributors, the dependency license list, and **License and privacy (Copyright & privacy)** (copyright notice, open-source licenses, and the full privacy policy — see the dedicated [License and privacy](/en/guide/legal) page).

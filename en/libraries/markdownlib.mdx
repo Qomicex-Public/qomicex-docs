@@ -3,7 +3,7 @@ title: "MarkdownLib Library plugin"
 ---
 ## MarkdownLib Library plugin
 
-> MarkdownLib is a library that wraps Markdown parsing as a Library plugin（前置插件）, which any plugin can call through `callPlugin` to render Markdown text as HTML.
+> MarkdownLib is a library that wraps Markdown parsing as a Library plugin (Library plugin), which any plugin can call through `callPlugin` to render Markdown text as HTML.
 
 - **Plugin ID**: `top.qomicex.markdown`
 - **Version**: `1.2.1`
@@ -180,10 +180,10 @@ Call flow:
 调用方插件 ──callPlugin──▶ 主窗口 __pluginRegistry 中转
                               │
                               ▼
-                         MarkdownLib（已激活）执行 renderMarkdown
+                         MarkdownLib (activated)执行 renderMarkdown
                               │
                               ▼
-                    返回渲染结果（Promise 值）
+                    返回渲染结果 (Promise value)
 ```
 
 ### Why embed instead of using a CDN
@@ -201,8 +201,8 @@ MarkdownLib **embeds** `marked.min.js` in the plugin package instead of referenc
 Dependencies are declared in the `dependencies` array of `manifest.json` and validated by the backend at install and startup:
 
 ```text
-安装时：检查必装前置是否已安装且版本符合 → 否则拒绝安装（PLUGIN_MISSING_DEPENDENCY）
-启动时：按依赖拓扑排序激活（先激活被依赖方，再激活依赖方）
+安装时：检查必装前置是否已安装且版本符合 → 否则拒绝安装 (PLUGIN_MISSING_DEPENDENCY)
+启动时：按依赖拓扑排序激活 (dependencies activate before dependents)
 运行中：可选前置缺失不影响启用，调用其方法时才报错
 ```
 
@@ -216,8 +216,8 @@ registerMethod(name, fn)
 
 callPlugin(pluginId, name, ...args)
   ──▶ 查找 pluginId 注册的 name 方法
-       ├── 找到 → 执行 fn(...args)，返回结果（值或 Promise）
-       └── 未找到 → reject（插件未安装 / 未激活 / 方法未注册）
+       ├── 找到 → 执行 fn(...args)，返回结果 (value or Promise)
+       └── 未找到 → reject (plugin missing, not activated, or method not registered)
 ```
 
 ### Error handling
@@ -226,7 +226,7 @@ callPlugin(pluginId, name, ...args)
 
 | Scenario | Error message (runtime string, shown as the launcher returns it) |
 |------|----------|
-| Target plugin not installed | 插件 xxx 未提供方法 yyy（可能未安装或未激活） |
+| Target plugin not installed | 插件 xxx 未提供方法 yyy (may not be installed or activated) |
 | Target plugin not active | Same as above |
 | Method not registered | Same as above |
 | Error thrown inside the method | 插件 xxx 方法 yyy 执行失败: &lt;具体错误&gt; |

@@ -3,7 +3,7 @@ title: "Deep link (qomicex-launcher://)"
 ---
 ## Deep link (qomicex-launcher://)
 
-Other programs — web pages, browser bookmarks, desktop shortcuts, scripts — can use `qomicex-launcher://` links to **invoke the Launcher（启动器） directly** and have it do one thing for you: launch an Instance（实例）, join a multiplayer room, install a plugin or Modpack（整合包）, or open a specific page.
+Other programs — web pages, browser bookmarks, desktop shortcuts, scripts — can use `qomicex-launcher://` links to **invoke the Launcher (Launcher) directly** and have it do one thing for you: launch an Instance (Instance), join a multiplayer room, install a plugin or Modpack (Modpack), or open a specific page.
 
 Typical uses:
 
@@ -69,7 +69,7 @@ This is not pedantry: the order of the instance list changes after the launcher 
 - A trailing slash at the end of the directory may be omitted.
 - If the instance name **itself contains a colon** (theoretically possible on Linux), use the instance ID instead.
 
-If nothing matches, you get an "instance not found" message and nothing launches. Launching behaves exactly like clicking launch in **Instance management（实例管理）** (including the Java check and memory settings).
+If nothing matches, you get an "instance not found" message and nothing launches. Launching behaves exactly like clicking launch in **Instance management (Instance Management)** (including the Java check and memory settings).
 
 ## Open a page
 
@@ -84,14 +84,14 @@ To prevent arbitrary page injection, **only routes registered inside the launche
 | Route | Page |
 | :--- | :--- |
 | `/` | Home |
-| `/instances` | Instance management（实例管理） (sub-paths allowed, e.g. `/instances/<ID>`) |
-| `/downloads` | Download center（下载中心） |
-| `/accounts` | Account management（账户管理） |
-| `/resource-center` | Resource center（资源中心） |
-| `/connect` | Multiplayer（多人联机） |
-| `/settings` | Settings（设置） |
-| `/running` | Running（运行中） |
-| `/log-analysis` | Log analysis（日志分析） |
+| `/instances` | Instance management (Instance Management) (sub-paths allowed, e.g. `/instances/<ID>`) |
+| `/downloads` | Download center (Download Center) |
+| `/accounts` | Account management (Account Management) |
+| `/resource-center` | Resource center (Resource Center) |
+| `/connect` | Multiplayer (Multiplayer) |
+| `/settings` | Settings (Settings) |
+| `/running` | Running (Running) |
+| `/log-analysis` | Log analysis (Log Analysis) |
 
 The routes in the table **and their sub-paths** are all allowed (for example, `/instances/abc` is valid). Paths not listed here are ignored.
 
@@ -101,7 +101,7 @@ The routes in the table **and their sub-paths** are all allowed (for example, `/
 qomicex-launcher://join/482913
 ```
 
-Put the **room code** the host gave you after `join/`. When triggered, the launcher switches to the **Multiplayer（多人联机）** page, starts joining, and shows a dialog asking you to confirm.
+Put the **room code** the host gave you after `join/`. When triggered, the launcher switches to the **Multiplayer (Multiplayer)** page, starts joining, and shows a dialog asking you to confirm.
 
 ## Install plugins
 
@@ -148,7 +148,7 @@ qomicex-launcher://install/modpack?type=curseforge&projectId=123456&fileId=7890&
 | `name` | No | Instance name after installation. If omitted, the modpack's official name is used |
 
 - `projectId` and `fileId` **must both be provided** — a project ID alone cannot determine which version to install.
-- A confirmation dialog appears after triggering; once confirmed, installation runs in the background and you can follow progress in the **Download center（下载中心）**.
+- A confirmation dialog appears after triggering; once confirmed, installation runs in the background and you can follow progress in the **Download center (Download Center)**.
 - For security reasons, specifying a local file path via a link is **not supported**.
 
 ## Security notes

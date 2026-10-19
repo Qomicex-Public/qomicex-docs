@@ -3,11 +3,11 @@ title: "Overlay development"
 ---
 ## Overlay development
 
-The Overlay window（悬浮窗）is a small window independent of the main interface that you can drag, minimize, and resize. It is usually for tool panels that stay open, such as an AI assistant chat window.
+The Overlay window (Overlay window)is a small window independent of the main interface that you can drag, minimize, and resize. It is usually for tool panels that stay open, such as an AI assistant chat window.
 
 ## 1. Declare an Overlay window
 
-Declare both `contributes.menuItems` (the entry point) and `contributes.overlay` (the Overlay window configuration) in the Manifest（清单）:
+Declare both `contributes.menuItems` (the entry point) and `contributes.overlay` (the Overlay window configuration) in the Manifest (manifest):
 
 ```json
 {
@@ -36,7 +36,7 @@ Key points:
 
 ## 2. Write the Overlay window HTML
 
-`overlay.html` is a complete HTML document (with its own `<html>`/`<head>`/`<body>`), and its scripts can use the `.p-*` Component（组件）classes and `window.__PLUGIN_API__` directly.
+`overlay.html` is a complete HTML document (with its own `<html>`/`<head>`/`<body>`), and its scripts can use the `.p-*` Component (component)classes and `window.__PLUGIN_API__` directly.
 
 ```html
 <!DOCTYPE html>

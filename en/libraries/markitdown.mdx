@@ -19,8 +19,8 @@ MarkItDown (`top.qomicex.markitdown`) converts local documents into Markdown tex
 
 ```js
 const res = await __PLUGIN_API__.callPlugin('top.qomicex.markitdown', 'convertFile', {
-  base64: '...',            // 文件内容 base64（二进制文件用 readBytes 获取 contentBase64）
-  fileName: 'a.pdf',        // 文件名（用于判断格式）
+  base64: '...',            // 文件内容 base64 (use readBytes to get contentBase64 for binary files)
+  fileName: 'a.pdf',        // 文件名 (used to detect the format)
   mime: 'application/pdf'   // 可选
 })
 // => { title, markdown, text_content, format } 或 { error }
@@ -32,7 +32,7 @@ const res = await __PLUGIN_API__.callPlugin('top.qomicex.markitdown', 'convertFi
 ## Dependencies and configuration
 
 - Pure document conversion (PDF / DOCX / XLSX / PPTX and so on) needs no configuration
-- **Image OCR and audio transcription** need an OpenAI-compatible API: fill in the vision / audio model and key in the "MarkItDown Document Conversion（文档转换）" section of the AI assistant settings page
+- **Image OCR and audio transcription** need an OpenAI-compatible API: fill in the vision / audio model and key in the "MarkItDown Document Conversion (Document conversion)" section of the AI assistant settings page
 
 ## Optional add-on
 

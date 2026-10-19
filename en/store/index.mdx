@@ -3,7 +3,7 @@ title: "Plugin store API"
 ---
 ## Plugin store API
 
-Backend API specification for the Qomicex Launcher plugin store（插件商店）(`plugins.qomicex.top`), for plugin developers and launcher integrators.
+Backend API specification for the Qomicex Launcher plugin store (Plugin store)(`plugins.qomicex.top`), for plugin developers and launcher integrators.
 
 ## Conventions
 
@@ -20,7 +20,7 @@ Backend API specification for the Qomicex Launcher plugin store（插件商店�
 | Method | Request header | Description |
 | :--- | :--- | :--- |
 | Access Token | `Authorization: Bearer <jwt>` | Issued at login, valid for 15 minutes; with a refresh token, 30 days |
-| API Key | `X-API-Key: qk_<64hex>` | Created in the account center（账户中心）, plaintext returned only once at creation |
+| API Key | `X-API-Key: qk_<64hex>` | Created in the account center (account center), plaintext returned only once at creation |
 | Admin Token | `Authorization: Bearer <ADMIN_TOKEN>` | `/admin/*` only; a user JWT with role=admin also works |
 
 🔒 below means authentication is required.
@@ -92,7 +92,7 @@ Backend API specification for the Qomicex Launcher plugin store（插件商店�
 | POST | `/auth/verification-request` | 🔒 | Apply for organization/official verification `{targetLevel:'organization'\|'official'}` → 201 `{ok, status:'pending'}`; prerequisites: already a developer, currently individually verified, no application in progress (409 `not_developer` / `already_verified` / `pending_exists`) |
 | GET | `/auth/verification-request/mine` | 🔒 | Check application status → `{developerLevel, pending}` (pending: 0 none / 1 organization / 2 official) |
 
-### Device flow login（设备流登录）(launcher/CLI)
+### Device flow login (device flow sign-in)(launcher/CLI)
 
 Simplified RFC 8628, no WebView authentication needed:
 

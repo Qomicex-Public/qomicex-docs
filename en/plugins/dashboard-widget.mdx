@@ -3,11 +3,11 @@ title: "Dashboard widgets (dashboard:widgets)"
 ---
 ## Dashboard widgets (dashboard:widgets)
 
-The Dashboard widget（主页小组件）area is an **editable widget grid** (much like a phone home screen): the built-in watermark, account, announcement, and instance launcher are all widgets in the grid, and plugins can add their own UI as widgets too. Users drag, resize, add, and remove plugin widgets just like built-in ones.
+The Dashboard widget (Dashboard widget)area is an **editable widget grid** (much like a phone home screen): the built-in watermark, account, announcement, and instance launcher are all widgets in the grid, and plugins can add their own UI as widgets too. Users drag, resize, add, and remove plugin widgets just like built-in ones.
 
 ## Quick start
 
-Declare a `dashboard:widgets` Slot（槽位） in `contributes.slots` of `manifest.json`:
+Declare a `dashboard:widgets` Slot (slot) in `contributes.slots` of `manifest.json`:
 
 ```json
 {
@@ -103,7 +103,7 @@ The `ResizeObserver` callback fires **after the user releases the resize handle*
 
 ## How users add and edit widgets
 
-Users click **Edit layout（编辑布局）** in the top-right corner of the dashboard to enter edit mode:
+Users click **Edit layout (Edit layout)** in the top-right corner of the dashboard to enter edit mode:
 
 | Action | How |
 |------|------|
@@ -113,7 +113,7 @@ Users click **Edit layout（编辑布局）** in the top-right corner of the das
 | Restore a removed widget | The 👁 icon in the toolbar (one per hidden widget) |
 | Add a widget | ➕ in the toolbar; the panel lists every hidden widget |
 | Restore the default layout | The ↺ button in the toolbar |
-| Save and exit | The **Done（完成）** button in the toolbar |
+| Save and exit | The **Done (Done)** button in the toolbar |
 
 When the toolbar is not shown (not in edit mode), widgets return to static display and buttons and links inside the grid work normally.
 

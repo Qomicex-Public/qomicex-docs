@@ -7,20 +7,20 @@ Qomicex gives AI agents (Claude / opencode / Cursor and so on) a **plugin develo
 
 ## Skill package repository
 
-The Skill package（技能包）is maintained separately in the **[qomicex-plugin-skills](https://github.com/Qomicex-Public/qomicex-plugin-skills)** repository (`skills/qomicex-plugin-dev/`):
+The Skill package (Skill package)is maintained separately in the **[qomicex-plugin-skills](https://github.com/Qomicex-Public/qomicex-plugin-skills)** repository (`skills/qomicex-plugin-dev/`):
 
 ```text
 skills/qomicex-plugin-dev/
 ├── SKILL.md           # 主入口：何时使用、文件导航、完整流程、起步提示词
-├── refs/              # 12 个专题参考（按需加载）
-│   ├── cli.md         # CLI 命令速查（create/dev/verify/pack/publish）
+├── refs/              # 12 个专题参考 (loaded on demand)
+│   ├── cli.md         # CLI 命令速查 (create/dev/verify/pack/publish)
 │   ├── manifest.md    # manifest.json 全字段 + layers + dependencies + contributes
-│   ├── plugin-api.md  # 桥 API（__PLUGIN_API__）签名速查
+│   ├── plugin-api.md  # 桥 API (__PLUGIN_API__)签名速查
 │   ├── theme.md       # 主题语义 token 三级体系 + var() 消费约定
-│   ├── publishing.md  # Ed25519 签名流程（生成密钥 → pack --key → publish）
+│   ├── publishing.md  # Ed25519 签名流程 (generate key → pack --key → publish)
 │   ├── debugging.md   # harness 热重载调试
 │   └── ...            # 其余专题
-└── templates/         # 13 个可复用模板（React/manifest/overlay 等）
+└── templates/         # 13 个可复用模板 (React, manifest, overlay, and more)
 ```
 
 These files track the code (`src/plugins/types.ts`, the CLI's `src/lib/*`, and the public docs). **When field meanings are in doubt, the code wins; if you are unsure, flag it rather than inventing an API.**
@@ -33,11 +33,11 @@ Copy the following to any AI assistant and it will complete the installation:
 
 ```text
 请帮我安装 Qomicex 插件开发 skill。步骤：
-1. 执行 `git clone https://github.com/Qomicex-Public/qomicex-plugin-skills.git /tmp/qomicex-plugin-skills`（或任意临时目录）
-2. 创建目录 `~/.agents/skills/`（如不存在）
+1. 执行 `git clone https://github.com/Qomicex-Public/qomicex-plugin-skills.git /tmp/qomicex-plugin-skills` (or any temporary directory)
+2. 创建目录 `~/.agents/skills/` (if missing)
 3. 把仓库里的 `skills/qomicex-plugin-dev/` 整个目录复制到 `~/.agents/skills/`
 4. 确认 `~/.agents/skills/qomicex-plugin-dev/SKILL.md` 存在，并删除临时 clone 目录
-5. 告诉我已安装完成，重启 AI 工具（opencode / Claude Code）后生效
+5. 告诉我已安装完成，重启 AI 工具 (opencode / Claude Code)后生效
 ```
 
 On Windows (PowerShell):
@@ -45,7 +45,7 @@ On Windows (PowerShell):
 ```text
 请帮我安装 Qomicex 插件开发 skill。步骤：
 1. 执行 `git clone https://github.com/Qomicex-Public/qomicex-plugin-skills.git $env:TEMP\qomicex-plugin-skills`
-2. 创建目录 `$HOME\.agents\skills\`（如不存在）
+2. 创建目录 `$HOME\.agents\skills\` (if missing)
 3. 把 `skills\qomicex-plugin-dev\` 整个目录复制到 `$HOME\.agents\skills\`
 4. 确认 `$HOME\.agents\skills\qomicex-plugin-dev\SKILL.md` 存在，删除临时 clone 目录
 5. 告诉我已安装完成，重启 AI 工具后生效
@@ -94,11 +94,11 @@ Used together with the CLI, the Skill package lets an AI produce a publishable p
 qomicex create com.example.myplugin   # 1. 脚手架生成项目
 cd com.example.myplugin
 pnpm install                          # 2. 装依赖
-qomicex dev                           # 3. 热重载调试（仓库内走 harness）
+qomicex dev                           # 3. 热重载调试 (use the harness inside the repo)
 # ... AI 实现功能 ...
-qomicex verify                        # 4. 静态校验（manifest/权限/长循环），0 error
-qomicex pack --key ./dev-key.pem      # 5. 构建 + 打包（可签名）
-qomicex publish --changelog "..."     # 6. 发布商店（设备流登录 → 签名 → 上传）
+qomicex verify                        # 4. 静态校验 (manifest, permissions, long loops)，0 error
+qomicex pack --key ./dev-key.pem      # 5. 构建 + 打包 (can be signed)
+qomicex publish --changelog "..."     # 6. 发布商店 (device flow sign-in → signing → upload)
 ```
 
 For the full command reference, see [CLI reference](/en/plugins/cli).
