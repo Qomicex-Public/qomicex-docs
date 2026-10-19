@@ -190,8 +190,8 @@ Quick reference for common upload errors:
 
 | Error | Cause |
 | :--- | :--- |
-| `包含不安全路径: xxx\yyy` | Windows backslash problem, see the section above |
-| `缺少根级 manifest.json` | The manifest was zipped into a subfolder |
-| `version 不是合法 semver` | The version must look like `1.2.3` |
-| `版本 x.y.z 已存在` | The same version number was uploaded twice |
-| `签名校验失败` (`signature_invalid`) | Not signed / the signature does not match the developer public key / the package body was tampered with / the store has no root public key configured. Re-sign with `qomicex pack --key` and upload again |
+| `unsafe path: xxx\yyy` | Windows backslash problem, see the section above |
+| `missing root-level manifest.json` | The manifest was zipped into a subfolder |
+| `version is not valid semver` | The version must look like `1.2.3` |
+| `version x.y.z already exists` | The same version number was uploaded twice |
+| `signature verification failed` (`signature_invalid`) | Not signed / the signature does not match the developer public key / the package body was tampered with / the store has no root public key configured. Re-sign with `qomicex pack --key` and upload again |
