@@ -104,7 +104,7 @@ const settings = await __PLUGIN_API__.call('getSettings')
 ```
 - Permission: `config:read`
 - Returns: `Record<string, unknown>` (`{}` when the file does not exist)
-- Storage: `{数据目录}/plugins/{插件id}/settings.json`
+- Storage: `{dataDir}/plugins/{pluginId}/settings.json`
 
 ### setSettings — Write plugin settings
 
@@ -129,8 +129,8 @@ await __PLUGIN_API__.call('setCache', 'modelList', { items: [...] }, 3600)
 const cached = await __PLUGIN_API__.call('getCache', 'modelList')
 ```
 - Permission: `cache:access`
-- Storage: `{数据目录}/plugins/{插件id}/cache.json`
-- Internal shape is `{ key: { v: 值, e: 过期时间戳|null } }`; plugins do not need to care about it
+- Storage: `{dataDir}/plugins/{pluginId}/cache.json`
+- Internal shape is `{ key: { v: value, e: expiresAt|null } }`; plugins do not need to care about it
 
 ### callBackend — Call the launcher backend API
 
@@ -485,7 +485,7 @@ listen<string[]>('file-drop', (event) => {
 - Emitted by the launcher's Rust `WindowEvent::DragDrop::Drop { paths, .. }` (when `dragDropEnabled` is on)
 - Paths are absolute system paths; well suited to interactions such as "drop a file to fill in its path"
 - **Note**: the native `drop` event's `File` object does not expose `.path` in the frontend (Tauri intercepts system drag-and-drop); you must use this event
-- For L2 sandbox plugins: the main UI frontend listens and relays via `__pluginRegistry.call(pluginId, '方法', [paths])` / `callPlugin`, and the plugin receives it with `registerMethod`
+- For L2 sandbox plugins: the main UI frontend listens and relays via `__pluginRegistry.call(pluginId, 'methodName', [paths])` / `callPlugin`, and the plugin receives it with `registerMethod`
 
 ### getThemeColor — Get the current theme seed color
 

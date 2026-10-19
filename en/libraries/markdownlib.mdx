@@ -226,10 +226,10 @@ callPlugin(pluginId, name, ...args)
 
 | Scenario | Error message (runtime string, shown as the launcher returns it) |
 |------|----------|
-| Target plugin not installed | 插件 xxx 未提供方法 yyy (may not be installed or activated) |
+| Target plugin not installed | `Plugin xxx does not provide method yyy (it may not be installed or activated)` |
 | Target plugin not active | Same as above |
 | Method not registered | Same as above |
-| Error thrown inside the method | 插件 xxx 方法 yyy 执行失败: &lt;具体错误&gt; |
+| Error thrown inside the method | `Plugin xxx method yyy failed: <specific error>` |
 
 ## Revision history
 
