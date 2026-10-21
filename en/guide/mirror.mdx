@@ -1,60 +1,90 @@
 ---
 title: "Download mirrors"
+description: "QML-Mirror: an acceleration mirror for Minecraft mods and dependency libraries, routing by path prefix to each loader repository."
 ---
 ## Download mirrors
 
-Qomicex provides several download acceleration Mirrors (Mirror) for mod resources. Using them is simple: **replace the domain in the original download link with a mirror domain**, leaving the path unchanged.
+**QML-Mirror** is an acceleration mirror for Minecraft mods and dependency libraries, aimed at players in mainland China. It addresses the timeouts, single-thread throttling, and dropped connections that occur when connecting straight to overseas sources such as Forge, Fabric, or Mojang. The service runs on Tencent Cloud EdgeOne's global edge network.
 
-## Available mirrors
+Highlights:
 
-| Mirror (Mirror) | Address | Supported |
+- **Direct domestic access**: reachable over all three major Chinese networks without a cross-border hop.
+- **Strong edge caching**: popular mods and libraries are cached at the edge, so repeat downloads are served from the edge.
+- **Multi-threaded range support**: works with concurrent launcher downloads and gets past the official sources' single-thread limits.
+- **Full loader coverage**: Forge, NeoForge, Fabric, Quilt, Legacy Fabric, Babric, Cleanroom, and Sponge.
+- **HTTPS enforced**: the whole site is HTTPS + HTTP/2.
+
+## How to call it
+
+The mirror routes by **path prefix**: replace the domain in the original URL with `mirror.shenv.top` and prepend the prefix for that repository. The rest of the path stays the same.
+
+For example, a Forge installer:
+
+```text
+# Original URL
+https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.1-47.2.0/forge-1.20.1-47.2.0-installer.jar
+
+# Mirrored URL
+https://mirror.shenv.top/mc-forge/net/minecraftforge/forge/1.20.1-47.2.0/forge-1.20.1-47.2.0-installer.jar
+```
+
+## Path mapping
+
+<Warning>
+Prefixes marked "Temporarily unavailable" currently fail; they are being fixed. All other prefixes work normally.
+</Warning>
+
+### Core loaders (Maven repositories)
+
+| Upstream domain | Mirror prefix | Example path |
 | :--- | :--- | :--- |
-| Mirror 1 | [https://mirror.qomicex.dpdns.org/](https://mirror.qomicex.dpdns.org/) | Modrinth / CurseForge / Forge |
-| Mirror 2 | [https://mirror1.qomicex.dpdns.org/](https://mirror1.qomicex.dpdns.org/) | Modrinth / CurseForge / Forge |
-| Mirror 3 | [https://mirror.lenmei233.dpdns.org/](https://mirror.lenmei233.dpdns.org/) | Modrinth / CurseForge / Forge |
-| Modrinth mirror 1 | [https://modrinth.lenmei233.dpdns.org/](https://modrinth.lenmei233.dpdns.org/) | Modrinth CDN |
-| Modrinth mirror 2 | [https://modrinth.qomicex.dpdns.org/](https://modrinth.qomicex.dpdns.org/) | Modrinth CDN |
-| Modrinth mirror 3 | [https://modrinth1.qomicex.dpdns.org/](https://modrinth1.qomicex.dpdns.org/) | Modrinth CDN |
+| `maven.minecraftforge.net` | `/mc-forge/` | `/mc-forge/net/minecraftforge/...` |
+| `files.minecraftforge.net` | `/mc-forge-files/` | `/mc-forge-files/maven/...` |
+| `maven.neoforged.net` | `/mc-neoforge/` | `/mc-neoforge/net/neoforged/...`  (Temporarily unavailable) |
+| `maven.fabricmc.net` | `/mc-fabric/` | `/mc-fabric/net/fabricmc/...` |
+| `maven.quiltmc.org` | `/mc-quilt/` | `/mc-quilt/org/quiltmc/...` |
+| `maven.legacyfabric.net` | `/mc-legacyfabric/` | `/mc-legacyfabric/net/legacyfabric/...`  (Temporarily unavailable) |
+| `maven.glass-launcher.net` | `/mc-babric/` | `/mc-babric/...`  (Temporarily unavailable) |
+| `repo.maven.apache.org` | `/mc-apache/` | `/mc-apache/maven2/...` |
+| `maven.cleanroommc.com` | `/mc-cleanroom/` | `/mc-cleanroom/...`  (Temporarily unavailable) |
+| `repo.spongepowered.org` | `/mc-sponge/` | `/mc-sponge/maven/...`  (Temporarily unavailable) |
 
-Failover across nodes is automatic, so pick any one; if one is unavailable, switch to another.
+### Version metadata (Meta)
 
-## Usage
+| Upstream domain | Mirror prefix | Example path |
+| :--- | :--- | :--- |
+| `meta.fabricmc.net` | `/mc-fabric-meta/` | `/mc-fabric-meta/v2/versions/...` |
+| `meta.quiltmc.org` | `/mc-quilt-meta/` | `/mc-quilt-meta/v3/versions/...` |
+| `meta.legacyfabric.net` | `/mc-legacyfabric-meta/` | `/mc-legacyfabric-meta/v2/versions/...` |
+| `meta.babric.glass-launcher.net` | `/mc-babric-meta/` | `/mc-babric-meta/v2/versions/...`  (Temporarily unavailable) |
 
-### Modrinth
+### Vanilla base resources
 
-Original link:
+| Upstream domain | Mirror prefix | Example path |
+| :--- | :--- | :--- |
+| `libraries.minecraft.net` | `/mc-libraries/` | `/mc-libraries/com/mojang/...`  (Temporarily unavailable) |
+| `resources.download.minecraft.net` | `/mc-assets/` | `/mc-assets/xx/xxxx...`  (Temporarily unavailable) |
 
-```text
-https://cdn.modrinth.com/data/AANobbMI/versions/mc1.16.3-0.1.0/sodium-fabric-mc1.16.3-0.1.0.jar
-```
+## Architecture and performance
 
-After replacing the domain:
+**Caching strategy**: immutable files such as `.jar` and `.pom` are cached at the edge for a long time. Metadata files such as `.xml` and `.json` use short caching or bypass the cache so you always get current version information.
 
-```text
-https://mirror.qomicex.dpdns.org/data/AANobbMI/versions/mc1.16.3-0.1.0/sodium-fabric-mc1.16.3-0.1.0.jar
-```
+**Origin fetching**: large file requests go straight through EdgeOne's native CDN path, fetching from origin and transferring in ranges without passing through an edge function. This lowers time to first byte (TTFB) and removes the single-thread bandwidth ceiling.
 
-### Forge / CurseForge
+**Measured performance**: downloading an 8 MB Forge installer takes about 14 seconds directly from the official source, versus about 4.3 seconds through this mirror (single-threaded). A second download served from cache finishes in under 1 second.
 
-Original link:
+## Relationship to the Qomicex Launcher
 
-```text
-https://mediafilez.forgecdn.net/files/8685/162/jei-26.2-neoforge-30.24.0.176.jar
-```
+<Note>
+The mirror source built into the Qomicex Launcher is still being migrated to QML-Mirror. Until that migration finishes, the launcher keeps using its existing mirror nodes under **Settings → Download settings → Resource download source**, so you do not need to enter any of the addresses above.
+</Note>
 
-After replacing the domain:
+## FAQ
 
-```text
-https://mirror.qomicex.dpdns.org/files/8685/162/jei-26.2-neoforge-30.24.0.176.jar
-```
+**A download returns 404?** Check that the path prefix matches the mapping table. Some upstream repositories have an extra directory level (for example NeoForge dependencies under `/releases/`); the mirror rewrites those internally.
 
-### Source domains that can be replaced
+**Does the mirror log what I download?** No. It acts purely as a CDN cache node and does not record or inspect user activity.
 
-- `cdn.modrinth.com` / `cdn-alt.modrinth.com`
-- `mediafilez.forgecdn.net` / `edge.forgecdn.net`
+**Is this an official service?** No. It is a community acceleration node maintained by an individual developer, and it has no affiliation with Mojang, Forge, or Fabric.
 
-## How the launcher actually picks a source
-
-By default the launcher prefers the public MCIM mirror (`mod.mcimirror.top`) and falls back to the QML mirror nodes and then the official sources when it is unavailable. This fallback chain is what **Settings → Download settings → Resource download source** controls — you never have to assemble URLs by hand.
-
-> For learning and exchange only. Please follow the relevant terms of service.
+> For learning and personal game acceleration only. Do not use it commercially or to generate abusive traffic. All game files remain the property of their respective authors.

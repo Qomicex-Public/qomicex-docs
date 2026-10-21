@@ -1,60 +1,90 @@
 ---
 title: "下载镜像"
+description: "QML-Mirror：Minecraft 模组与依赖库的国内加速镜像，支持按路径前缀路由到各加载器仓库。"
 ---
 ## 下载镜像
 
-Qomicex 提供多个模组资源下载加速镜像。使用方法很简单：**将原始下载链接中的域名替换为镜像域名即可**，路径保持不变。
+**QML-Mirror** 是为国内 Minecraft 玩家提供的模组与依赖库加速镜像。针对直连海外官方源（Forge、Fabric、Mojang 等）时常见的超时、单线程限速与频繁断连问题，镜像基于腾讯云 EdgeOne 全球边缘节点构建。
 
-## 可用镜像
+核心特性：
 
-| 镜像 | 地址 | 适用 |
+- **国内直连**：国内三网直连，无需跨国链路。
+- **边缘强缓存**：热门模组与依赖库在边缘节点缓存，重复下载走边缘命中。
+- **支持多线程分片**：兼容启动器并发下载，突破官方源单线程限速。
+- **全加载器覆盖**：Forge、NeoForge、Fabric、Quilt、Legacy Fabric、Babric、Cleanroom、Sponge 等。
+- **强制 HTTPS**：全站 HTTPS + HTTP/2。
+
+## 调用方式
+
+镜像采用**路径前缀路由**：把原始 URL 的域名替换为 `mirror.shenv.top`，并在路径前加上对应仓库的前缀，其余路径保持不变。
+
+例如 Forge 安装包：
+
+```text
+# 原始链接
+https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.1-47.2.0/forge-1.20.1-47.2.0-installer.jar
+
+# 镜像链接
+https://mirror.shenv.top/mc-forge/net/minecraftforge/forge/1.20.1-47.2.0/forge-1.20.1-47.2.0-installer.jar
+```
+
+## 路径映射表
+
+<Warning>
+标注「暂不可用」的前缀当前请求会失败，正在修复中；其余前缀可正常使用。
+</Warning>
+
+### 核心加载器（Maven 仓库）
+
+| 上游域名 | 镜像前缀 | 原路径示例 |
 | :--- | :--- | :--- |
-| 镜像 1 | [https://mirror.qomicex.dpdns.org/](https://mirror.qomicex.dpdns.org/) | Modrinth / CurseForge / Forge |
-| 镜像 2 | [https://mirror1.qomicex.dpdns.org/](https://mirror1.qomicex.dpdns.org/) | Modrinth / CurseForge / Forge |
-| 镜像 3 | [https://mirror.lenmei233.dpdns.org/](https://mirror.lenmei233.dpdns.org/) | Modrinth / CurseForge / Forge |
-| Modrinth 镜像 1 | [https://modrinth.lenmei233.dpdns.org/](https://modrinth.lenmei233.dpdns.org/) | Modrinth CDN |
-| Modrinth 镜像 2 | [https://modrinth.qomicex.dpdns.org/](https://modrinth.qomicex.dpdns.org/) | Modrinth CDN |
-| Modrinth 镜像 3 | [https://modrinth1.qomicex.dpdns.org/](https://modrinth1.qomicex.dpdns.org/) | Modrinth CDN |
+| `maven.minecraftforge.net` | `/mc-forge/` | `/mc-forge/net/minecraftforge/...` |
+| `files.minecraftforge.net` | `/mc-forge-files/` | `/mc-forge-files/maven/...` |
+| `maven.neoforged.net` | `/mc-neoforge/` | `/mc-neoforge/net/neoforged/...` （暂不可用） |
+| `maven.fabricmc.net` | `/mc-fabric/` | `/mc-fabric/net/fabricmc/...` |
+| `maven.quiltmc.org` | `/mc-quilt/` | `/mc-quilt/org/quiltmc/...` |
+| `maven.legacyfabric.net` | `/mc-legacyfabric/` | `/mc-legacyfabric/net/legacyfabric/...` （暂不可用） |
+| `maven.glass-launcher.net` | `/mc-babric/` | `/mc-babric/...` （暂不可用） |
+| `repo.maven.apache.org` | `/mc-apache/` | `/mc-apache/maven2/...` |
+| `maven.cleanroommc.com` | `/mc-cleanroom/` | `/mc-cleanroom/...` （暂不可用） |
+| `repo.spongepowered.org` | `/mc-sponge/` | `/mc-sponge/maven/...` （暂不可用） |
 
-多个节点自动故障转移，任选其一即可；某个不可用时换另一个。
+### 版本元数据（Meta）
 
-## 使用方法
+| 上游域名 | 镜像前缀 | 原路径示例 |
+| :--- | :--- | :--- |
+| `meta.fabricmc.net` | `/mc-fabric-meta/` | `/mc-fabric-meta/v2/versions/...` |
+| `meta.quiltmc.org` | `/mc-quilt-meta/` | `/mc-quilt-meta/v3/versions/...` |
+| `meta.legacyfabric.net` | `/mc-legacyfabric-meta/` | `/mc-legacyfabric-meta/v2/versions/...` |
+| `meta.babric.glass-launcher.net` | `/mc-babric-meta/` | `/mc-babric-meta/v2/versions/...` （暂不可用） |
 
-### Modrinth
+### 原版基础资源
 
-原始链接：
+| 上游域名 | 镜像前缀 | 原路径示例 |
+| :--- | :--- | :--- |
+| `libraries.minecraft.net` | `/mc-libraries/` | `/mc-libraries/com/mojang/...` （暂不可用） |
+| `resources.download.minecraft.net` | `/mc-assets/` | `/mc-assets/xx/xxxx...` （暂不可用） |
 
-```text
-https://cdn.modrinth.com/data/AANobbMI/versions/mc1.16.3-0.1.0/sodium-fabric-mc1.16.3-0.1.0.jar
-```
+## 架构说明与性能指标
 
-替换域名后：
+**缓存策略**：`.jar`、`.pom` 等不可变文件走边缘节点长缓存；`.xml`、`.json` 等元数据文件采用短缓存或不缓存，保证拿到最新版本信息。
 
-```text
-https://mirror.qomicex.dpdns.org/data/AANobbMI/versions/mc1.16.3-0.1.0/sodium-fabric-mc1.16.3-0.1.0.jar
-```
+**回源机制**：大文件请求直接走 EdgeOne 原生 CDN 链路回源并分片传输，不经过边缘函数，从而降低首字节延迟（TTFB）并突破单线程带宽限制。
 
-### Forge / CurseForge
+**性能实测**：下载 8 MB 的 Forge 安装包，官方源直连约 14 秒，经本镜像约 4.3 秒（单线程）；二次下载命中缓存后可缩短至 1 秒内。
 
-原始链接：
+## 与 Qomicex 启动器的关系
 
-```text
-https://mediafilez.forgecdn.net/files/8685/162/jei-26.2-neoforge-30.24.0.176.jar
-```
+<Note>
+Qomicex 启动器当前内置的镜像源仍在迁移至 QML-Mirror 的过程中。在迁移完成前，启动器「设置 → 下载设置 → 资源下载源」里使用原有的镜像节点，无需手动填写上述地址。
+</Note>
 
-替换域名后：
+## 常见问题
 
-```text
-https://mirror.qomicex.dpdns.org/files/8685/162/jei-26.2-neoforge-30.24.0.176.jar
-```
+**下载返回 404？** 检查路径前缀是否与映射表一致。部分上游仓库有额外目录层级（如 NeoForge 依赖的 `/releases/`），镜像内部已做重写。
 
-### 支持替换的源域名
+**会记录下载内容吗？** 不会。镜像仅作为 CDN 缓存节点，不记录或审查用户行为。
 
-- `cdn.modrinth.com` / `cdn-alt.modrinth.com`
-- `mediafilez.forgecdn.net` / `edge.forgecdn.net`
+**是官方服务吗？** 不是。由个人开发者基于开源精神维护的公益加速节点，与 Mojang、Forge、Fabric 等团队无隶属关系。
 
-## 启动器的实际取源顺序
-
-启动器默认优先使用 MCIM 公共镜像（`mod.mcimirror.top`），不可用时依次回退到 QML 镜像节点与官方源。这个回退逻辑写在「设置 → 下载设置 → 资源下载源」里，不需要手动拼 URL。
-
-> 仅供学习交流使用，请遵守相关服务条款。
+> 仅供学习交流与个人游戏加速使用，请勿用于商业用途或恶意刷流量。所有游戏文件版权归各自原作者所有。
