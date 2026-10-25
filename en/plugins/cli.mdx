@@ -37,6 +37,7 @@ npm publish
 | Variable | Purpose |
 |------|------|
 | `QOMICEX_SIGN_KEY` | Signing private key (PKCS#8 PEM or raw base64 seed); required by `publish` |
+| `QOMICEX_DEV_ROOT_PUBLIC_KEY` | Local development root public key (raw base64): `verify --package` uses it instead of the bundled store root key to verify locally signed packages; pairs with the same-named override in the launcher's debug build for local dev signing (see [Publishing and signing](/en/plugins/publishing#local-development-signing-no-store-certificate)) |
 | `QOMICEX_API_KEY` | Plugin store (Plugin store)API key (CI mode skips device-flow login and confirms uploads automatically) |
 | `QOMICEX_STORE_API` | Store API base (defaults to `https://plugins.qomicex.top/api/v1`) |
 | `QOMICEX_LAUNCHER_PATH` | Lets `debug` locate the launcher executable |
@@ -130,7 +131,7 @@ A `.qplugin` is a zip with `manifest.json` at the root plus `dist/**` (or `plugi
 
 ```bash
 qomicex pack                                    # development self-test package
-qomicex pack --key ./dev-key.pem                # offline package with a self-signed certificate (verify rejects it because root-key validation fails; only for local install / web upload to obtain a certificate)
+qomicex pack --key ./dev-key.pem                # offline package with a self-signed certificate (by default verify rejects it on root-key validation; with QOMICEX_DEV_ROOT_PUBLIC_KEY set, the local signing chain can be verified — see the publishing docs)
 qomicex pack --version 0.3.0 --skip-build       # bump the version and package directly (reuse dist)
 ```
 
@@ -144,7 +145,7 @@ qomicex verify --package ./release/x.qplugin   # package mode: manifest + signat
 - **Manifest validity**: id (reverse domain / safe characters), name, version (semver), minLauncherVersion, layers, permissions, entry, contributes
 - **Least privilege**: compares `manifest.permissions` with the bridge methods the source actually calls (the `METHOD_PERMISSIONS` table). Both declared-but-unused and used-but-undeclared raise errors
 - **Long-loop warnings**: `while(true)`, `for(;;)`, and unbounded `setInterval` polling (it suggests moving the work to a Worker / WASM / backend) — a heuristic text scan, so false positives and misses are possible
-- **Signature check**: in package mode it verifies with the bundled store root public key (ADR-050); an unsigned package reports "unsigned" rather than being rejected; a failed verification (including a **self-signed certificate** produced by `pack --key` being rejected by the root key) exits non-zero
+- **Signature check**: in package mode it verifies with the bundled store root public key (ADR-050), unless `QOMICEX_DEV_ROOT_PUBLIC_KEY` is set (local dev root, see the publishing docs); an unsigned package reports "unsigned" rather than being rejected; a failed verification (including a **self-signed certificate** produced by `pack --key` being rejected by the root key) exits non-zero
 
 **Examples** (pre-publish quick check plus re-verifying a signed package):
 

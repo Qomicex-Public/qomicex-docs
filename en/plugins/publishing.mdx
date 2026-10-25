@@ -102,6 +102,29 @@ store root key -> issues the developer public-key certificate -> the developer k
 - Sign: `qomicex pack --key ./dev-key.pem` (builds a signed `.qplugin`), or `qomicex publish` to run the whole chain (device-flow login → upload the public key and get a certificate → sign → upload)
 - Verify: `qomicex verify --package ./release/xxx.qplugin`
 
+### Local development signing (no store certificate)
+
+Uploading to the store requires a developer certificate **issued by the store root key**. During development, when no certificate is available, you can run the full three-level verification chain with a local root key:
+
+1. Generate a local root key pair plus a developer key pair (`openssl` / `plugin-keygen.mjs` as above), have the **local root private key** issue the developer certificate (`signature.cert.json`, same structure as a store certificate), then sign the package body with the developer private key (`signature.json`).
+2. Launcher side: run a **debug build** (`pnpm tauri dev`) with the environment variable `QOMICEX_DEV_ROOT_PUBLIC_KEY=<local root public key base64>` — the launcher then verifies the certificate against the local root public key. **Release builds do not compile this override in**; they always use the bundled store root key, so the production trust chain is unaffected.
+3. `qomicex verify --package` reads `QOMICEX_DEV_ROOT_PUBLIC_KEY` too, so locally signed packages can be re-verified offline.
+
+Any single-byte change to the package content causes rejection with a signature hash mismatch; official publishing must still go through `qomicex publish` to obtain a store certificate.
+
+⚠️ **The environment variable must be set on the backend process.** In dev mode the Tauri shell does not spawn the backend sidecar (the startup log shows `[backend] placeholder (0 bytes), skipping`); the frontend talks directly to the axum backend on `:5000`, which is started by **`pnpm dev:backend` in a separate terminal**. Setting the variable on the `pnpm tauri dev` terminal has no effect:
+
+```powershell
+# Terminal A (backend — signature verification happens here)
+$env:QOMICEX_DEV_ROOT_PUBLIC_KEY = "<local root public key base64>"
+pnpm dev:backend
+
+# Terminal B (launcher shell, no env var needed)
+pnpm tauri dev
+```
+
+The root public key is cached **per process** (fixed at the first verification): after the backend has started, changing the variable requires restarting the backend. When troubleshooting "signature certificate invalid (root key verification failed)", check the `[plugin-signature]` line in the backend trace for the root key in effect — "local development override" means the variable took effect, "bundled store root key" means the backend process never received it.
+
 ## 5. Installation methods
 
 - **Upload a .qplugin file**: Settings → Plugins → Install plugin, then pick a `.qplugin` / `.zip` file (**signature verification is enforced**; a missing signature or a failed check is rejected)

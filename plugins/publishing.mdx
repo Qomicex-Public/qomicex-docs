@@ -102,6 +102,29 @@ my-wasm-plugin.qplugin（即 zip）
 - 签名：`qomicex pack --key ./dev-key.pem`（打签名的 `.qplugin`），或 `qomicex publish` 一键走完设备流登录 → 上传公钥获证书 → 签名 → 上传
 - 验签：`qomicex verify --package ./release/xxx.qplugin`
 
+### 本地开发签名（无商店证书）
+
+上传商店需要**商店根钥签发**的开发者证书；开发阶段拿不到证书时，可用本地根钥走完整三级验签链：
+
+1. 生成本地根密钥对 + 开发者密钥对（同上 `openssl` / `plugin-keygen.mjs`），用**本地根私钥**签发开发者证书（`signature.cert.json`，结构与商店证书一致），再用开发者私钥签包体（`signature.json`）。
+2. 启动器侧：以 **debug 构建**运行（`pnpm tauri dev`），并设置环境变量 `QOMICEX_DEV_ROOT_PUBLIC_KEY=<本地根公钥 base64>`——此时启动器用本地根公钥验证书。**release 构建不编译该覆盖**，恒用内置商店根钥，生产信任链不受影响。
+3. `qomicex verify --package` 同样读取 `QOMICEX_DEV_ROOT_PUBLIC_KEY`，可离线复验本地签名包。
+
+包内容任何一字节改动都会导致 `签名哈希与包内容不匹配` 拒装；正式发布仍必须 `qomicex publish` 换商店证书。
+
+⚠️ **环境变量必须设在后端进程上**。dev 模式下 Tauri 壳不启动后端 sidecar（启动日志出现 `[backend] placeholder (0 bytes), skipping`），前端直连 `:5000` 的 axum 后端——它由 **`pnpm dev:backend`** 在另一个终端启动。变量设给 `pnpm tauri dev` 的终端无效：
+
+```powershell
+# 终端 A（后端，签名验签在这里发生）
+$env:QOMICEX_DEV_ROOT_PUBLIC_KEY = "<本地根公钥 base64>"
+pnpm dev:backend
+
+# 终端 B（启动器壳，无需环境变量）
+pnpm tauri dev
+```
+
+根公钥按**进程缓存**（首次验签时确定）：后端启动后再修改变量需重启后端。排查「签名证书无效（根钥验证失败）」时，看后端 trace 里 `[plugin-signature]` 一行的生效根钥——显示"本地开发覆盖"即变量已生效，显示"内置商店根钥"即后端进程没拿到变量。
+
 ## 五、安装方式
 
 - **上传 .qplugin 文件**：设置 → 插件 → 安装插件，选择 `.qplugin` / `.zip` 文件（**强制验签**，无签名/验签失败被拒）

@@ -88,6 +88,8 @@ Permission denied: requires <权限id>
 | `shell:execute` | 执行系统命令 | 危险 |
 | `filesystem:read` | 读取文件系统 | 警告 |
 | `filesystem:write` | 写入文件系统 | 危险 |
+| `process:manage` | 管理常驻进程（启动/输入/终止） | 危险 |
+| `dialog:open` | 打开文件/目录选择对话框 | 普通 |
 | `hook:register` | 钩住启动器方法（拦截/修改参数、阻止执行） | 危险 |
 | `download:manage` | 管理下载中心任务 | 警告 |
 | `plugin:log` | 输出插件日志 | 普通 |
@@ -384,6 +386,150 @@ const fail = await __PLUGIN_API__.call('execCommand', 'nonexistent-cmd')
 - 超时 → `SHELL_TIMEOUT`(400)，命令被强制终止
 - 命令为空 → `SHELL_COMMAND_REQUIRED`(400)
 
+⚠️ `execCommand` 是**一次性执行**模型：stdout/stderr 全量缓冲到进程结束才返回、无进程句柄、无 stdin。**不要用它拉起常驻进程**（服务端、守护进程等）——超时会被强制杀掉。这类场景用下面的 `process.*`。
+
+### process.spawn — 启动常驻进程
+
+拉起一个长期运行的外部进程（如 Minecraft 服务端 `java -jar server.jar nogui`），返回进程句柄。
+
+```js
+const { pid, startedAtMs } = await __PLUGIN_API__.call('process.spawn', {
+  command: 'C:/Program Files/Java/jdk-21/bin/java.exe',
+  args: ['-Xmx2048M', '-jar', 'server.jar', 'nogui'],
+  cwd: 'C:/servers/my-server',
+  env: { JAVA_HOME: '...' }   // 可选
+})
+```
+- 权限：`process:manage`（**危险权限**）
+- 参数：`{ command: string, args?: string[], cwd?: string, env?: Record<string, string> }`
+- 返回：`{ pid: number, startedAtMs: number }`
+- stdout/stderr 逐行进入环形缓冲（2000 行），经 `process.logs` 游标增量拉取
+- **归属隔离**：插件只能管理自己 spawn 的进程（其他插件的 pid 一律 404 `PROCESS_NOT_FOUND`）
+- 每插件同时管理的进程数上限 32（`PROCESS_SPAWN_FAILED`）
+- 进程退出后句柄保留 10 分钟供收尾日志，之后自动回收
+
+### process.stdin — 向进程标准输入写入
+
+```js
+await __PLUGIN_API__.call('process.stdin', pid, 'stop')          // 默认补 \n
+await __PLUGIN_API__.call('process.stdin', pid, 'raw', { appendNewline: false })
+```
+- 权限：`process:manage`
+- 参数：`(pid: number, text: string, opts?: { appendNewline?: boolean })`
+- 交互式控制台命令（如服务端 `stop` / `say` / `whitelist add`）由此实现
+- 进程已退出 → `PROCESS_STDIN_FAILED`
+
+### process.kill — 终止进程树
+
+```js
+await __PLUGIN_API__.call('process.kill', pid)
+// { message: '进程 1234 已终止' }
+```
+- 权限：`process:manage`
+- 终止**整个进程树**（Windows `taskkill /T /F`，Unix 逐个 kill 子孙进程）
+- 对已退出进程幂等返回成功
+
+### process.alive — 查询进程状态
+
+```js
+const snap = await __PLUGIN_API__.call('process.alive', pid)
+// { pid, command, args, startedAtMs, alive, exitCode, oldestSeq, nextSeq }
+```
+- 权限：`process:manage`
+- `alive: false` 时 `exitCode` 为退出码（被信号终止或无法获取时为 `null`）
+
+### process.logs — 游标式增量日志
+
+```js
+// 轮询示例：保存 nextSeq 作为下次 afterSeq
+let seq = 0
+const timer = setInterval(async () => {
+  const r = await __PLUGIN_API__.call('process.logs', pid, seq)
+  seq = r.nextSeq
+  for (const line of r.lines) {
+    // line = { seq, stream: 'out'|'err', text }
+    appendConsole(line)
+  }
+  if (!r.alive) { clearInterval(timer); onExit(r.exitCode) }
+}, 800)
+```
+- 权限：`process:manage`
+- 参数：`(pid: number, afterSeq?: number)`，缺省 `afterSeq` 从缓冲最旧行开始
+- 返回：`{ lines: [{ seq, stream, text }], nextSeq, oldestSeq, alive, exitCode }`
+- `oldestSeq`：环形缓冲淘汰后仍在的最旧 seq —— 若你的游标落后超过缓冲容量（2000 行），中间的行已丢失，建议据此提示用户
+- 进程退出后日志仍可拉取（保留期内）
+
+### process.list — 列出本插件的全部受管进程
+
+```js
+const procs = await __PLUGIN_API__.call('process.list')
+// [process.alive 同结构的快照数组]
+```
+- 权限：`process:manage`
+- 典型用途：插件页面重载/启动器重启后，凭此找回仍在运行的进程（配合持久化的 pid）
+
+### pickFile — 文件选择对话框
+
+弹出系统文件选择对话框（主窗口 Tauri 原生实现）。沙箱里 `<input type="file">` 拿不到绝对路径，`window.showOpenFilePicker` 不可用 —— 需要**绝对路径**时必须用此方法。
+
+```js
+const path = await __PLUGIN_API__.call('pickFile', {
+  title: '选择服务端压缩包',
+  defaultPath: 'C:/Users/me/Downloads',
+  filters: [{ name: '压缩包', extensions: ['zip'] }],
+  multiple: false
+})
+// 取消 / 浏览器 dev 环境返回 null
+```
+- 权限：`dialog:open`
+- 参数：`{ title?, defaultPath?, filters?: [{ name, extensions: string[] }], multiple? }` 全部可选
+- 返回：`string | null`（选中的绝对路径；取消返回 `null`）
+
+### pickDirectory — 目录选择对话框
+
+```js
+const dir = await __PLUGIN_API__.call('pickDirectory', { title: '选择服务器根目录' })
+```
+- 权限：`dialog:open`
+- 返回：`string | null`
+
+### extractArchive — 解压本地 zip 到目录（授权制）
+
+```js
+const { destPath } = await __PLUGIN_API__.call('extractArchive',
+  'C:/Users/me/Downloads/server-pack.zip',
+  'C:/servers/my-server')
+```
+- 权限：`filesystem:write`
+- 参数：`(archivePath: string, destPath: string)`，目标目录自动创建
+- 防护：zip-slip（非法路径条目拒绝）+ 条目数 / 单文件 / 总量体积上限（复用整合包同一解压器）
+- **授权机制**：压缩包路径需读授权、目标目录需写授权 —— 首次使用弹一次确认、同时授权两个路径前缀
+- 仅支持 zip（rar/7z 暂不支持）
+
+### listDir — 列举目录条目（授权制）
+
+```js
+const entries = await __PLUGIN_API__.call('listDir', 'C:/servers/my-server', { recursive: true, maxEntries: 3000 })
+// [{ name, path, isDir, size, modifiedMs }, ...]  目录优先、名称排序
+```
+- 权限：`filesystem:read`
+- 参数：`(path: string, opts?: { recursive?: boolean, maxEntries?: number })`
+- `maxEntries` 默认 1000，上限 10000
+- 授权机制同 `readText`
+- 典型用途：导入后探测服务端 jar、检查 `eula.txt` / `server.properties` 是否存在
+
+### sendNotification — 系统级通知
+
+发送系统级桌面通知（WebView Notification API，首次调用触发系统授权询问）。插件页面不在前台时也能触达用户；失败/被拒返回 `false`，可降级为 `showToast`。
+
+```js
+const ok = await __PLUGIN_API__.call('sendNotification', { title: '服务端已停止', body: '退出码 1' })
+if (!ok) await __PLUGIN_API__.call('showToast', '服务端已停止', 'error')
+```
+- 权限：`system:notification`
+- 参数：`{ title: string, body?: string }`
+- 返回：`boolean`（通知已发出为 `true`；API 不可用 / 未授权 / 被拒为 `false`）
+
 ### openUrl — 打开外部链接
 
 用系统默认浏览器打开外部 URL。L2 沙箱内 `window.open` 会被 `sandbox` 拦截，请用此方法打开外链。
@@ -401,12 +547,13 @@ await __PLUGIN_API__.call('openUrl', 'https://example.com')
 ```js
 const info = await __PLUGIN_API__.call('getSystemInfo')
 // { Os, Architecture, OsName, OsVersion, OsVersionId, OsDisplayName, GitCommit,
-//   Memory, AvailableMemory,
+//   Memory, AvailableMemory, DataDir,
 //   LauncherName, LauncherVersion, VersionType, Developers, CoreDependencies }
 ```
 - 权限：`system:info`
 - 后台走 `GET /api/systeminfo`（与 `/api/system/info` 等价）
 - `GitCommit` 为启动器 Git 提交哈希；`Memory` / `AvailableMemory` 为字节数
+- `DataDir`：启动器数据目录（如 `%LOCALAPPDATA%/qomicex-launcher`）。插件需要默认工作区（存放自己的服务器/存档/下载等数据）时以此定位，如 `{DataDir}/Servers`
 - 启动器元信息字段：
 - `LauncherName`：启动器名称（如 `Qomicex Launcher`）
 - `LauncherVersion`：启动器版本号（程序集版本，如 `0.1.1`）
@@ -477,10 +624,10 @@ await __PLUGIN_API__.call('showToast', '操作成功', 'success')
 把日志写入启动器日志，便于在「设置 → 日志」中统一排查。
 
 ```js
-await __PLUGIN_API__.call('log', 'info', '插件初始化完成')
+await __PLUGIN_API__.call('log', '插件初始化完成', 'info')
 ```
 - 权限：`plugin:log`
-- 参数：`(level: string, message: string)`
+- 参数：`(message: string, level?: 'debug' | 'info' | 'warn' | 'error')`，默认 `info`
 
 
 ### 文件拖放事件（file-drop）
@@ -600,6 +747,39 @@ __PLUGIN_API__.addMenuItem({
 - 参数：`PluginMenuItem`（同 `contributes.menuItems` 元素）
 - 插件停用时自动移除动态注册的菜单项
 
+### onLauncherExit — 启动器退出事件
+
+注册启动器**关窗前**的回调（尽力而为）。适合做同步快速收尾：保存状态、提示用户插件拉起的进程的去留等。
+
+```js
+__PLUGIN_API__.onLauncherExit((event) => {
+  // event = 'launcher-exit'
+  localStorage.setItem('lastActive', String(Date.now()))   // 同步快操作
+})
+```
+- **无需权限**（被动事件）
+- 回调是**同步、尽力而为**的：启动器不会等待插件完成，关闭流程照常进行 —— 回调里**不能**发网络请求或做耗时异步操作（不保证执行完）
+- 仅在启动器主窗口正常关闭流程中触发；进程被强杀 / 崩溃不保证触发
+
+### getPluginStrings — 读取插件自己的 i18n 包
+
+返回本插件 `l10n/` 目录合并后的字符串包（`bundle.json` 打底、当前 locale 的 `bundle.<locale>.json` 覆盖）。与 manifest `%key%` 解析同源，插件运行时 UI 用它渲染自己的文案。
+
+```js
+const strings = await __PLUGIN_API__.call('getPluginStrings')
+// { "plugin.name": "服务端管理", ... }  未声明 l10n 时返回 {}
+```
+- **无需权限**（读取的是插件自带数据）
+- 需在 manifest 声明 `"l10n": "l10n"`（见 [manifest](/plugins/manifest#插件自持-i18n-l10n)）
+
+### getLocale — 当前启动器语言
+
+```js
+const locale = await __PLUGIN_API__.call('getLocale')   // 'zh-CN'
+```
+- **无需权限**；与 `getPluginStrings` 的覆盖层一致
+
+
 ## 下载与安装
 
 ### download.addTask — 创建下载任务
@@ -695,6 +875,51 @@ await __PLUGIN_API__.call('modpack.install', {
 - 返回：`{ instanceId }`，安装异步进行（进度在下载中心 / SSE 查看）
 - 错误码：`MODPACK_NAME_REQUIRED`、`MODPACK_GAME_DIR_REQUIRED`、`MODPACK_FILE_NOT_FOUND`、`MODPACK_SOURCE_REQUIRED`、`MODPACK_SOURCE_INVALID`
 - 需要下载中心显示安装进度时，可配合 `download.registerInstall` 登记
+
+### 服务端搭建（整合包一键开服）
+
+经 `callBackend` 调用启动器后端的服务端搭建管线（需要 `network:fetch` 权限）。与 `modpack.install` 相反，产物不是客户端实例而是一个**可运行的 Minecraft 服务端目录**。
+
+```js
+// 发起搭建（立即返回 taskId，进度进下载中心，kind = 'server'）
+const { taskId, dir } = await __PLUGIN_API__.call('callBackend', '/server/setup', {
+  name: '我的生存服',
+  dir: 'C:/Users/me/AppData/Roaming/qomicex-launcher/Servers/我的生存服',
+  // 安装来源三选一（扁平字段）：
+  //   packPath: 'C:/packs/pack.mrpack'                       — 本地整合包
+  //   source: 'modrinth', projectId: '...', fileId: '...'    — 在线整合包
+  //   vanilla: true, mcVersion: '1.21.4'                     — 纯净服
+  packPath: 'C:/packs/pack.mrpack',
+  javaPath: 'C:/Program Files/Java/jdk-21/bin/java.exe', // 可选，缺省按 MC 版本自动选
+  xmxMb: 4096                                     // 可选，写入 user_jvm_args.txt
+})
+
+// 轮询进度（也可直接订阅下载中心 SSE /progress/stream）
+const snap = await __PLUGIN_API__.call('callBackend', `/server/setup/progress/${taskId}`)
+// snap = InstallProgress：{ status, progress, stage, steps, blockedFiles, error, ... }
+// 取消：call('callBackend', `/server/setup/progress/${taskId}`, { _method: 'DELETE' })
+```
+
+管线内容：解析包 → 装服务端运行时（Forge/NeoForge 下载官方安装器并执行 `--installServer`；Fabric 下载 server-launcher jar；原版下载 server.jar）→ 并行释放 overrides 与下载 mods（CurseForge 反查 + 分发受限处理）→ **client-only 模组自动隔离**到 `{dir}/mods-client-only/` → 生成 `eula.txt`（false，同意流程由调用方负责）/ `server.properties` / `user_jvm_args.txt` → 写启动清单。
+
+完成后读 `{dir}/.qml-server/launch.json` 组装启动命令（`readText` 读取，需该目录的文件授权）：
+
+```json
+{
+  "mode": "argfile",                     // "argfile"（forge/neo 1.17+）| "jar"
+  "gameVersion": "1.20.1",
+  "loader": "forge",
+  "loaderVersion": "47.2.0",
+  "windowsArgfile": "libraries/net/minecraftforge/forge/1.20.1-47.2.0/win_args.txt",
+  "unixArgfile": "libraries/.../unix_args.txt"
+}
+```
+
+- `mode=argfile`：`java @<windowsArgfile 或 unixArgfile>`（按平台选）
+- `mode=jar`：`java -jar <jar>`
+- 分发受限文件清单在 `{dir}/.qml-server/blocked-mods.json`，隔离的 client-only 模组清单在 `{dir}/.qml-server/client-only.json`
+- 错误码：`SERVER_NAME_REQUIRED`、`SERVER_DIR_REQUIRED`、`SERVER_DIR_NOT_ABSOLUTE`、`SERVER_SOURCE_INVALID`（400，安装来源三选一缺项）、`SERVER_SETUP_IN_PROGRESS`（409，同目录已有进行中任务）
+- 支持 loader：vanilla / fabric / forge / neoforge（1.13+，更老版本优雅报暂不支持）
 
 ## 错误处理
 

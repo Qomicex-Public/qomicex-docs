@@ -79,6 +79,49 @@ If you omit `entry.frontend`, the plugin **is not activated** (`activatePlugin` 
 | `iconTheme` | string | Icon theme: relative path of `icon-theme.json` inside the `.qtheme` package (such as `"dist/icon-theme.json"`), registered through the theme manager on activation. See [Theme system](/en/plugins/theme#icon-theme-icon-theme-json) |
 | `fontLinks` | string[] | Font/ligature contribution: list of font CSS/CDN URLs, injected automatically as `<link rel="stylesheet">` on activation and removed on deactivation. See [Font and ligature contribution](/en/plugins/theme#font-and-ligature-contribution) |
 | `hooks` | PluginHookDecl[] | Declares the launcher methods this plugin can hook. The `hook:register` permission must also be declared. See [Hook system](/en/plugins/hooks) |
+| `installModes` | PluginInstallModeDecl[] | Plugin-contributed install options in the resource center install dialog (such as "Install as a server"). See [installModes array elements](#installmodes-array-elements) |
+
+### Plugin-owned i18n (l10n)
+
+Declare `"l10n": "l10n"` at the manifest top level (a directory inside the package, relative to the .qplugin root):
+
+```
+l10n/
+├── bundle.json          # default language (English recommended)
+└── bundle.zh-CN.json    # overrides by launcher locale
+```
+
+Values are a flat `key → string` map. Manifest **display strings** reference entries with `%key%` (e.g. `"name": "%plugin.name%"`, installModes labels/descriptions); the host resolves them at manifest load time using the launcher's current locale (missing keys in the locale bundle fall back to the default bundle, then to the raw `%key%`). Plugin runtime UI reads the same merged bundle through the bridge:
+
+```js
+const strings = await __PLUGIN_API__.call('getPluginStrings')  // merged bundle (no permission)
+const locale = await __PLUGIN_API__.call('getLocale')           // e.g. 'zh-CN'
+```
+
+Every string a plugin contributes for host-side rendering (menus, install modes, overlay titles, progress titles, step labels) should go through this channel — **never depend on the launcher's own i18n**.
+
+### installModes array elements
+
+| Field | Type | Description |
+|------|------|------|
+| `id` | string | Stable id, unique within the plugin; the launcher invokes the method named `installMode:{id}` |
+| `label` | string | Option display name (such as "Install as a server") |
+| `description` | string? | Description text (option title/subtitle) |
+| `icon` | string? | Emoji or icon text |
+| `resourceKinds` | string[]? | Matching resource kinds (such as `['modpack']`); omitted = all kinds |
+
+When installing modpacks and other resources, the install dialog's "Install as" option group lists entries contributed by active plugins (the default entry is the launcher built-in "Create instance"). Once the user selects one and confirms, the launcher invokes the `installMode:{id}` method through the plugin registry (the plugin must register it with `__PLUGIN_API__.registerMethod`), passing a resource context:
+
+```js
+__PLUGIN_API__.registerMethod('installMode:to-server', (ctx) => {
+  // ctx = { kind: 'modpack', source: 'modrinth'|'curseforge'|'technic',
+  //         projectId?, fileId?, name, gameVersion?, iconUrl?, path? }
+  // path is only present for local imports; the method should return fast
+  // (kick off the task and return), reporting progress to the download center itself
+})
+```
+
+No extra permission is required: the entry point is declared in the manifest, and the method call goes through the existing `registerMethod` (`config:write`) permission model. For a worked example see the server manager plugin (`top.qomicex.server-manager`, the "Install as a server" install mode).
 
 ### hooks array elements
 

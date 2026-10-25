@@ -88,6 +88,8 @@ Permission denied: requires <permissionId>
 | `shell:execute` | Run system commands | Dangerous |
 | `filesystem:read` | Read the filesystem | Warning |
 | `filesystem:write` | Write to the filesystem | Dangerous |
+| `process:manage` | Manage resident processes (spawn/stdin/kill) | Dangerous |
+| `dialog:open` | Open file/directory picker dialogs | Normal |
 | `hook:register` | Hook launcher methods (intercept or modify arguments, block execution) | Dangerous |
 | `download:manage` | Manage download tasks | Warning |
 | `plugin:log` | Write plugin logs | Normal |
@@ -384,6 +386,150 @@ const fail = await __PLUGIN_API__.call('execCommand', 'nonexistent-cmd')
 - Timeout → `SHELL_TIMEOUT`(400); the command is terminated forcibly
 - Empty command → `SHELL_COMMAND_REQUIRED`(400)
 
+⚠️ `execCommand` is a **one-shot** execution model: stdout/stderr are fully buffered until the process exits, and there is no process handle and no stdin. **Do not use it to start resident processes** (game servers, daemons, and so on) — they would be killed on timeout. Use `process.*` below for those scenarios.
+
+### process.spawn — Start a resident process
+
+Start a long-running external process (such as a Minecraft server `java -jar server.jar nogui`) and get a handle back.
+
+```js
+const { pid, startedAtMs } = await __PLUGIN_API__.call('process.spawn', {
+  command: 'C:/Program Files/Java/jdk-21/bin/java.exe',
+  args: ['-Xmx2048M', '-jar', 'server.jar', 'nogui'],
+  cwd: 'C:/servers/my-server',
+  env: { JAVA_HOME: '...' }   // optional
+})
+```
+- Permission: `process:manage` (**dangerous permission**)
+- Parameters: `{ command: string, args?: string[], cwd?: string, env?: Record<string, string> }`
+- Returns: `{ pid: number, startedAtMs: number }`
+- stdout/stderr are buffered line by line into a ring buffer (2000 lines), fetched incrementally via `process.logs`
+- **Ownership isolation**: a plugin can only manage processes it spawned itself (pids of other plugins always return 404 `PROCESS_NOT_FOUND`)
+- Up to 32 concurrently managed processes per plugin (`PROCESS_SPAWN_FAILED`)
+- After the process exits, the handle is kept for 10 minutes for final log reads, then reclaimed
+
+### process.stdin — Write to the process stdin
+
+```js
+await __PLUGIN_API__.call('process.stdin', pid, 'stop')          // appends \n by default
+await __PLUGIN_API__.call('process.stdin', pid, 'raw', { appendNewline: false })
+```
+- Permission: `process:manage`
+- Parameters: `(pid: number, text: string, opts?: { appendNewline?: boolean })`
+- This is how interactive console commands work (server `stop` / `say` / `whitelist add` and so on)
+- Process already exited → `PROCESS_STDIN_FAILED`
+
+### process.kill — Kill the process tree
+
+```js
+await __PLUGIN_API__.call('process.kill', pid)
+// { message: 'Process 1234 killed' }
+```
+- Permission: `process:manage`
+- Kills the **whole process tree** (Windows `taskkill /T /F`; Unix kills descendants one by one)
+- Idempotent: killing an already-exited process succeeds
+
+### process.alive — Query process state
+
+```js
+const snap = await __PLUGIN_API__.call('process.alive', pid)
+// { pid, command, args, startedAtMs, alive, exitCode, oldestSeq, nextSeq }
+```
+- Permission: `process:manage`
+- When `alive: false`, `exitCode` holds the exit code (`null` if killed by a signal or unavailable)
+
+### process.logs — Cursor-based incremental logs
+
+```js
+// Polling example: keep nextSeq as the afterSeq of the next call
+let seq = 0
+const timer = setInterval(async () => {
+  const r = await __PLUGIN_API__.call('process.logs', pid, seq)
+  seq = r.nextSeq
+  for (const line of r.lines) {
+    // line = { seq, stream: 'out'|'err', text }
+    appendConsole(line)
+  }
+  if (!r.alive) { clearInterval(timer); onExit(r.exitCode) }
+}, 800)
+```
+- Permission: `process:manage`
+- Parameters: `(pid: number, afterSeq?: number)`; omitting `afterSeq` starts from the oldest buffered line
+- Returns: `{ lines: [{ seq, stream, text }], nextSeq, oldestSeq, alive, exitCode }`
+- `oldestSeq`: the oldest seq still held after ring-buffer eviction — if your cursor lags beyond the buffer capacity (2000 lines), the middle lines are lost; surface this to the user
+- Logs remain fetchable after the process exits (within the retention window)
+
+### process.list — List this plugin's managed processes
+
+```js
+const procs = await __PLUGIN_API__.call('process.list')
+// [array of snapshots in the same shape as process.alive]
+```
+- Permission: `process:manage`
+- Typical use: after a plugin page reload or launcher restart, recover still-running processes this way (together with a persisted pid)
+
+### pickFile — File picker dialog
+
+Open a native file picker dialog (implemented in the main window via Tauri). In the sandbox, `<input type="file">` cannot get absolute paths and `window.showOpenFilePicker` is unavailable — when you need an **absolute path**, this is the way.
+
+```js
+const path = await __PLUGIN_API__.call('pickFile', {
+  title: 'Pick a server archive',
+  defaultPath: 'C:/Users/me/Downloads',
+  filters: [{ name: 'Archives', extensions: ['zip'] }],
+  multiple: false
+})
+// returns null on cancel / in browser dev mode
+```
+- Permission: `dialog:open`
+- Parameters: `{ title?, defaultPath?, filters?: [{ name, extensions: string[] }], multiple? }`, all optional
+- Returns: `string | null` (absolute path of the selection; `null` on cancel)
+
+### pickDirectory — Directory picker dialog
+
+```js
+const dir = await __PLUGIN_API__.call('pickDirectory', { title: 'Pick the server root directory' })
+```
+- Permission: `dialog:open`
+- Returns: `string | null`
+
+### extractArchive — Extract a local zip to a directory (authorization required)
+
+```js
+const { destPath } = await __PLUGIN_API__.call('extractArchive',
+  'C:/Users/me/Downloads/server-pack.zip',
+  'C:/servers/my-server')
+```
+- Permission: `filesystem:write`
+- Parameters: `(archivePath: string, destPath: string)`; the destination directory is created automatically
+- Guards: zip-slip (illegal path entries rejected) plus entry-count / per-file / total-size limits (same extractor as modpacks)
+- **Authorization**: the archive path needs read authorization and the destination needs write authorization — the first use shows one confirmation that authorizes both path prefixes
+- zip only (rar/7z not supported yet)
+
+### listDir — List directory entries (authorization required)
+
+```js
+const entries = await __PLUGIN_API__.call('listDir', 'C:/servers/my-server', { recursive: true, maxEntries: 3000 })
+// [{ name, path, isDir, size, modifiedMs }, ...]  directories first, then by name
+```
+- Permission: `filesystem:read`
+- Parameters: `(path: string, opts?: { recursive?: boolean, maxEntries?: number })`
+- `maxEntries` defaults to 1000, capped at 10000
+- Authorization works the same as `readText`
+- Typical use: detect the server jar after an import, check whether `eula.txt` / `server.properties` exist
+
+### sendNotification — System-level notification
+
+Send a system-level desktop notification (WebView Notification API; the first call triggers the browser permission prompt). This reaches users even when the plugin page is not in the foreground. Returns `false` on failure/denial — fall back to `showToast`.
+
+```js
+const ok = await __PLUGIN_API__.call('sendNotification', { title: 'Server stopped', body: 'exit code 1' })
+if (!ok) await __PLUGIN_API__.call('showToast', 'Server stopped', 'error')
+```
+- Permission: `system:notification`
+- Parameters: `{ title: string, body?: string }`
+- Returns: `boolean` (`true` when the notification was shown; `false` when the API is unavailable / not granted / denied)
+
 ### openUrl — Open an external link
 
 Open an external URL in the system default browser. Inside the L2 sandbox, `window.open` is blocked by the `sandbox` attribute, so use this method for external links.
@@ -401,12 +547,13 @@ Read OS, launcher, and memory information. Useful for `minLauncherVersion` compa
 ```js
 const info = await __PLUGIN_API__.call('getSystemInfo')
 // { Os, Architecture, OsName, OsVersion, OsVersionId, OsDisplayName, GitCommit,
-//   Memory, AvailableMemory,
+//   Memory, AvailableMemory, DataDir,
 //   LauncherName, LauncherVersion, VersionType, Developers, CoreDependencies }
 ```
 - Permission: `system:info`
 - Uses `GET /api/systeminfo` under the hood (equivalent to `/api/system/info`)
 - `GitCommit` is the launcher's Git commit hash; `Memory` / `AvailableMemory` are byte counts
+- `DataDir`: the launcher data directory (such as `%LOCALAPPDATA%/qomicex-launcher`). Use it to locate a default workspace for the plugin's own data (servers, saves, downloads), e.g. `{DataDir}/Servers`
 - Launcher metadata fields:
 - `LauncherName`: launcher name (such as `Qomicex Launcher`)
 - `LauncherVersion`: launcher version (assembly version, such as `0.1.1`)
@@ -477,10 +624,10 @@ await __PLUGIN_API__.call('showToast', 'Operation succeeded', 'success')
 Write a log line into the launcher log so it shows up in **Settings → Logs**.
 
 ```js
-await __PLUGIN_API__.call('log', 'info', 'Plugin initialized')
+await __PLUGIN_API__.call('log', 'Plugin initialized', 'info')
 ```
 - Permission: `plugin:log`
-- Parameters: `(level: string, message: string)`
+- Parameters: `(message: string, level?: 'debug' | 'info' | 'warn' | 'error')`, defaults to `info`
 
 ### File drag-and-drop event (file-drop)
 
@@ -599,6 +746,39 @@ __PLUGIN_API__.addMenuItem({
 - Parameters: `PluginMenuItem` (the same element as `contributes.menuItems`)
 - Dynamically registered menu items are removed automatically when the plugin is disabled
 
+### onLauncherExit — Launcher exit event
+
+Register a callback that runs **just before the launcher window closes** (best effort). Suitable for fast synchronous cleanup: saving state, informing the user about processes the plugin spawned, and so on.
+
+```js
+__PLUGIN_API__.onLauncherExit((event) => {
+  // event = 'launcher-exit'
+  localStorage.setItem('lastActive', String(Date.now()))   // fast synchronous work
+})
+```
+- **No permission required** (passive event)
+- The callback is **synchronous and best-effort**: the launcher does not wait for plugins and proceeds with the close flow — **do not** send network requests or start long async work inside the callback (it is not guaranteed to finish)
+- Only fires during the normal close flow of the main launcher window; force-killed / crashed processes cannot guarantee it
+
+### getPluginStrings — Read the plugin's own i18n bundle
+
+Returns the merged string bundle of this plugin's `l10n/` directory (`bundle.json` as the base, overridden by `bundle.<locale>.json` for the current locale). The same source the manifest `%key%` resolution uses; render the plugin's own UI with it.
+
+```js
+const strings = await __PLUGIN_API__.call('getPluginStrings')
+// { "plugin.name": "Server Manager", ... }  returns {} when l10n is not declared
+```
+- **No permission required** (reads the plugin's own data)
+- Requires `"l10n": "l10n"` in the manifest (see [manifest](/en/plugins/manifest#plugin-owned-i18n-l10n))
+
+### getLocale — Current launcher language
+
+```js
+const locale = await __PLUGIN_API__.call('getLocale')   // 'zh-CN'
+```
+- **No permission required**; consistent with the overlay layer of `getPluginStrings`
+
+
 ## Downloads and installation
 
 ### download.addTask — Create a download task
@@ -694,6 +874,51 @@ await __PLUGIN_API__.call('modpack.install', {
 - Returns: `{ instanceId }`; installation runs asynchronously (check progress in the download center / via SSE)
 - Error codes: `MODPACK_NAME_REQUIRED`, `MODPACK_GAME_DIR_REQUIRED`, `MODPACK_FILE_NOT_FOUND`, `MODPACK_SOURCE_REQUIRED`, `MODPACK_SOURCE_INVALID`
 - To show install progress in the download center, register it with `download.registerInstall`
+
+### Server setup (one-click modpack to server)
+
+Call the launcher backend's server-setup pipeline via `callBackend` (requires the `network:fetch` permission). Unlike `modpack.install`, the output is not a client instance but a **runnable Minecraft server directory**.
+
+```js
+// kick off setup (returns taskId immediately; progress shows in the download center, kind = 'server')
+const { taskId, dir } = await __PLUGIN_API__.call('callBackend', '/server/setup', {
+  name: 'my-server',
+  dir: 'C:/Users/me/AppData/Roaming/qomicex-launcher/Servers/my-server',
+  // install source, one of (flat fields):
+  //   packPath: 'C:/packs/pack.mrpack'                       — local pack
+  //   source: 'modrinth', projectId: '...', fileId: '...'    — online pack
+  //   vanilla: true, mcVersion: '1.21.4'                     — vanilla server
+  packPath: 'C:/packs/pack.mrpack',
+  javaPath: 'C:/Program Files/Java/jdk-21/bin/java.exe', // optional; auto-selected by MC version by default
+  xmxMb: 4096                                     // optional, written to user_jvm_args.txt
+})
+
+// poll progress (or subscribe to the download-center SSE /progress/stream directly)
+const snap = await __PLUGIN_API__.call('callBackend', `/server/setup/progress/${taskId}`)
+// snap = InstallProgress: { status, progress, stage, steps, blockedFiles, error, ... }
+// cancel: call('callBackend', `/server/setup/progress/${taskId}`, { _method: 'DELETE' })
+```
+
+Pipeline: parse the pack → install the server runtime (Forge/NeoForge download the official installer and run `--installServer`; Fabric downloads the server-launcher jar; vanilla downloads server.jar) → release overrides and download mods in parallel (CurseForge reverse lookup + distribution-restricted handling) → **client-only mods are automatically quarantined** into `{dir}/mods-client-only/` → generate `eula.txt` (false; the consent flow is the caller's responsibility) / `server.properties` / `user_jvm_args.txt` → write the launch manifest.
+
+When finished, read `{dir}/.qml-server/launch.json` to assemble the launch command (via `readText`, which requires file authorization for that directory):
+
+```json
+{
+  "mode": "argfile",                     // "argfile" (forge/neo 1.17+) | "jar"
+  "gameVersion": "1.20.1",
+  "loader": "forge",
+  "loaderVersion": "47.2.0",
+  "windowsArgfile": "libraries/net/minecraftforge/forge/1.20.1-47.2.0/win_args.txt",
+  "unixArgfile": "libraries/.../unix_args.txt"
+}
+```
+
+- `mode=argfile`: `java @<windowsArgfile or unixArgfile>` (pick by platform)
+- `mode=jar`: `java -jar <jar>`
+- Distribution-restricted files are listed in `{dir}/.qml-server/blocked-mods.json`; quarantined client-only mods in `{dir}/.qml-server/client-only.json`
+- Error codes: `SERVER_NAME_REQUIRED`, `SERVER_DIR_REQUIRED`, `SERVER_DIR_NOT_ABSOLUTE`, `SERVER_SOURCE_INVALID` (400, missing install source), `SERVER_SETUP_IN_PROGRESS` (409, an active task already exists for that directory)
+- Supported loaders: vanilla / fabric / forge / neoforge (1.13+; older versions fail gracefully with "not supported")
 
 ## Error handling
 

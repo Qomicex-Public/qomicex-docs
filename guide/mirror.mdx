@@ -76,7 +76,7 @@ https://mirror.shenv.top/mc-forge/net/minecraftforge/forge/1.20.1-47.2.0/forge-1
 ## 与 Qomicex 启动器的关系
 
 <Note>
-Qomicex 启动器当前内置的镜像源仍在迁移至 QML-Mirror 的过程中。在迁移完成前，启动器「设置 → 下载设置 → 资源下载源」里使用原有的镜像节点，无需手动填写上述地址。
+启动器已按流量分工接入：**模组加载器的 meta 与 installer**（Fabric/Quilt meta、Forge installer 与 maven 依赖等小体积、强缓存文件）默认走 QML-Mirror（上表前缀路由，官方源自动兜底）；**模组文件**走官方 CDN（MCIM 镜像兜底）——模组文件体积大、流量高，统一打到公益镜像会打爆 CDN，因此只在加载器元数据与安装器这类小文件上使用镜像。
 </Note>
 
 ## 常见问题

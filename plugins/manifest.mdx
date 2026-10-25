@@ -79,6 +79,48 @@ title: "manifest 清单详解"
 | `iconTheme` | string | 图标主题：`.qtheme` 包内 `icon-theme.json` 的相对路径（如 `"dist/icon-theme.json"`），激活时经主题管理器注册。详见 [主题系统](/plugins/theme#图标主题icon-themejson) |
 | `fontLinks` | string[] | 字体/连字贡献：字体 CSS/CDN URL 列表，激活时自动注入 `<link rel="stylesheet">`，停用时移除。详见 [字体/连字贡献](/plugins/theme#字体连字贡献) |
 | `hooks` | PluginHookDecl[] | 声明可被本插件 hook 的启动器方法。需同时声明 `hook:register` 权限。详见 [Hook 系统](/plugins/hooks) |
+| `installModes` | PluginInstallModeDecl[] | 资源中心安装对话框的插件贡献安装方式（如「安装为服务端」）。详见 [installModes 数组](#installmodes-数组) |
+
+### 插件自持 i18n（l10n）
+
+manifest 顶层声明 `"l10n": "l10n"`（包内目录，相对 .qplugin 根），目录内存：
+
+```
+l10n/
+├── bundle.json          # 默认语言（建议英文）
+└── bundle.zh-CN.json    # 按启动器 locale 覆盖
+```
+
+值为扁平 `key → string` 映射。manifest 的**显示字符串**用 `%key%` 引用词条（如 `"name": "%plugin.name%"`、installModes 的 label/description），宿主在加载清单时按启动器当前 locale 解析（locale 包缺失的 key 回退默认包，再缺失回退 `%key%` 原文）。插件运行时 UI 经桥取同一份包：
+
+```js
+const strings = await __PLUGIN_API__.call('getPluginStrings')  // 合并后的包（免权限）
+const locale = await __PLUGIN_API__.call('getLocale')           // 如 'zh-CN'
+```
+
+插件贡献给宿主渲染的文案（菜单、安装方式、悬浮窗标题、进度标题、步骤标签）都应走此通道——**不要依赖启动器 i18n**（那是启动器内置功能的命名空间）。
+
+### installModes 数组元素
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | string | 插件内唯一的稳定 id；启动器调用的方法名为 `installMode:{id}` |
+| `label` | string | 选项显示名（如「安装为服务端」） |
+| `description` | string? | 说明文本（选项 title/副标题） |
+| `icon` | string? | emoji 或图标文本 |
+| `resourceKinds` | string[]? | 匹配的资源类型（如 `['modpack']`）；缺省匹配所有类型 |
+
+安装整合包等资源时，安装对话框的「安装方式」选项组会列出激活插件贡献的条目（默认项为启动器内置的「创建实例」）。用户选中并确认后，启动器经插件注册表调用 `installMode:{id}` 方法（插件需用 `__PLUGIN_API__.registerMethod` 注册），附资源上下文：
+
+```js
+__PLUGIN_API__.registerMethod('installMode:to-server', (ctx) => {
+  // ctx = { kind: 'modpack', source: 'modrinth'|'curseforge'|'technic',
+  //         projectId?, fileId?, name, gameVersion?, iconUrl?, path? }
+  // path 仅本地导入时有值；方法应快速返回（发起任务即返回），进度自行登记进下载中心
+})
+```
+
+无需额外权限：入口由 manifest 声明，方法调用走既有 `registerMethod`（`config:write`）权限模型。实践示例见服务端管理插件（`top.qomicex.server-manager`，安装方式「安装为服务端」）。
 
 ### hooks 数组元素
 

@@ -37,6 +37,7 @@ npm publish
 | 变量 | 用途 |
 |------|------|
 | `QOMICEX_SIGN_KEY` | 签名私钥（PKCS#8 PEM 或 raw base64 seed），`publish` 必填 |
+| `QOMICEX_DEV_ROOT_PUBLIC_KEY` | 本地开发根公钥（raw base64）：`verify --package` 用它替代内置商店根钥验本地签名包；配合启动器 debug 构建的同名覆盖实现本地开发签名（见 [发布与签名](/plugins/publishing#本地开发签名无商店证书)） |
 | `QOMICEX_API_KEY` | 商店 API Key（CI 模式跳过设备流登录，自动确认上传） |
 | `QOMICEX_STORE_API` | 商店 API base（默认 `https://plugins.qomicex.top/api/v1`） |
 | `QOMICEX_LAUNCHER_PATH` | `debug` 定位启动器可执行文件 |
@@ -130,7 +131,7 @@ qomicex pack --out-dir ./dist-releases # 指定输出目录（默认 release/）
 
 ```bash
 qomicex pack                                    # 开发自测包
-qomicex pack --key ./dev-key.pem                # 带自签名证书的离线包（verify 会因根钥校验失败而拒绝，仅供本地安装/网页上传取证书）
+qomicex pack --key ./dev-key.pem                # 带自签名证书的离线包（默认下 verify 因根钥校验失败而拒绝；设置 QOMICEX_DEV_ROOT_PUBLIC_KEY 后可验本地签名链，见发布与签名文档）
 qomicex pack --version 0.3.0 --skip-build       # 改版本号后直接出包（复用 dist）
 ```
 
@@ -144,7 +145,7 @@ qomicex verify --package ./release/x.qplugin   # 包模式：manifest + 签名�
 - **manifest 合法性**：id（反向域名/安全字符）、name、version(semver)、minLauncherVersion、layers、permissions、entry、contributes
 - **权限最小化**：对比 `manifest.permissions` 与源码实际调用的桥方法（`METHOD_PERMISSIONS` 表）。声明未用 / 用了未声明都会报错
 - **长循环告警**：`while(true)`、`for(;;)`、`setInterval` 无界轮询（提示放 Worker / WASM / 后端）——启发式文本扫描，可能误报/漏报
-- **签名检查**：包模式用内置商店根公钥验签（ADR-050）；无签名提示「未签名」不拒绝；验签失败（含 `pack --key` 生成的**自签名证书**被根钥拒绝）以非 0 退出
+- **签名检查**：包模式用内置商店根公钥验签（ADR-050，设置 `QOMICEX_DEV_ROOT_PUBLIC_KEY` 时改用本地开发根钥，见发布与签名文档）；无签名提示「未签名」不拒绝；验签失败（含 `pack --key` 生成的**自签名证书**被根钥拒绝）以非 0 退出
 
 **实例**（发布前快检 + 复验签名包）：
 

@@ -76,7 +76,7 @@ Prefixes marked "Temporarily unavailable" currently fail; they are being fixed. 
 ## Relationship to the Qomicex Launcher
 
 <Note>
-The mirror source built into the Qomicex Launcher is still being migrated to QML-Mirror. Until that migration finishes, the launcher keeps using its existing mirror nodes under **Settings → Download settings → Resource download source**, so you do not need to enter any of the addresses above.
+The launcher now integrates QML-Mirror with a traffic-splitting policy: **mod loader metadata and installers** (Fabric/Quilt meta, the Forge installer and its maven dependencies — small, strongly cached files) go through QML-Mirror by default (prefix routing per the table above, with automatic fallback to the official source), while **mod files** stay on the official CDNs (with MCIM as the mirror fallback) — mod files are large and high-traffic, and routing them all through a community mirror would overwhelm the CDN, so the mirror is reserved for loader metadata and installers.
 </Note>
 
 ## FAQ
