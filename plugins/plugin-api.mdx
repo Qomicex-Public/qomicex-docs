@@ -779,6 +779,33 @@ const locale = await __PLUGIN_API__.call('getLocale')   // 'zh-CN'
 ```
 - **无需权限**；与 `getPluginStrings` 的覆盖层一致
 
+### getIconSvg — 内置图标（Font Awesome 类名 → SVG path）
+
+```js
+const svg = await __PLUGIN_API__.call('getIconSvg', 'fa-solid fa-server')
+// { width: 512, height: 512, path: 'M64…' }  未知类名返回 null
+```
+- **无需权限**（公共只读数据）
+- 可用类名 = 启动器内置图标集（约 280 个 `fa-solid` 类，与 manifest `icon` 字段同一体系）
+- 插件侧内联渲染，`currentColor` 跟随主题色，不引入图标字体：
+
+```jsx
+<svg viewBox={`0 0 ${svg.width} ${svg.height}`} fill="currentColor" className="h-4 w-4">
+  <path d={svg.path} />
+</svg>
+```
+
+### 语言切换事件（plugin:locale-changed）
+
+启动器切换语言时向所有插件沙箱广播；插件收到后重拉 `getPluginStrings` 并重渲染（与主题跟随对齐）：
+
+```js
+window.addEventListener('plugin:locale-changed', (e) => {
+  reloadStrings()          // 重新 getPluginStrings()（e.detail.locale 为新 locale）
+})
+```
+- **无需权限**（被动事件）
+
 
 ## 下载与安装
 

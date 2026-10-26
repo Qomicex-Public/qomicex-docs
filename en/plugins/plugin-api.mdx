@@ -778,6 +778,33 @@ const locale = await __PLUGIN_API__.call('getLocale')   // 'zh-CN'
 ```
 - **No permission required**; consistent with the overlay layer of `getPluginStrings`
 
+### getIconSvg — Built-in icons (Font Awesome class → SVG path)
+
+```js
+const svg = await __PLUGIN_API__.call('getIconSvg', 'fa-solid fa-server')
+// { width: 512, height: 512, path: 'M64…' }  returns null for unknown classes
+```
+- **No permission required** (public read-only data)
+- Available classes = the launcher's built-in icon set (~280 `fa-solid` classes, the same system as the manifest `icon` field)
+- Render inline in the plugin; `currentColor` follows the theme, no icon font needed:
+
+```jsx
+<svg viewBox={`0 0 ${svg.width} ${svg.height}`} fill="currentColor" className="h-4 w-4">
+  <path d={svg.path} />
+</svg>
+```
+
+### Language change event (plugin:locale-changed)
+
+Broadcast to all plugin sandboxes when the launcher language changes; re-fetch `getPluginStrings` and re-render (aligned with theme following):
+
+```js
+window.addEventListener('plugin:locale-changed', (e) => {
+  reloadStrings()          // getPluginStrings() again (e.detail.locale is the new locale)
+})
+```
+- **No permission required** (passive event)
+
 
 ## Downloads and installation
 

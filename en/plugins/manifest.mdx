@@ -100,6 +100,14 @@ const locale = await __PLUGIN_API__.call('getLocale')           // e.g. 'zh-CN'
 
 Every string a plugin contributes for host-side rendering (menus, install modes, overlay titles, progress titles, step labels) should go through this channel — **never depend on the launcher's own i18n**.
 
+### icon field spec (menus / install modes / top-level icon)
+
+Choose in priority order:
+
+1. **Font Awesome class name (recommended)**: `"fa-solid fa-server"`. Zero assets, follows the theme color (currentColor), resolved by the launcher (sidebar and install dialogs render uniformly). The available set is the launcher's built-in icon collection (~280 `fa-solid` classes: server / play / stop / folder-open / box / link …). Plugin runtime UI fetches the same SVG paths via `call('getIconSvg', cls)` and renders them inline, keeping manifest and in-page icons identical.
+2. **In-package relative path**: `"dist/icon.svg"` (for multicolor/brand icons; resolved to the plugin file-service URL).
+3. Absolute URL / emoji: transitional compatibility only — emoji do not follow the theme color and do not scale well; prefer replacing them with class names.
+
 ### installModes array elements
 
 | Field | Type | Description |

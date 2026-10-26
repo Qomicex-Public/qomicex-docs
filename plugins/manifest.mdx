@@ -100,6 +100,14 @@ const locale = await __PLUGIN_API__.call('getLocale')           // 如 'zh-CN'
 
 插件贡献给宿主渲染的文案（菜单、安装方式、悬浮窗标题、进度标题、步骤标签）都应走此通道——**不要依赖启动器 i18n**（那是启动器内置功能的命名空间）。
 
+### icon 字段规范（菜单 / 安装方式 / 顶层图标）
+
+按优先级选择：
+
+1. **Font Awesome 类名（推荐）**：`"fa-solid fa-server"`。零资产、跟随主题色（currentColor 渲染）、启动器内置解析（侧栏、安装对话框统一渲染）。可用类名即启动器内置图标集（约 280 个，`fa-solid` 系：server / play / stop / folder-open / box / link 等）。插件运行时 UI 经 `call('getIconSvg', cls)` 取同一套 SVG path 内联渲染，manifest 与页面图标完全统一。
+2. **包内相对路径**：`"dist/icon.svg"`（多色/品牌图标用；自动解析为插件文件服务 URL）。
+3. 绝对 URL / emoji：仅过渡兼容——emoji 不跟随主题色、不随缩放优化，建议替换为类名。
+
 ### installModes 数组元素
 
 | 字段 | 类型 | 说明 |
