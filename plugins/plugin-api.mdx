@@ -501,7 +501,8 @@ const { destPath } = await __PLUGIN_API__.call('extractArchive',
   'C:/servers/my-server')
 ```
 - 权限：`filesystem:write`
-- 参数：`(archivePath: string, destPath: string)`，目标目录自动创建
+- 参数：`(archivePath: string, destPath: string, opts?: { prefix?: string, stripPrefix?: boolean })`，目标目录自动创建
+- `prefix` 只解压该子目录下的条目；搭配 `stripPrefix: true` 时剥掉前缀——整合包的 `overrides/` 要提到服务器根目录就靠这两个选项（`overrides/mods/a.jar` → `mods/a.jar`）
 - 防护：zip-slip（非法路径条目拒绝）+ 条目数 / 单文件 / 总量体积上限（复用整合包同一解压器）
 - **授权机制**：压缩包路径需读授权、目标目录需写授权 —— 首次使用弹一次确认、同时授权两个路径前缀
 - 仅支持 zip（rar/7z 暂不支持）
@@ -859,6 +860,37 @@ await __PLUGIN_API__.call('download.cancel', taskId)
 ```
 - 权限：`download:manage`
 
+### download.addBatch — 批量下载（一张卡片）
+
+一次调用下载多个文件，但**只占下载中心一张卡片**——下载几百个 mod 不会刷屏。底层与安装管线同一套下载器（并发、同目标去重、镜像兜底、`.part` 原子改名）。
+
+```js
+const { taskId, batchId, totalFiles } = await __PLUGIN_API__.call('download.addBatch', {
+  files: [
+    { url: 'https://.../a.jar', destPath: 'C:/servers/s1/mods/a.jar' },
+    { url: 'https://.../b.jar', destPath: 'C:/servers/s1/mods/b.jar' }
+  ],
+  // taskId + stepId 可选：把进度写进已有任务（task.register 注册）的某个步骤
+  taskId: 'my-task', stepId: 'download-files',
+  // 省略 taskId 时自建一个只含单步的任务，title 为卡片名
+  title: '下载模组'
+})
+```
+- 权限：`download:manage`
+- 返回：`{ taskId, batchId, totalFiles }`
+- 下载在**后台进行**，完成状态用 `download.batchStatus(batchId)` 轮询
+- 镜像兜底自动生效：Modrinth/CF 文件挂 MCIM、Forge/NeoForge maven 挂 ForgeCDN/BMCLAPI、原版库挂 BMCLAPI——插件传官方 URL 即可
+
+### download.batchStatus — 批量下载批次状态
+
+```js
+const st = await __PLUGIN_API__.call('download.batchStatus', batchId)
+// { status: 'running' | 'completed' | 'failed', totalFiles, error? }
+// 批次不存在（后端重启）返回 null
+```
+- 权限：`download:manage`
+- 轮询建议间隔 800ms～1s；`failed` 时 `error` 带首个失败原因
+
 ### download.registerInstall — 在下载中心登记安装任务
 
 仅在前端下载中心登记一个「游戏安装」任务（type `'game'`），不创建真实下载。适合插件发起安装后让用户能在下载中心看到进度。
@@ -873,6 +905,99 @@ await __PLUGIN_API__.call('download.registerInstall', {
 })
 ```
 - 权限：`instance:write`
+
+## 插件自报任务（分步进度）
+
+插件自己编排的长流程（解析 → 下载 → 安装 → 写配置）用 `task.*` 上报：任务进 `InstallTracker`，**自动出现在下载中心**，与内置安装任务同一套分步卡片渲染。
+
+### task.register — 注册分步任务
+
+```js
+const { taskId } = await __PLUGIN_API__.call('task.register', {
+  taskId: 'my-plugin:setup:1690000000', // 可选；建议带插件前缀避免冲突，缺省自动生成
+  title: '服务端搭建 · 我的生存服',
+  steps: [
+    { id: 'parse-pack',     weight: 10, label: '解析整合包' },
+    { id: 'server-runtime', weight: 35, label: '安装服务端运行时' },
+    { id: 'download-files', weight: 40, label: '下载模组' }
+  ]
+})
+```
+- 权限：`download:manage`
+- `weight` 只影响合成总进度的占比（内部按 Σweight 归一化）；`label` 为卡片上的步骤文案（插件自带，无需改启动器 i18n）
+- 同 `taskId` 已有非终态任务时抛 `TASK_BUSY`（409）
+
+### task.update — 推进步骤/状态
+
+```js
+await __PLUGIN_API__.call('task.update', taskId, {
+  stepId: 'server-runtime', stepStatus: 'active',   // pending | active | done | failed
+  // stepPercent: 42.5,                              // 字节级进度（如配合 download.addBatch 自动推进）
+  // currentFile: '正在下载 xxx.jar',
+  // stage: 'server-runtime',                        // 阶段文案
+  // status: 'downloading'                           // 任务级状态（终态走 task.complete）
+})
+```
+- 权限：`download:manage`
+- 所有字段可选，只更新提供的部分；`status` 传终态（completed/failed/cancelled）会被 400 拒绝——终态必须走 `task.complete`
+
+### task.complete — 任务收尾
+
+```js
+await __PLUGIN_API__.call('task.complete', taskId)               // 成功 → completed
+await __PLUGIN_API__.call('task.complete', taskId, '原因')        // 失败 → failed（error 进卡片）
+```
+- 权限：`download:manage`
+- 任务上有 `blockedFiles`（受限文件数）时成功收尾会转为 `awaiting-files` 而非 completed（提醒用户补文件）
+
+### task.progress — 查询任务进度
+
+```js
+const snap = await __PLUGIN_API__.call('task.progress', taskId)
+// InstallProgress：{ status, progress, stage, steps, currentFile, blockedFiles, error, title }
+// 任务不存在返回 null
+```
+- 权限：`download:manage`
+
+### curseforge.files — CurseForge 元数据代理
+
+把 CurseForge 的 `projectID:fileID` 批量换成下载直链。API key 始终留在启动器进程内，插件拿不到——这是插件生态里唯一的 CF 查询通道。
+
+```js
+const infos = await __PLUGIN_API__.call('curseforge.files', [
+  { projectId: 238222, fileId: 4800000 },
+  { fileId: 4800001 }
+])
+// [{ projectId, fileId, fileName, downloadUrl, fileLength, blockedReason? }]
+// downloadUrl === null 表示作者关闭第三方分发（受限文件），应引导用户手动补全
+```
+- 权限：`network:fetch`
+- 单次最多 20000 个文件（`CF_TOO_MANY_FILES`）
+
+## 文件系统扩展
+
+### readArchiveEntry — 读 zip 内单个条目（授权制）
+
+不解压整包，直接读压缩包里一个条目的文本。模组/整合包的元数据都在包里（`fabric.mod.json`、`META-INF/mods.toml`、`modrinth.index.json`），这是读它们的最快路径。
+
+```js
+const res = await __PLUGIN_API__.call('readArchiveEntry',
+  'C:/packs/pack.mrpack', 'modrinth.index.json', { maxBytes: 16 * 1024 * 1024 })
+// { content, size }；条目不存在返回 null（可用于探测）
+```
+- 权限：`filesystem:read`，且压缩包路径需逐路径授权（与 `readText` 同一套授权流程，首次弹确认）
+- `maxBytes` 缺省 4 MiB、上限 32 MiB，超限报 `ARCHIVE_ENTRY_TOO_LARGE`
+- 仅支持 zip 系（jar/mrpack/litemod 均为 zip 容器）
+
+### renamePath — 移动/重命名（授权制）
+
+```js
+const { path } = await __PLUGIN_API__.call('renamePath',
+  'C:/servers/s1/mods/a.jar', 'C:/servers/s1/mods-client-only/a.jar')
+```
+- 权限：`filesystem:write`，源与目标两个路径都需授权（一次确认同时授两端）
+- 支持目录；目标父目录自动创建
+- 没有「移动」时插件只能 readBytes + writeBytes + deleteFile 三倍搬运大文件——把 client-only 模组隔离到别的目录这类操作就该用它
 
 ### modpack.install — 一键安装整合包
 
@@ -903,50 +1028,36 @@ await __PLUGIN_API__.call('modpack.install', {
 - 错误码：`MODPACK_NAME_REQUIRED`、`MODPACK_GAME_DIR_REQUIRED`、`MODPACK_FILE_NOT_FOUND`、`MODPACK_SOURCE_REQUIRED`、`MODPACK_SOURCE_INVALID`
 - 需要下载中心显示安装进度时，可配合 `download.registerInstall` 登记
 
-### 服务端搭建（整合包一键开服）
+### 整合包一键开服（参考实现）
 
-经 `callBackend` 调用启动器后端的服务端搭建管线（需要 `network:fetch` 权限）。与 `modpack.install` 相反，产物不是客户端实例而是一个**可运行的 Minecraft 服务端目录**。
+「把整合包装成可运行的 Minecraft 服务端」没有专用端点——启动器只提供通用能力，流程由插件用上面这些 API 编排。官方插件 `top.qomicex.server-manager`（`src/api/setup.js`）是完整范例，管线与要点：
 
-```js
-// 发起搭建（立即返回 taskId，进度进下载中心，kind = 'server'）
-const { taskId, dir } = await __PLUGIN_API__.call('callBackend', '/server/setup', {
-  name: '我的生存服',
-  dir: 'C:/Users/me/AppData/Roaming/qomicex-launcher/Servers/我的生存服',
-  // 安装来源三选一（扁平字段）：
-  //   packPath: 'C:/packs/pack.mrpack'                       — 本地整合包
-  //   source: 'modrinth', projectId: '...', fileId: '...'    — 在线整合包
-  //   vanilla: true, mcVersion: '1.21.4'                     — 纯净服
-  packPath: 'C:/packs/pack.mrpack',
-  javaPath: 'C:/Program Files/Java/jdk-21/bin/java.exe', // 可选，缺省按 MC 版本自动选
-  xmxMb: 4096                                     // 可选，写入 user_jvm_args.txt
-})
-
-// 轮询进度（也可直接订阅下载中心 SSE /progress/stream）
-const snap = await __PLUGIN_API__.call('callBackend', `/server/setup/progress/${taskId}`)
-// snap = InstallProgress：{ status, progress, stage, steps, blockedFiles, error, ... }
-// 取消：call('callBackend', `/server/setup/progress/${taskId}`, { _method: 'DELETE' })
-```
-
-管线内容：解析包 → 装服务端运行时（Forge/NeoForge 下载官方安装器并执行 `--installServer`；Fabric 下载 server-launcher jar；原版下载 server.jar）→ 并行释放 overrides 与下载 mods（CurseForge 反查 + 分发受限处理）→ **client-only 模组自动隔离**到 `{dir}/mods-client-only/` → 生成 `eula.txt`（false，同意流程由调用方负责）/ `server.properties` / `user_jvm_args.txt` → 写启动清单。
-
-完成后读 `{dir}/.qml-server/launch.json` 组装启动命令（`readText` 读取，需该目录的文件授权）：
+1. **解析包**：`readArchiveEntry` 读包内 `modrinth.index.json`（Modrinth）或 `manifest.json`（CurseForge），得到 MC 版本 / 加载器 / 文件清单。服务端侧按 `env.server != "unsupported"` 过滤（与客户端的 `env.client == "required"` 不同）。
+2. **装运行时**（`download.addBatch` + `process.spawn`）：
+   - vanilla：`proxyFetch` 拿版本清单 → 下载 `server.jar`（`download.addBatch` 自动挂 BMCLAPI 兜底）
+   - fabric：fabric meta → 下载 server-launcher jar
+   - forge / neoforge：下载官方安装器 → **先预填 `libraries/`**（用 `readArchiveEntry` 读安装器内嵌 `install_profile.json` / `version.json` 里的库清单，经 `download.addBatch` 并发下载，NeoForge maven 因此拿到 ForgeCDN 兜底）→ 再 `process.spawn` 执行 `java -jar installer --installServer`，轮询 `process.alive` 等退出码。安装器对已存在且 sha1 匹配的文件直接跳过，`--mirror` 参数对 neoforged.net 无效（实测）
+3. **下载 mods**：Modrinth 清单自带直链；CurseForge 经 `curseforge.files` 换直链，取不到直链（作者关闭分发）的记入 `{dir}/.qml-server/blocked-mods.json`，进度经 `task.update` 上报
+4. **释放 overrides**：`extractArchive(packPath, dir, { prefix: 'overrides', stripPrefix: true })`
+5. **隔离 client-only**：`listDir` 扫 `mods/*.jar`，`readArchiveEntry` 读 `fabric.mod.json` 的 `environment` 或 `(neo)forge.mods.toml` 的 `clientSideOnly`，命中的 `renamePath` 进 `{dir}/mods-client-only/`（不删，可恢复）。注意：**元数据没声明 side 的漏标 mod 无法静态识别**，只能靠启动崩溃后手动隔离
+6. **写基础配置**：`writeText` 写 `eula.txt`（false，同意流程由用户负责）/ `server.properties` / `user_jvm_args.txt`；已存在的文件不覆盖（overrides 可能带正式配置）
+7. **写启动清单**：`{dir}/.qml-server/launch.json`（`readText` 读取需该目录授权）：
 
 ```json
 {
-  "mode": "argfile",                     // "argfile"（forge/neo 1.17+）| "jar"
-  "gameVersion": "1.20.1",
-  "loader": "forge",
-  "loaderVersion": "47.2.0",
-  "windowsArgfile": "libraries/net/minecraftforge/forge/1.20.1-47.2.0/win_args.txt",
-  "unixArgfile": "libraries/.../unix_args.txt"
+  "mode": "argfile",                     // "argfile"（forge/neo 1.17+，安装器生成 run.bat/run.sh 后从脚本提取 @args 路径）| "jar"
+  "gameVersion": "1.21.1",
+  "loader": "neoforge",
+  "loaderVersion": "21.1.233",
+  "windowsArgfile": "libraries/net/neoforged/neoforge/21.1.233/win_args.txt",
+  "unixArgfile": "libraries/.../unix_args.txt",
+  "jar": "fabric-server-launch.jar"      // mode=jar 时
 }
 ```
 
-- `mode=argfile`：`java @<windowsArgfile 或 unixArgfile>`（按平台选）
-- `mode=jar`：`java -jar <jar>`
-- 分发受限文件清单在 `{dir}/.qml-server/blocked-mods.json`，隔离的 client-only 模组清单在 `{dir}/.qml-server/client-only.json`
-- 错误码：`SERVER_NAME_REQUIRED`、`SERVER_DIR_REQUIRED`、`SERVER_DIR_NOT_ABSOLUTE`、`SERVER_SOURCE_INVALID`（400，安装来源三选一缺项）、`SERVER_SETUP_IN_PROGRESS`（409，同目录已有进行中任务）
-- 支持 loader：vanilla / fabric / forge / neoforge（1.13+，更老版本优雅报暂不支持）
+- `mode=argfile`：`java @<windowsArgfile 或 unixArgfile>`（按平台选）；`mode=jar`：`java -jar <jar>`
+- 服务端务必带 `nogui`：GUI 会接管控制台输出且不读 stdin 管道（stop 命令失效）
+- 进度全程经 `task.register` / `task.update` / `task.complete` 上报，下载中心可看分步卡片
 
 ## 错误处理
 
