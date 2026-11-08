@@ -104,9 +104,16 @@ Every string a plugin contributes for host-side rendering (menus, install modes,
 
 Choose in priority order:
 
-1. **Font Awesome class name (recommended)**: `"fa-solid fa-server"`. Zero assets, follows the theme color (currentColor), resolved by the launcher (sidebar and install dialogs render uniformly). The available set is the launcher's built-in icon collection (~280 `fa-solid` classes: server / play / stop / folder-open / box / link …). Plugin runtime UI fetches the same SVG paths via `call('getIconSvg', cls)` and renders them inline, keeping manifest and in-page icons identical.
+1. **Font Awesome class name (recommended)**: `"fa-solid fa-server"`. Zero assets, follows the theme color (currentColor), resolved by the launcher (sidebar and install dialogs render uniformly).
+   - **Do not hardcode the available set**: the built-in table evolves with the launcher. Get the full list at runtime with `call('listIcons')`, or offline from the `ICON_NAMES` export of `@qomicex/plugin-ui`.
+   - **Names outside the table render blank** (historically ignored silently). `qomicex verify` / `lint` validate them statically, report an error, and suggest the closest built-in names.
+   - In-page icons should not call `getIconSvg`; use `<Glyph>` with per-icon subpath imports (see [Plugin API — Icons](/en/plugins/plugin-api#icons)).
 2. **In-package relative path**: `"dist/icon.svg"` (for multicolor/brand icons; resolved to the plugin file-service URL).
-3. Absolute URL / emoji: transitional compatibility only — emoji do not follow the theme color and do not scale well; prefer replacing them with class names.
+3. Absolute URL / emoji / plain text: e.g. `"https://…/icon.png"`, `"🏆"`, `"A"`. Emoji do not follow the theme color and do not scale well; prefer option 1 or 2.
+4. **Private icons (`contributes.iconTheme`)**: point at an in-package `icon-theme.json` shaped as
+   `{ "schemaVersion": 1, "icons": { "<icon key>": { "type": "svg", "path": "M…" } } }`.
+   Declared keys show up in `listIcons()` and are resolved first by `getIconSvg` — you can ship
+   icons the built-in table lacks without waiting for a launcher release.
 
 ### installModes array elements
 

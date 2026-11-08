@@ -50,8 +50,8 @@ npm publish
 | `qomicex create <id> [--template <react\|html\|lib\|wasm>] [-t <...>]` | Generate a valid plugin project from a built-in template (react by default) |
 | `qomicex dev [--port <n>]` | Start a local debugging environment (harness mode inside the repo, bare Vite outside it) |
 | `qomicex pack [--out-dir <d>] [--version <v>] [--key <k>] [--skip-build]` | Build → package into a `.qplugin` (optional `--key` signing) |
-| `qomicex verify [--package <f>]` | Validate manifest / permissions / long loops / signatures |
-| `qomicex lint [--json]` | Stricter static checks: manifest / permissions / long loops / import extensions / resource references |
+| `qomicex verify [--package <f>]` | Validate manifest / permissions / icon names / long loops / signatures |
+| `qomicex lint [--json]` | Stricter static checks: manifest / permissions / long loops / icon names / import extensions / resource references |
 | `qomicex bump <major\|minor\|patch> [--version <v>]` | Increment the `manifest.json` version |
 | `qomicex publish [--key <k>] [--slug <s>] [--changelog <c>] [--api <url>] [--org-id <id>] [--package <f>] [--skip-build] [--yes]` | Device-flow login → sign → upload to the store |
 | `qomicex login [--api <url>]` | Device-flow login and persist the session (no repeat login for 30 days) |
@@ -144,6 +144,7 @@ qomicex verify --package ./release/x.qplugin   # package mode: manifest + signat
 
 - **Manifest validity**: id (reverse domain / safe characters), name, version (semver), minLauncherVersion, layers, permissions, entry, contributes
 - **Least privilege**: compares `manifest.permissions` with the bridge methods the source actually calls (the `METHOD_PERMISSIONS` table). Both declared-but-unused and used-but-undeclared raise errors
+- **Icon name validation**: `fa-solid fa-*` / `fa-brands fa-*` literals in the source and the manifest `icon` field are checked against the launcher's built-in icon table; a name outside it is an **error** (such icons render blank, and used to do so silently) and the closest built-in names are suggested. Keys declared by a plugin's own `contributes.iconTheme` count as valid
 - **Long-loop warnings**: `while(true)`, `for(;;)`, and unbounded `setInterval` polling (it suggests moving the work to a Worker / WASM / backend) — a heuristic text scan, so false positives and misses are possible
 - **Signature check**: in package mode it verifies with the bundled store root public key (ADR-050), unless `QOMICEX_DEV_ROOT_PUBLIC_KEY` is set (local dev root, see the publishing docs); an unsigned package reports "unsigned" rather than being rejected; a failed verification (including a **self-signed certificate** produced by `pack --key` being rejected by the root key) exits non-zero
 
@@ -157,14 +158,15 @@ qomicex verify --package ./release/com.acgstudio.ligatures-0.3.0.signed.qplugin
 ## lint
 
 ```bash
-qomicex lint               # manifest, permissions, long loops + relative import extensions + asset references
+qomicex lint               # manifest, permissions, long loops, icon names + relative import extensions + asset references
 qomicex lint --json        # structured output ({ok, errors, warnings, findings})，for CI consumption
 ```
 
-A stricter pre-publish static gate than `verify`, with two extra checks:
+A stricter pre-publish static gate than `verify`, with these extra checks:
 
 - **Relative imports missing an extension**: `import ... from './x'` with no extension and not a directory barrel → error (a hard Vite rule)
 - **Resource reference existence**: files pointed at by `entry.frontend/theme/backend` or `contributes.overlay.file` do not exist → error (a `dist/` reference that has not been built raises a warning)
+- **Icon name validation**: same as `verify` (manifest `icon` fields plus `fa-*` literals in source); names outside the built-in table → error
 
 **Examples** (CI gate):
 

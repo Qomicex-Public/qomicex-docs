@@ -223,8 +223,15 @@ const html = tpl.split('<!--占位符-->').join('<script>' + js + '</script>')
 
 - 插件管理卡片的图标读取顺序为 `contributes.menuItems[0].icon ?? manifest.icon`
 - **库插件要显示图标，用 manifest 顶层 `"icon": "fa-solid fa-file-lines"`**，不要声明 `contributes.menuItems`（会创建侧边栏入口，并可能把插件页面渲染出来）
-- 图标尽量用 **FontAwesome 类名**（`fa-solid fa-xxx`，启动器预置列表见 `BuiltinIcons.tsx`）：SVG 路径经 `<img>` 渲染固定黑色、不随明暗主题；FA 类名经 `<FontAwesomeIcon>` 随主题
-- 需要新的 FA 图标时，在启动器 `BuiltinIcons.tsx` 的 `byClass` 里加条目（含 `fa-brands` 如 `fa-markdown`）
+- 图标尽量用 **FontAwesome 类名**（`fa-solid fa-xxx`，即启动器内置表）：SVG 路径经 `<img>` 渲染固定黑色、不随明暗主题；FA 类名随主题
+- 需要新的 FA 图标时，在启动器 `src/components/BuiltinIcons.tsx` 的 entries 表里加条目（含 `fa-brands` 如 `fa-markdown`），再跑 `node scripts/gen-icon-catalog.mjs` 同步到 `@qomicex/plugin-ui` 与 `qomicex-cli`（`pnpm run test:icon-catalog` 会检查漂移）
+
+### 图标不显示 / 只剩一个空位
+
+- **最常见原因：类名不在启动器内置表里。** `fa-floppy-disk`、`fa-skull`、`fa-file-zipper`、`fa-keyboard`、`fa-folder-tree`、`fa-puzzle-piece`、`fa-cog` 这类"看起来很像"的名字都不在表内。表外类名历史上是**静默渲染为空**的。
+- 排查：`qomicex verify` 或 `qomicex lint` 会报 error 并给出相近的内置图标建议；运行时 `<Icon>` 未命中会在控制台 `console.warn`；也可以在启动器里调 `await __PLUGIN_API__.call('listIcons')` 拿全量清单。
+- 插件页面里的图标应该用 `@qomicex/plugin-ui` 的 `<Glyph>` + 单图标子路径（`@qomicex/plugin-ui/icons/server`），不要自己封装 `getIconSvg` 桥调用——那条路径每个图标一次 IPC，且拼错时没有任何反馈。
+- 表里确实没有需要的图标时：用 `contributes.iconTheme` 声明私有图标，或随包附 `.svg` 用 `<img>` 渲染。
 
 ### 文件拖放拿不到本地路径
 

@@ -50,8 +50,8 @@ npm publish
 | `qomicex create <id> [--template <react\|html\|lib\|wasm>] [-t <...>]` | 从内置模板生成合法插件项目（默认 react） |
 | `qomicex dev [--port <n>]` | 起本地调试环境（仓库内 harness 模式 / 仓库外裸 Vite） |
 | `qomicex pack [--out-dir <d>] [--version <v>] [--key <k>] [--skip-build]` | 构建 → 打包 `.qplugin`（可选 `--key` 签名） |
-| `qomicex verify [--package <f>]` | 校验 manifest / 权限 / 长循环 / 签名 |
-| `qomicex lint [--json]` | 增强静态检查：manifest / 权限 / 长循环 / import 扩展名 / 资源引用 |
+| `qomicex verify [--package <f>]` | 校验 manifest / 权限 / 图标名 / 长循环 / 签名 |
+| `qomicex lint [--json]` | 增强静态检查：manifest / 权限 / 长循环 / 图标名 / import 扩展名 / 资源引用 |
 | `qomicex bump <major\|minor\|patch> [--version <v>]` | 递增 `manifest.json` 版本号 |
 | `qomicex publish [--key <k>] [--slug <s>] [--changelog <c>] [--api <url>] [--org-id <id>] [--package <f>] [--skip-build] [--yes]` | 设备流登录 → 签名 → 上传商店 |
 | `qomicex login [--api <url>]` | 设备流登录并持久化会话（30 天免登录） |
@@ -144,6 +144,7 @@ qomicex verify --package ./release/x.qplugin   # 包模式：manifest + 签名�
 
 - **manifest 合法性**：id（反向域名/安全字符）、name、version(semver)、minLauncherVersion、layers、permissions、entry、contributes
 - **权限最小化**：对比 `manifest.permissions` 与源码实际调用的桥方法（`METHOD_PERMISSIONS` 表）。声明未用 / 用了未声明都会报错
+- **图标名校验**：源码里的 `fa-solid fa-*` / `fa-brands fa-*` 字面量与 manifest 的 `icon` 字段，对照启动器内置图标表；表外类名报 **error**（这类图标在 UI 里渲染为空，且此前是静默的），并给出相近的内置图标建议。插件自带 `contributes.iconTheme` 声明的键视为合法
 - **长循环告警**：`while(true)`、`for(;;)`、`setInterval` 无界轮询（提示放 Worker / WASM / 后端）——启发式文本扫描，可能误报/漏报
 - **签名检查**：包模式用内置商店根公钥验签（ADR-050，设置 `QOMICEX_DEV_ROOT_PUBLIC_KEY` 时改用本地开发根钥，见发布与签名文档）；无签名提示「未签名」不拒绝；验签失败（含 `pack --key` 生成的**自签名证书**被根钥拒绝）以非 0 退出
 
@@ -157,7 +158,7 @@ qomicex verify --package ./release/com.acgstudio.ligatures-0.3.0.signed.qplugin
 ## lint
 
 ```bash
-qomicex lint               # manifest/权限/长循环 + 相对 import 扩展名 + 资源引用
+qomicex lint               # manifest/权限/长循环 + 图标名 + 相对 import 扩展名 + 资源引用
 qomicex lint --json        # 结构化输出（{ok, errors, warnings, findings}），供 CI 消费
 ```
 
@@ -165,6 +166,7 @@ qomicex lint --json        # 结构化输出（{ok, errors, warnings, findings}�
 
 - **相对 import 缺扩展名**：`import ... from './x'` 无扩展名且非目录 barrel → error（Vite 硬规则）
 - **资源引用存在性**：`entry.frontend/theme/backend`、`contributes.overlay.file` 指向的文件不存在 → error（`dist/` 引用未构建时给 warning）
+- **图标名校验**：同 `verify`（manifest `icon` 字段 + 源码 FA 字面量），表外类名 → error
 
 **实例**（CI 门禁）：
 

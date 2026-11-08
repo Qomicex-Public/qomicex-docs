@@ -179,6 +179,56 @@ Modifiers: `--indeterminate` indeterminate, `--danger` danger, `--warn` warning
 <div class="p-color-picker"><span class="p-color-picker__swatch" style="background:#f00"></span> Color</div>
 ```
 
+## Icons (React components)
+
+Icons ship with the component library: **synchronous, zero IPC, tree-shakeable**. In React
+plugins do not hand-roll SVGs, and do not wrap the `getIconSvg` bridge yourself.
+
+### `<Glyph>` — per-icon static import (recommended)
+
+```tsx
+import { Glyph } from '@qomicex/plugin-ui'
+import { ServerIcon } from '@qomicex/plugin-ui/icons/server'
+import { FolderOpenIcon } from '@qomicex/plugin-ui/icons/folder-open'
+
+<Glyph icon={ServerIcon} className="h-4 w-4" />
+```
+
+- The subpath is the class name without the `fa-solid fa-` prefix; brand icons add `brand-`
+  (`fa-brands fa-github` → `@qomicex/plugin-ui/icons/brand-github`)
+- The export name is PascalCase + `Icon`
+- The bundler keeps only the icons you import, and a wrong icon name **fails at build time**
+  instead of reaching the runtime
+- Filled with `currentColor`, so it follows the theme automatically; pass `label` for an
+  accessible name
+
+### `<Icon>` — when the icon name comes from runtime data
+
+```tsx
+import { Icon } from '@qomicex/plugin-ui'
+
+<Icon name={iconNameFromSettings} className="h-4 w-4" />
+```
+
+`name` is a runtime string the bundler cannot analyse, so the **entire icon table (~160KB) is
+lazily loaded as a separate chunk** — only downloaded when an `<Icon>` actually renders. Prefer
+`<Glyph>` whenever the name is known at compile time.
+
+Unknown names render `null` (no empty gap) and `console.warn` in dev builds.
+
+### Discovering icons
+
+```tsx
+import { ICON_NAMES, hasIcon } from '@qomicex/plugin-ui'
+
+ICON_NAMES.includes('fa-solid fa-server')   // true
+hasIcon('fa-solid fa-skull')                 // false
+```
+
+At runtime (including theme and plugin-private icons): `await __PLUGIN_API__.call('listIcons')`.
+**Do not hardcode an icon list** — the built-in table evolves with the launcher, so
+`listIcons()` / `ICON_NAMES` are the authoritative sources.
+
 ### Layout and utilities
 
 ```html

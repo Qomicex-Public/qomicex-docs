@@ -779,21 +779,82 @@ const locale = await __PLUGIN_API__.call('getLocale')   // 'zh-CN'
 ```
 - **No permission required**; consistent with the overlay layer of `getPluginStrings`
 
-### getIconSvg — Built-in icons (Font Awesome class → SVG path)
+### Icons
+
+#### Recommended: `<Glyph>` + per-icon subpath (zero IPC, tree-shakeable)
+
+Do **not** route in-page icons through the bridge. Icon data ships with `@qomicex/plugin-ui`;
+static imports render synchronously:
+
+```tsx
+import { Glyph } from '@qomicex/plugin-ui'
+import { ServerIcon } from '@qomicex/plugin-ui/icons/server'
+import { PlayIcon } from '@qomicex/plugin-ui/icons/play'
+
+<Glyph icon={ServerIcon} className="h-4 w-4" />
+```
+
+The subpath is the class name without the `fa-solid fa-` prefix (`fa-solid fa-folder-open` →
+`@qomicex/plugin-ui/icons/folder-open`). Brand icons use a `brand-` prefix
+(`fa-brands fa-github` → `@qomicex/plugin-ui/icons/brand-github`). The export name is
+PascalCase + `Icon`.
+
+The bundler keeps only the icons you import (27 icons measured 0 redundant entries) and there
+is no IPC round-trip at all.
+
+#### `<Icon name>` — when the icon name comes from runtime data
+
+```tsx
+import { Icon } from '@qomicex/plugin-ui'
+
+<Icon name={iconNameFromSettings} className="h-4 w-4" />
+```
+
+Because `name` is a runtime string the bundler cannot analyse it, so the **entire icon table
+(~160KB) is lazily loaded as a separate chunk** — only downloaded when an `<Icon>` actually
+renders. Prefer `<Glyph>` whenever the name is known at compile time.
+
+Unknown names render `null` (no empty gap) and `console.warn` in dev builds.
+
+#### Discovering icons: `listIcons`
+
+```js
+const names = await __PLUGIN_API__.call('listIcons')
+// ['fa-solid fa-arrow-left', 'fa-solid fa-server', …]  sorted
+```
+- **No permission required**
+- Returns every usable key: built-in table + current colour-theme mapping + this plugin's
+  `contributes.iconTheme`
+- Use it for icon pickers and self-checks rather than **hardcoding a list** (the built-in table
+  evolves with the launcher)
+
+#### Low level: `getIconSvg`
 
 ```js
 const svg = await __PLUGIN_API__.call('getIconSvg', 'fa-solid fa-server')
-// { width: 512, height: 512, path: 'M64…' }  returns null for unknown classes
+// { width: 448, height: 512, path: 'M64…', source: 'builtin' }
+// miss → null, plus a console.warn
 ```
-- **No permission required** (public read-only data)
-- Available classes = the launcher's built-in icon set (~280 `fa-solid` classes, the same system as the manifest `icon` field)
-- Render inline in the plugin; `currentColor` follows the theme, no icon font needed:
+- **No permission required**
+- Lookup order: this plugin's `contributes.iconTheme` → current colour-theme mapping → the
+  launcher's built-in table; the `source` field reports which one matched
+  (`plugin` / `theme` / `builtin`)
+- A miss is **no longer silent**: the console warns with pointers to `listIcons()` and
+  `contributes.iconTheme`
+- Only call it directly when the name comes from runtime data and `<Icon>` is not a good fit
 
-```jsx
-<svg viewBox={`0 0 ${svg.width} ${svg.height}`} fill="currentColor" className="h-4 w-4">
-  <path d={svg.path} />
-</svg>
-```
+#### Icon names must exist in the launcher's built-in table
+
+A wrong `fa-solid fa-*` / `fa-brands fa-*` renders blank (historically silently, which let the
+problem reach users). There are now two gates:
+
+1. `qomicex verify` / `qomicex lint` scan source literals and the manifest `icon` field, report
+   an **error** for names outside the table, and suggest the closest built-in icons;
+2. `<Icon>` warns on a runtime miss.
+
+To use an icon the built-in table lacks, declare a private icon via
+`contributes.iconTheme` (see [manifest — icon field spec](/en/plugins/manifest#icon-field-spec-menus-install-modes-top-level-icon)),
+or ship an `.svg` and render it with `<img>`.
 
 ### Language change event (plugin:locale-changed)
 

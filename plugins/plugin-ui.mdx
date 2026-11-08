@@ -179,6 +179,52 @@ title: "UI 组件库（.p-* 样式）"
 <div class="p-color-picker"><span class="p-color-picker__swatch" style="background:#f00"></span> 颜色</div>
 ```
 
+## 图标（React 组件）
+
+图标随组件库分发，**同步渲染、零 IPC、可 tree-shake**。React 插件里不要用
+`.p-*` 手写 SVG，也不要自己封装 `getIconSvg` 桥调用。
+
+### `<Glyph>` — 单图标静态导入（推荐）
+
+```tsx
+import { Glyph } from '@qomicex/plugin-ui'
+import { ServerIcon } from '@qomicex/plugin-ui/icons/server'
+import { FolderOpenIcon } from '@qomicex/plugin-ui/icons/folder-open'
+
+<Glyph icon={ServerIcon} className="h-4 w-4" />
+```
+
+- 子路径 = 类名去掉 `fa-solid fa-` 前缀；品牌图标加 `brand-`（`fa-brands fa-github`
+  → `@qomicex/plugin-ui/icons/brand-github`）
+- 导出名 = PascalCase + `Icon`
+- 打包器只保留导入的图标（图标名写错时**打包阶段**就报错，进不了运行时）
+- `currentColor` 填充，自动跟随明暗主题；`label` 属性给出无障碍名
+
+### `<Icon>` — 图标名来自运行期数据
+
+```tsx
+import { Icon } from '@qomicex/plugin-ui'
+
+<Icon name={iconNameFromSettings} className="h-4 w-4" />
+```
+
+`name` 是运行期字符串，打包器无法分析，因此**整张图标表（约 160KB）作为独立
+chunk 懒加载** —— 只在真的渲染 `<Icon>` 时才下载。图标名编译期已知时请用 `<Glyph>`。
+
+未登记的类名渲染 `null`（不留空白档位）并在开发构建 `console.warn`。
+
+### 发现可用图标
+
+```tsx
+import { ICON_NAMES, hasIcon } from '@qomicex/plugin-ui'
+
+ICON_NAMES.includes('fa-solid fa-server')   // true
+hasIcon('fa-solid fa-skull')                 // false
+```
+
+运行时（含主题与插件自带图标）：`await __PLUGIN_API__.call('listIcons')`。
+**不要硬编码图标清单**——内置表随启动器演进，用 `listIcons()` / `ICON_NAMES` 才是准的。
+
 ### 布局与工具类
 
 ```html

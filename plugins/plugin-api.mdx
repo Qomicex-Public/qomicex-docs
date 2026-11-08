@@ -780,21 +780,77 @@ const locale = await __PLUGIN_API__.call('getLocale')   // 'zh-CN'
 ```
 - **无需权限**；与 `getPluginStrings` 的覆盖层一致
 
-### getIconSvg — 内置图标（Font Awesome 类名 → SVG path）
+### 图标
+
+#### 推荐：`<Glyph>` + 单图标子路径（零 IPC、可 tree-shake）
+
+插件页面里的图标**不要走桥**。图标数据随 `@qomicex/plugin-ui` 分发，静态导入后同步渲染：
+
+```tsx
+import { Glyph } from '@qomicex/plugin-ui'
+import { ServerIcon } from '@qomicex/plugin-ui/icons/server'
+import { PlayIcon } from '@qomicex/plugin-ui/icons/play'
+
+<Glyph icon={ServerIcon} className="h-4 w-4" />
+```
+
+子路径 = 类名去掉 `fa-solid fa-` 前缀（`fa-solid fa-folder-open` →
+`@qomicex/plugin-ui/icons/folder-open`）。品牌图标加 `brand-` 前缀
+（`fa-brands fa-github` → `@qomicex/plugin-ui/icons/brand-github`）。导出名是
+PascalCase + `Icon`。
+
+打包器只保留真正导入的图标（27 个图标实测 0 条冗余），且不产生任何 IPC 往返。
+
+#### `<Icon name>` — 图标名来自运行期数据时
+
+```tsx
+import { Icon } from '@qomicex/plugin-ui'
+
+<Icon name={iconNameFromSettings} className="h-4 w-4" />
+```
+
+因为 `name` 是运行期字符串，打包器无法静态分析，**整张图标表（约 160KB）会作为
+独立 chunk 懒加载**——只在真的渲染 `<Icon>` 时才下载。图标名在编译期已知时请用
+上面的 `<Glyph>`。
+
+未登记的类名渲染 `null`（不留空档）并在开发构建 `console.warn`。
+
+#### 发现可用图标：`listIcons`
+
+```js
+const names = await __PLUGIN_API__.call('listIcons')
+// ['fa-solid fa-arrow-left', 'fa-solid fa-server', …]  按字典序
+```
+- **无需权限**
+- 返回内置表 + 当前颜色主题映射 + 本插件 `contributes.iconTheme` 的全部可用键
+- 做图标选择器或自检时以它为准，**不要硬编码清单**（内置表随启动器演进）
+
+#### 底层：`getIconSvg`
 
 ```js
 const svg = await __PLUGIN_API__.call('getIconSvg', 'fa-solid fa-server')
-// { width: 512, height: 512, path: 'M64…' }  未知类名返回 null
+// { width: 448, height: 512, path: 'M64…', source: 'builtin' }
+// 未命中 → null，并在控制台 console.warn
 ```
-- **无需权限**（公共只读数据）
-- 可用类名 = 启动器内置图标集（约 280 个 `fa-solid` 类，与 manifest `icon` 字段同一体系）
-- 插件侧内联渲染，`currentColor` 跟随主题色，不引入图标字体：
+- **无需权限**
+- 查找顺序：本插件 `contributes.iconTheme` → 当前颜色主题映射 → 启动器内置表；
+  `source` 字段标明命中来源（`plugin` / `theme` / `builtin`）
+- 未命中**不再静默返回 null**：控制台会给出告警，附 `listIcons()` 与
+  `contributes.iconTheme` 的修复提示
+- 仅当图标名来自运行期数据、又不方便用 `<Icon>` 时才直接调它
 
-```jsx
-<svg viewBox={`0 0 ${svg.width} ${svg.height}`} fill="currentColor" className="h-4 w-4">
-  <path d={svg.path} />
-</svg>
-```
+#### 图标名必须在启动器内置表内
+
+`fa-solid fa-*` / `fa-brands fa-*` 写错会渲染成空白（历史上是静默的，问题能一路
+发到用户侧）。现在两道闸门：
+
+1. `qomicex verify` / `qomicex lint` 扫描源码字面量与 manifest `icon` 字段，
+   表外类名报 **error** 并给出相近的内置图标建议；
+2. `<Icon>` 运行时未命中会 `console.warn`。
+
+需要内置表里没有的图标时，用 `contributes.iconTheme` 声明私有图标（见
+[manifest — icon 字段规范](/plugins/manifest#icon-字段规范菜单--安装方式--顶层图标)），
+或随包附一个 `.svg` 用 `<img>` 渲染。
 
 ### 语言切换事件（plugin:locale-changed）
 

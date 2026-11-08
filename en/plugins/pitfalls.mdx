@@ -223,8 +223,15 @@ const html = tpl.split('<!--placeholder-->').join('<script>' + js + '</script>')
 
 - The icon on a plugin management card is read as `contributes.menuItems[0].icon ?? manifest.icon`
 - **For a library plugin to show an icon, use the top-level manifest field `"icon": "fa-solid fa-file-lines"`** and do not declare `contributes.menuItems` (that creates a sidebar entry and may render the plugin page as well)
-- Prefer **FontAwesome class names** (`fa-solid fa-xxx`; see `BuiltinIcons.tsx` for the launcher's built-in list): SVG paths rendered through `<img>` are fixed black and ignore the light/dark theme, while FA class names rendered through `<FontAwesomeIcon>` follow the theme
-- To use a new FA icon, add an entry to `byClass` in the launcher's `BuiltinIcons.tsx` (including `fa-brands` icons such as `fa-markdown`)
+- Prefer **FontAwesome class names** (`fa-solid fa-xxx`, i.e. the launcher's built-in table): SVG paths rendered through `<img>` are fixed black and ignore the light/dark theme, while FA class names follow the theme
+- To use a new FA icon, add an entry to the `entries` table in the launcher's `src/components/BuiltinIcons.tsx` (including `fa-brands` icons such as `fa-markdown`), then run `node scripts/gen-icon-catalog.mjs` to sync it into `@qomicex/plugin-ui` and `qomicex-cli` (`pnpm run test:icon-catalog` guards against drift)
+
+### Icons do not show up / only an empty slot remains
+
+- **Most common cause: the class name is not in the launcher's built-in table.** Names that *look* right — `fa-floppy-disk`, `fa-skull`, `fa-file-zipper`, `fa-keyboard`, `fa-folder-tree`, `fa-puzzle-piece`, `fa-cog` — are all absent. Historically a name outside the table was **silently rendered as nothing**.
+- Diagnose: `qomicex verify` / `qomicex lint` report an error and suggest the closest built-in icons; at runtime an `<Icon>` miss logs a `console.warn`; you can also call `await __PLUGIN_API__.call('listIcons')` in the launcher to get the full list.
+- In-page icons should use `<Glyph>` from `@qomicex/plugin-ui` with a per-icon subpath (`@qomicex/plugin-ui/icons/server`) rather than wrapping the `getIconSvg` bridge yourself — that path costs one IPC round-trip per icon and gives no feedback when a name is wrong.
+- If the table genuinely lacks the icon you need, declare a private icon with `contributes.iconTheme`, or ship an `.svg` and render it with `<img>`.
 
 ### File drag and drop cannot get local paths
 

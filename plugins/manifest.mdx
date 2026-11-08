@@ -104,9 +104,16 @@ const locale = await __PLUGIN_API__.call('getLocale')           // 如 'zh-CN'
 
 按优先级选择：
 
-1. **Font Awesome 类名（推荐）**：`"fa-solid fa-server"`。零资产、跟随主题色（currentColor 渲染）、启动器内置解析（侧栏、安装对话框统一渲染）。可用类名即启动器内置图标集（约 280 个，`fa-solid` 系：server / play / stop / folder-open / box / link 等）。插件运行时 UI 经 `call('getIconSvg', cls)` 取同一套 SVG path 内联渲染，manifest 与页面图标完全统一。
+1. **Font Awesome 类名（推荐）**：`"fa-solid fa-server"`。零资产、跟随主题色（currentColor 渲染）、启动器内置解析（侧栏、安装对话框统一渲染）。
+   - **可用类名不要硬编码**：内置表随启动器演进。运行时取全量用 `call('listIcons')`，离线查表见 `@qomicex/plugin-ui` 导出的 `ICON_NAMES`。
+   - **表外类名会渲染为空白**（曾被静默忽略）。`qomicex verify` / `lint` 会静态校验并报 error，同时给出相近的内置图标建议。
+   - 插件页面内的图标不要调用 `getIconSvg`，用 `<Glyph>` + 单图标子路径（见 [插件 API — 图标](/plugins/plugin-api#图标)）。
 2. **包内相对路径**：`"dist/icon.svg"`（多色/品牌图标用；自动解析为插件文件服务 URL）。
-3. 绝对 URL / emoji：仅过渡兼容——emoji 不跟随主题色、不随缩放优化，建议替换为类名。
+3. 绝对 URL / emoji / 纯文本：如 `"https://…/icon.png"`、`"🏆"`、`"A"`。emoji 不跟随主题色、不随缩放优化，建议优先用 1 或 2。
+4. **私有图标（`contributes.iconTheme`）**：指向包内 `icon-theme.json`，结构为
+   `{ "schemaVersion": 1, "icons": { "<图标键>": { "type": "svg", "path": "M…" } } }`。
+   声明的键会出现在 `listIcons()` 中，`getIconSvg` 优先解析它们——内置表里没有的图标
+   可以靠它自带，不必等启动器版本更新。
 
 ### installModes 数组元素
 
