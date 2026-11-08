@@ -364,10 +364,36 @@ await __PLUGIN_API__.call('writeBytes', 'C:/Users/me/out.bin', new Uint8Array([1
 await __PLUGIN_API__.call('deleteFile', 'C:/Users/me/tmp.txt')
 ```
 - Permission: `filesystem:write`
-- Parameters: `(path: string)`; deletes **files** only (directories are not supported)
+- Parameters: `(path: string)`; deletes **files** only — use `deleteDir` for directories
 - Authorization works the same as `readText` (destructive operations also require confirmation)
 - Missing file → `FS_FILE_NOT_FOUND`(404)
 - Returns: `{ path }`
+
+### deleteDir — Delete a directory (authorization required)
+
+```js
+// Empty directories only (a non-empty one is rejected, preventing accidents)
+await __PLUGIN_API__.call('deleteDir', 'C:/Servers/old')
+
+// Delete the directory together with everything inside
+const { removed } = await __PLUGIN_API__.call('deleteDir', 'C:/Servers/old', { recursive: true })
+// removed = number of entries deleted (files + subdirectories)
+```
+- Permission: `filesystem:write`
+- Parameters: `(path: string, options?: { recursive?: boolean })`
+- Authorization works the same as `readText`; the path must be inside a granted prefix
+- With `{ recursive: false }` only an **empty** directory is accepted; otherwise
+  `FS_DIR_NOT_EMPTY`(400)
+- **Dangerous roots are always refused**: drive roots (`D:`, `D:\`) and the filesystem root
+  return `FS_REFUSE_ROOT`(403). Grants are prefix-based, so a plugin granted a whole drive
+  could otherwise wipe it in one call — plugins should still validate in their own domain
+  (for example, refuse directories that are too shallow)
+- Missing directory → `FS_DIR_NOT_FOUND`(404)
+- Returns: `{ path, removed }`
+
+> Typical use: deleting an instance or server directory. Previously the backend could only
+> delete individual files, so a plugin had to recursively `deleteFile` and then rename the
+> empty shell away — leaving unremovable junk directories on disk.
 
 ### execCommand — Run a shell command
 

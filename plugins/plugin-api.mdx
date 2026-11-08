@@ -364,10 +364,33 @@ await __PLUGIN_API__.call('writeBytes', 'C:/Users/me/out.bin', new Uint8Array([1
 await __PLUGIN_API__.call('deleteFile', 'C:/Users/me/tmp.txt')
 ```
 - 权限：`filesystem:write`
-- 参数：`(path: string)`，仅删除**文件**（不支持目录）
+- 参数：`(path: string)`，仅删除**文件**；目录请用 `deleteDir`
 - 授权机制同 `readText`（破坏性操作同样需授权确认）
 - 文件不存在 → `FS_FILE_NOT_FOUND`(404)
 - 返回：`{ path }`
+
+### deleteDir — 删除目录（授权制）
+
+```js
+// 只删空目录（非空会报错，防止误删）
+await __PLUGIN_API__.call('deleteDir', 'C:/Servers/old')
+
+// 连同目录内容一起删
+const { removed } = await __PLUGIN_API__.call('deleteDir', 'C:/Servers/old', { recursive: true })
+// removed = 实际删除的条目数（文件 + 子目录）
+```
+- 权限：`filesystem:write`
+- 参数：`(path: string, options?: { recursive?: boolean })`
+- 授权机制同 `readText`；路径必须在已授权前缀内
+- 请求 `{ recursive: false }` 时只接受**空目录**，非空返回 `FS_DIR_NOT_EMPTY`(400)
+- **危险根永远拒绝**：盘符根（`D:`、`D:\`）与文件系统根返回 `FS_REFUSE_ROOT`(403)。
+  授权是按路径前缀覆盖的，误把整个盘授权给插件后一次递归删除就是灾难——
+  插件侧仍建议自己做业务层校验（例如拒绝层级过浅的目录）
+- 目录不存在 → `FS_DIR_NOT_FOUND`(404)
+- 返回：`{ path, removed }`
+
+> 典型用途：删除实例/服务端目录。此前后端只能删单个文件，插件想删目录只能
+> 递归 `deleteFile` 再把空壳 rename 挪走，会在磁盘上留下无法清理的垃圾目录。
 
 ### execCommand — 执行 shell 命令
 
