@@ -1,0 +1,58 @@
+---
+title: "TextBox"
+---
+
+## TextBox
+
+Text input box. The current value goes into `{Inputs.<Name>}` and can be read by bindings and functions.
+
+## Signature
+
+```xml
+<TextBox Name="Keyword" Value="" Placeholder="输入关键词"
+         Multiline="False" Password="False" ReadOnly="False"
+         MaxLength="100" OnChange="CallFunction" Function="Search" />
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | Required | Input key |
+| `Value` | string | — | Initial value, supports binding |
+| `Placeholder` | string | — | Placeholder text |
+| `Multiline` | `True` / `False` | `False` | Multi-line text area |
+| `Password` | `True` / `False` | `False` | Password input |
+| `ReadOnly` | `True` / `False` | `False` | Read-only |
+| `MaxLength` | 0–10000 | — | Maximum length |
+| `OnChange` | action | — | Fires on every input |
+
+## Content syntax
+
+```xml
+<TextBox Name="Keyword">初始值</TextBox>
+```
+
+Equivalent to `Value="初始值"`.
+
+## Runtime behavior
+
+- The initial value comes from the interpolated `Value`; after that the internal `Inputs` state takes over.
+- User input is written to `{Inputs.Name}` immediately.
+- `OnChange` fires on every keystroke; do debouncing inside the function.
+
+## Example
+
+```xml
+<Column Gap="2">
+  <TextBox Name="City" Placeholder="城市" />
+  <Button Text="查询" OnClick="CallFunction" Function="GetWeather" />
+  <Text Value="{Results.GetWeather.City}" />
+</Column>
+```
+
+## Gotchas
+
+- `Value` is an initial value, not two-way binding; external data changes do not overwrite user input.
+- `{Inputs.Name}` is case-sensitive.
+- Multi-line input requires an explicit `Multiline="True"`.

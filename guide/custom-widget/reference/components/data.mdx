@@ -1,0 +1,77 @@
+---
+title: "Data"
+---
+
+## Data
+
+声明数据源。`Data` 不渲染，只负责拉取/读取数据。
+
+## 签名
+
+```xml
+<Data Name="News" Type="Json" Source="Url"
+      Url="https://api.example.com/news"
+      Refresh="3600" />
+
+<Data Name="Cover" Type="Binary" Source="File"
+      Path="./cover.png" Mime="image/png" />
+```
+
+## 属性
+
+| 属性 | 类型 | 必填 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- | :--- |
+| `Name` | identifier | 否 | `Data` | 数据源名，唯一 |
+| `Type` | `Json` / `Text` / `Xml` / `Binary` | 否 | `Json` | 解析类型 |
+| `Source` | `Url` / `File` | 否 | `Url` | 来源 |
+| `Url` | https URL | Source=Url | — | 远程地址 |
+| `Path` | path | Source=File | — | 本地路径 |
+| `Mime` | string | 否 | — | 二进制 MIME |
+| `Refresh` | 0–86400 | 否 | `3600` | 缓存秒数 |
+
+## 数据形状
+
+| Type | 绑定值 |
+| :--- | :--- |
+| `Json` | 解析后的对象/数组 |
+| `Text` | 字符串 |
+| `Xml` | `{ Root: { Name, Attributes, Text, Children } }` |
+| `Binary` | `{ Url, Base64, Mime, Size }` |
+
+## 访问
+
+- 命名源：`{Data.News.Title}` 或 `{News.Title}`
+- 默认源（Name=Data）：`{Data.Title}`
+- 最多 8 个数据源。
+
+## 本地路径
+
+- 绝对路径原样。
+- 相对路径：本地导入的组件以 `.qwidget` 目录为基准；URL 导入的组件以启动器数据目录为基准。
+- 编辑器信息面板显示解析后的绝对路径。
+
+## 缓存
+
+- `Refresh` 秒内复用缓存；`0` 表示每次挂载都刷新。
+- 非二进制缓存到 localStorage；二进制只缓存在内存。
+- `Refresh` 动作会重新拉取过期数据源。
+
+## 示例
+
+```xml
+<Data Name="News" Type="Json" Url="https://api.example.com/news" Refresh="600" />
+<Data Name="Feed" Type="Xml" Url="https://example.com/feed.xml" />
+<Data Name="Cover" Type="Binary" Source="File" Path="./cover.png" />
+
+<Text Value="{Data.News.Title}" />
+<List Items="{Data.News.Items}" As="Item">
+  <ListItem><Text Value="{Item.Title}" /></ListItem>
+</List>
+<Image Src="{Data.Cover.Url}" />
+```
+
+## 坑
+
+- `Url` / `Path` 是静态字符串，不支持运行时绑定。
+- 在线请求需要域名确认；非 https:443、私网地址会被拒绝。
+- 文本/JSON/XML 上限 1MB，二进制 8MB。

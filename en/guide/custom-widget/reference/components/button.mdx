@@ -1,0 +1,61 @@
+---
+title: "Button"
+---
+
+## Button
+
+A clickable button that can bind a launcher action or function.
+
+## Signature
+
+```xml
+<Button Text="启动" Size="Md" Variant="Default"
+        OnClick="Launch" />
+
+<Button OnClick="Navigate" To="Instances">
+  实例管理
+</Button>
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | — | Key used by `Click` triggers to target the button |
+| `Text` | string | Required | Button text |
+| `Variant` | `Default` / `Secondary` / `Outline` / `Ghost` / `Destructive` / `Link` | `Default` | Style |
+| `Size` | `Sm` / `Md` / `Lg` | `Md` | Size |
+| `OnClick` | action | — | Click action |
+
+Action parameters go directly on the `Button` as attributes or attribute elements; see the [Actions reference](/en/guide/custom-widget/reference/actions).
+
+## Content syntax
+
+```xml
+<Button OnClick="Refresh">刷新</Button>
+```
+
+Equivalent to `Text="刷新"`.
+
+## Runtime behavior
+
+- Renders the launcher `Button` component.
+- With an empty `OnClick` the button is clickable but does nothing.
+- A click first fires the `Click` trigger with the same `Name`, then runs `OnClick`.
+- In preview mode `RunCommand` / `PluginApi` do not execute.
+
+## Example
+
+```xml
+<Row Gap="2">
+  <Button Text="启动" OnClick="Launch" />
+  <Button Text="实例" Variant="Outline" OnClick="Navigate" To="Instances" />
+  <Button Text="更多" Variant="Ghost" OnClick="OpenUrl" Url="https://example.com" />
+</Row>
+```
+
+## Gotchas
+
+- The action parameters of `OnClick` must belong to that action; wrong ones are rejected by XML validation.
+- Long button text widens the button; for wrapping, use `Text` inside a custom container, or shorten the text.
+- `Name` is not the display text; it only targets triggers.

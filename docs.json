@@ -21,47 +21,119 @@
         "default": true,
         "pages": [
           {
-            "group": "开始",
+            "group": "启动器使用指引",
             "pages": [
-              "index",
-              "guide/index",
-              "guide/getting-started",
-              "guide/first-start",
-              "guide/mcp"
-            ]
-          },
-          {
-            "group": "功能",
-            "pages": [
-              "guide/dashboard-widget",
-              "guide/installing-games",
-              "guide/instances",
-              "guide/modpack-support",
-              "guide/resource-center",
-              "guide/downloads",
-              "guide/accounts",
-              "guide/connect",
-              "guide/running",
-              "guide/log-analysis",
-              "guide/plugins",
-              "guide/deep-link"
-            ]
-          },
-          {
-            "group": "设置与网络",
-            "pages": [
-              "guide/settings",
-              "guide/mirror"
-            ]
-          },
-          {
-            "group": "帮助与优化",
-            "pages": [
-              "guide/glossary",
-              "guide/faq",
-              "guide/report-issue",
-              "guide/optimize",
-              "guide/legal"
+              {
+                "group": "开始",
+                "pages": [
+                  "index",
+                  "guide/index",
+                  "guide/getting-started",
+                  "guide/first-start",
+                  "guide/mcp"
+                ]
+              },
+              {
+                "group": "功能",
+                "pages": [
+                  "guide/dashboard-widget",
+                  {
+                    "group": "主页自定义组件",
+                    "pages": [
+                      {
+                        "group": "入门",
+                        "pages": [
+                          "guide/custom-widget/index",
+                          "guide/custom-widget/syntax"
+                        ]
+                      },
+                      {
+                        "group": "高级功能",
+                        "pages": [
+                          "guide/custom-widget/advanced/layout",
+                          "guide/custom-widget/advanced/functions",
+                          "guide/custom-widget/advanced/nesting",
+                          "guide/custom-widget/advanced/plugin-api",
+                          "guide/custom-widget/advanced/data",
+                          "guide/custom-widget/advanced/media-binary"
+                        ]
+                      },
+                      "guide/custom-widget/examples",
+                      {
+                        "group": "定义参考",
+                        "pages": [
+                          "guide/custom-widget/reference/binding",
+                          "guide/custom-widget/reference/nesting-scope",
+                          "guide/custom-widget/reference/actions",
+                          "guide/custom-widget/reference/version",
+                          {
+                            "group": "组件字典",
+                            "pages": [
+                              "guide/custom-widget/reference/components/index",
+                              "guide/custom-widget/reference/components/widget",
+                              "guide/custom-widget/reference/components/container",
+                              "guide/custom-widget/reference/components/row",
+                              "guide/custom-widget/reference/components/column",
+                              "guide/custom-widget/reference/components/grid",
+                              "guide/custom-widget/reference/components/tabs",
+                              "guide/custom-widget/reference/components/list",
+                              "guide/custom-widget/reference/components/list-item",
+                              "guide/custom-widget/reference/components/if",
+                              "guide/custom-widget/reference/components/divider",
+                              "guide/custom-widget/reference/components/spacer",
+                              "guide/custom-widget/reference/components/text",
+                              "guide/custom-widget/reference/components/button",
+                              "guide/custom-widget/reference/components/link",
+                              "guide/custom-widget/reference/components/image",
+                              "guide/custom-widget/reference/components/media",
+                              "guide/custom-widget/reference/components/text-box",
+                              "guide/custom-widget/reference/components/check-box",
+                              "guide/custom-widget/reference/components/slider",
+                              "guide/custom-widget/reference/components/select",
+                              "guide/custom-widget/reference/components/progress",
+                              "guide/custom-widget/reference/components/file-picker",
+                              "guide/custom-widget/reference/components/color-picker",
+                              "guide/custom-widget/reference/components/data",
+                              "guide/custom-widget/reference/components/resources",
+                              "guide/custom-widget/reference/components/triggers",
+                              "guide/custom-widget/reference/components/function",
+                              "guide/custom-widget/reference/components/using"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "guide/installing-games",
+                  "guide/instances",
+                  "guide/modpack-support",
+                  "guide/resource-center",
+                  "guide/downloads",
+                  "guide/accounts",
+                  "guide/connect",
+                  "guide/running",
+                  "guide/log-analysis",
+                  "guide/plugins",
+                  "guide/deep-link"
+                ]
+              },
+              {
+                "group": "设置与网络",
+                "pages": [
+                  "guide/settings",
+                  "guide/mirror"
+                ]
+              },
+              {
+                "group": "帮助与优化",
+                "pages": [
+                  "guide/glossary",
+                  "guide/faq",
+                  "guide/report-issue",
+                  "guide/optimize",
+                  "guide/legal"
+                ]
+              }
             ]
           },
           {
@@ -123,7 +195,7 @@
             ]
           },
           {
-            "group": "插件商店",
+            "group": "插件商店使用",
             "pages": [
               "store/publish",
               "store/index",
@@ -148,47 +220,119 @@
         "language": "en",
         "pages": [
           {
-            "group": "Get started",
+            "group": "Launcher guide",
             "pages": [
-              "en/index",
-              "en/guide/index",
-              "en/guide/getting-started",
-              "en/guide/first-start",
-              "en/guide/mcp"
-            ]
-          },
-          {
-            "group": "Features",
-            "pages": [
-              "en/guide/dashboard-widget",
-              "en/guide/installing-games",
-              "en/guide/instances",
-              "en/guide/modpack-support",
-              "en/guide/resource-center",
-              "en/guide/downloads",
-              "en/guide/accounts",
-              "en/guide/connect",
-              "en/guide/running",
-              "en/guide/log-analysis",
-              "en/guide/plugins",
-              "en/guide/deep-link"
-            ]
-          },
-          {
-            "group": "Settings and network",
-            "pages": [
-              "en/guide/settings",
-              "en/guide/mirror"
-            ]
-          },
-          {
-            "group": "Help and performance",
-            "pages": [
-              "en/guide/glossary",
-              "en/guide/faq",
-              "en/guide/report-issue",
-              "en/guide/optimize",
-              "en/guide/legal"
+              {
+                "group": "Getting started",
+                "pages": [
+                  "en/index",
+                  "en/guide/index",
+                  "en/guide/getting-started",
+                  "en/guide/first-start",
+                  "en/guide/mcp"
+                ]
+              },
+              {
+                "group": "Features",
+                "pages": [
+                  "en/guide/dashboard-widget",
+                  {
+                    "group": "Dashboard custom widgets",
+                    "pages": [
+                      {
+                        "group": "Basics",
+                        "pages": [
+                          "en/guide/custom-widget/index",
+                          "en/guide/custom-widget/syntax"
+                        ]
+                      },
+                      {
+                        "group": "Advanced",
+                        "pages": [
+                          "en/guide/custom-widget/advanced/layout",
+                          "en/guide/custom-widget/advanced/functions",
+                          "en/guide/custom-widget/advanced/nesting",
+                          "en/guide/custom-widget/advanced/plugin-api",
+                          "en/guide/custom-widget/advanced/data",
+                          "en/guide/custom-widget/advanced/media-binary"
+                        ]
+                      },
+                      "en/guide/custom-widget/examples",
+                      {
+                        "group": "Reference",
+                        "pages": [
+                          "en/guide/custom-widget/reference/binding",
+                          "en/guide/custom-widget/reference/nesting-scope",
+                          "en/guide/custom-widget/reference/actions",
+                          "en/guide/custom-widget/reference/version",
+                          {
+                            "group": "Component reference",
+                            "pages": [
+                              "en/guide/custom-widget/reference/components/index",
+                              "en/guide/custom-widget/reference/components/widget",
+                              "en/guide/custom-widget/reference/components/container",
+                              "en/guide/custom-widget/reference/components/row",
+                              "en/guide/custom-widget/reference/components/column",
+                              "en/guide/custom-widget/reference/components/grid",
+                              "en/guide/custom-widget/reference/components/tabs",
+                              "en/guide/custom-widget/reference/components/list",
+                              "en/guide/custom-widget/reference/components/list-item",
+                              "en/guide/custom-widget/reference/components/if",
+                              "en/guide/custom-widget/reference/components/divider",
+                              "en/guide/custom-widget/reference/components/spacer",
+                              "en/guide/custom-widget/reference/components/text",
+                              "en/guide/custom-widget/reference/components/button",
+                              "en/guide/custom-widget/reference/components/link",
+                              "en/guide/custom-widget/reference/components/image",
+                              "en/guide/custom-widget/reference/components/media",
+                              "en/guide/custom-widget/reference/components/text-box",
+                              "en/guide/custom-widget/reference/components/check-box",
+                              "en/guide/custom-widget/reference/components/slider",
+                              "en/guide/custom-widget/reference/components/select",
+                              "en/guide/custom-widget/reference/components/progress",
+                              "en/guide/custom-widget/reference/components/file-picker",
+                              "en/guide/custom-widget/reference/components/color-picker",
+                              "en/guide/custom-widget/reference/components/data",
+                              "en/guide/custom-widget/reference/components/resources",
+                              "en/guide/custom-widget/reference/components/triggers",
+                              "en/guide/custom-widget/reference/components/function",
+                              "en/guide/custom-widget/reference/components/using"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "en/guide/installing-games",
+                  "en/guide/instances",
+                  "en/guide/modpack-support",
+                  "en/guide/resource-center",
+                  "en/guide/downloads",
+                  "en/guide/accounts",
+                  "en/guide/connect",
+                  "en/guide/running",
+                  "en/guide/log-analysis",
+                  "en/guide/plugins",
+                  "en/guide/deep-link"
+                ]
+              },
+              {
+                "group": "Settings and network",
+                "pages": [
+                  "en/guide/settings",
+                  "en/guide/mirror"
+                ]
+              },
+              {
+                "group": "Help and performance",
+                "pages": [
+                  "en/guide/glossary",
+                  "en/guide/faq",
+                  "en/guide/report-issue",
+                  "en/guide/optimize",
+                  "en/guide/legal"
+                ]
+              }
             ]
           },
           {
@@ -250,7 +394,7 @@
             ]
           },
           {
-            "group": "Plugin store",
+            "group": "Plugin store usage",
             "pages": [
               "en/store/publish",
               "en/store/index",

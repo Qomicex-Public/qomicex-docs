@@ -1,0 +1,84 @@
+---
+title: "Grid"
+---
+
+## Grid
+
+A multi-column grid layout. Supports the `Grid.Row` / `Grid.Column` / `Grid.RowSpan` / `Grid.ColumnSpan` attached properties.
+
+## Signature
+
+```xml
+<Grid Columns="2" Gap="2" Padding="0" Align="Stretch" Justify="Start">
+  ...
+</Grid>
+```
+
+## Attributes
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `Columns` | 1–6 | Yes | Column count |
+| `Gap` | 0–8 | No | Row and column spacing |
+| `Padding` | 0–8 | No | Inner padding |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | No | Cell alignment |
+| `Justify` | `Start` / `Center` / `End` / `Between` | No | Horizontal distribution |
+
+## Attached properties
+
+These only affect the direct children of a `Grid`:
+
+| Attribute | Description |
+| :--- | :--- |
+| `Grid.Row` | Row index, 0-based |
+| `Grid.Column` | Column index, 0-based |
+| `Grid.RowSpan` | Rows to span, default 1 |
+| `Grid.ColumnSpan` | Columns to span, default 1 |
+
+As attributes:
+
+```xml
+<Grid Columns="3" Gap="2">
+  <Button Grid.Column="0" Text="A" />
+  <Button Grid.Column="1" Text="B" />
+  <Button Grid.Column="2" Text="C" />
+</Grid>
+```
+
+As attribute elements:
+
+```xml
+<Grid Columns="2" Gap="2">
+  <Button>
+    <Grid.Row>1</Grid.Row>
+    <Grid.Column>0</Grid.Column>
+    <Grid.ColumnSpan>2</Grid.ColumnSpan>
+    <Button.Text>跨两列</Button.Text>
+  </Button>
+</Grid>
+```
+
+## Runtime behavior
+
+- Renders as CSS Grid; `grid-template-columns` is generated from `Columns`.
+- Without attached properties, cells fill in flow order.
+- Each child is wrapped in a grid item; row and column spans are applied with inline styles.
+- Row height comes from the content and `gap`; there is no fixed row height.
+
+## Example
+
+```xml
+<Grid Columns="2" Gap="2">
+  <Container Padding="3"><Text Value="{Data.A}" /></Container>
+  <Container Padding="3"><Text Value="{Data.B}" /></Container>
+  <Container Padding="3" Grid.ColumnSpan="2">
+    <Text Value="底部整行" />
+  </Container>
+</Grid>
+```
+
+## Gotchas
+
+- Attached properties have no effect on elements that are not children of a `Grid`.
+- Row and column indexes start at 0; out-of-range values create implicit tracks per CSS Grid rules, so control them explicitly.
+- There is no auto-dense packing or masonry layout; use `List` for variable-height lists.

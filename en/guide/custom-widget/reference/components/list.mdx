@@ -1,0 +1,70 @@
+---
+title: "List"
+---
+
+## List
+
+Renders a list from an array. It must contain exactly one `ListItem` as the item template.
+
+## Signature
+
+```xml
+<List Items="{Data.News.Items}" As="Item" Gap="2" EmptyText="暂无内容">
+  <ListItem>
+    <Text Value="{Item.Title}" />
+  </ListItem>
+</List>
+```
+
+## Attributes
+
+| Attribute | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `Items` | path | Yes | — | Array path |
+| `As` | identifier | No | `item` | Item variable name |
+| `Gap` | 0–8 | No | `0` | Spacing between items |
+| `EmptyText` | string | No | — | Message shown for an empty array |
+
+## Content
+
+- Exactly one `ListItem`.
+- Exactly one root element inside the `ListItem`.
+- Items can bind `{Item.*}` and `{Index}`.
+
+```xml
+<List Items="{Data.News.Items}" As="News">
+  <ListItem>
+    <Container Padding="2" Gap="1">
+      <Text Value="{News.Title}" Weight="Semibold" />
+      <Text Value="{Index}" Size="Xs" Color="Muted" />
+    </Container>
+  </ListItem>
+</List>
+```
+
+## Runtime behavior
+
+- Parses the `Items` path; a non-array value shows the empty state.
+- Renders at most 200 items; the rest are truncated.
+- Each item has its own scope, so `Item`/`Index` do not leak outside.
+- List items have no selection or click events; put a `Button`/`Link` inside the item when you need one.
+
+## Example: news list
+
+```xml
+<List Items="{Data.News.Items}" As="Item" Gap="2" EmptyText="暂无新闻">
+  <ListItem>
+    <Row Gap="2" Align="Center">
+      <Text Value="{Item.Title}" Size="Sm" Clamp="2" />
+      <Button Text="阅读" Size="Sm" Variant="Ghost"
+              OnClick="OpenUrl" Url="{Item.Url}" />
+    </Row>
+  </ListItem>
+</List>
+```
+
+## Gotchas
+
+- `Items` must point at an array; an object shows the empty state.
+- There is no virtual scrolling; more than 200 items are truncated.
+- The item template takes a single root element; wrap multiple elements in `Column`/`Row`/`Container`.

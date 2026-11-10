@@ -1,0 +1,74 @@
+---
+title: "Container"
+---
+
+## Container
+
+带视觉的布局容器：边框、背景、圆角、内边距。只想排版时用 `Row` / `Column`。
+
+## 签名
+
+```xml
+<Container Direction="Column" Padding="4" Gap="3"
+           Border="True" Background="Card" Radius="Lg"
+           Align="Stretch" Justify="Start">
+  ...
+</Container>
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Direction` | `Row` / `Column` | `Column` | 主轴方向 |
+| `Gap` | 0–8 | `0` | 子元素间距 |
+| `Padding` | 0–8 | `0` | 内边距 |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | — | 交叉轴对齐 |
+| `Justify` | `Start` / `Center` / `End` / `Between` | — | 主轴对齐 |
+| `Border` | `True` / `False` | `True` | 边框 |
+| `Background` | `Transparent` / `Card` / `Muted` / `Primary` | `Card` | 背景 |
+| `Radius` | `None` / `Sm` / `Md` / `Lg` / `Full` | `Lg` | 圆角 |
+
+## 内容
+
+容器内容是子元素：
+
+```xml
+<Container Padding="3" Gap="2">
+  <Text Value="标题" Weight="Bold" />
+  <Button Text="操作" OnClick="Refresh" />
+</Container>
+```
+
+不能把裸文本直接放进容器；文本用 `Text`。
+
+## 属性元素
+
+```xml
+<Container>
+  <Container.Padding>3</Container.Padding>
+  <Container.Background>Muted</Container.Background>
+  <Text Value="内容" />
+</Container>
+```
+
+## 运行时行为
+
+- 渲染为 flex 容器；`Direction` 决定 `flex-row` / `flex-col`。
+- `Background="Card"` 使用卡片背景与模糊；`Transparent` 无背景。
+- `Border` 使用主题边框色。
+- 尺寸由父布局/主页网格决定，没有像素宽高。
+
+## 示例
+
+```xml
+<Container Padding="4" Gap="3" Radius="Lg" Background="Card">
+  <Text Value="{Data.Title}" Size="Lg" Weight="Bold" />
+  <Text Value="{Data.Summary}" Size="Sm" Color="Muted" Clamp="3" />
+</Container>
+```
+
+## 坑
+
+- 嵌套多个 `Card` 容器会出现双层背景，内层建议用 `Transparent`。
+- `Stretch` 会让子元素占满交叉轴；文本可能被拉宽，必要时配合 `Align="Start"`。

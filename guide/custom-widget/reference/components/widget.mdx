@@ -1,0 +1,74 @@
+---
+title: "Widget"
+---
+
+## Widget
+
+组件根元素。一个 `.qwidget` 文件只能有一个 `Widget`。
+
+## 签名
+
+```xml
+<Widget Name="每日新闻" Version="1.0.0"
+        Author="示例" Description="可选说明"
+        UpdateUrl="https://example.com/news.qwidget"
+        LauncherVersion="1.4.0">
+  ...
+</Widget>
+```
+
+## 属性
+
+| 属性 | 类型 | 必填 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- | :--- |
+| `Name` | string | 是 | — | 显示名，≤64 字符 |
+| `Version` | string | 是 | — | 组件版本 |
+| `Author` | string | 否 | — | 作者 |
+| `Description` | string | 否 | — | 描述 |
+| `UpdateUrl` | https URL | 否 | 导入 URL | 在线更新源 |
+| `LauncherVersion` | semver | 否 | — | 最低启动器版本 |
+
+## 子元素
+
+`Widget` 的直接子元素可以是：
+
+- 布局/控件节点：`Container`、`Row`、`Column`、`Grid`、`Text`、`Button` 等
+- `Data`
+- `Resources`
+- `Triggers`
+- `Function`
+- `Widget.Using`
+
+`Data` 也可以出现在任意布局容器内；`Resources`、`Triggers`、`Function` 只允许放在根下。
+
+## 属性元素
+
+根属性也适用属性元素语法：
+
+```xml
+<Widget>
+  <Widget.Name>示例</Widget.Name>
+  <Widget.Version>1.0.0</Widget.Version>
+  <Text Value="Hello" />
+</Widget>
+```
+
+## 运行时行为
+
+1. 解析并严格校验 XML：未知元素/属性、重复属性、非法 URL/枚举直接报错。
+2. 解析 `Data` 并开始拉取；解析 `Resources`；解析 `Function`/`Triggers`。
+3. 执行 `Loaded` 触发器。
+4. 渲染节点；父组件通过 `Children` 读取快照。
+5. 在线组件按 6 小时 TTL 检查更新。
+
+## 限制
+
+- XML ≤256KB、深度 ≤16、元素 ≤1000。
+- 数据源 ≤8、嵌套实例 ≤20。
+- 未命名数据源默认名为 `Data`。
+
+## 相关
+
+- [QWidget XML 语法](/guide/custom-widget/syntax)
+- [数据绑定](/guide/custom-widget/reference/binding)
+- [版本要求](/guide/custom-widget/reference/version)

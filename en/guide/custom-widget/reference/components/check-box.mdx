@@ -1,0 +1,48 @@
+---
+title: "CheckBox"
+---
+
+## CheckBox
+
+Checkbox. The current value goes into `{Inputs.<Name>}`.
+
+## Signature
+
+```xml
+<CheckBox Name="Enable" Text="启用" Checked="False" OnChange="CallFunction" Function="Apply" />
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | Required | Input key |
+| `Text` | string | — | Label text |
+| `Checked` | bool / binding | `False` | Initial checked state |
+| `OnChange` | action | — | Fires on toggle |
+
+## Content syntax
+
+```xml
+<CheckBox Name="Enable">启用</CheckBox>
+```
+
+## Runtime behavior
+
+- The initial value comes from `Checked`; supports `{Resources.*}` / `{Data.*}` bindings.
+- After the user toggles it, the boolean is written to `{Inputs.Name}`.
+- `OnChange` fires after the state changes.
+
+## Example
+
+```xml
+<CheckBox Name="AutoStart" Text="启动后自动检查更新" />
+<If Test="{Inputs.AutoStart}">
+  <Text Value="已启用" Color="Primary" />
+</If>
+```
+
+## Gotchas
+
+- A `Checked` binding only acts as the initial value on first render or when the data changes; after user interaction `Inputs` wins.
+- An empty label leaves only the checkbox, so `Text` is recommended.

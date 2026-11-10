@@ -1,0 +1,45 @@
+---
+title: "Image"
+---
+
+## Image
+
+显示图片，支持在线 URL、Blob URL 和 data URL。
+
+## 签名
+
+```xml
+<Image Src="{Data.Cover.Url}" Alt="封面" W="160" H="90" Rounded="True" />
+<Image>https://example.com/a.png</Image>
+```
+
+## 属性
+
+| 属性 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `Src` | URL | 必填；https / Blob / data URL |
+| `Alt` | string | 替代文本 |
+| `W` / `H` | 1–2048 | 像素宽高 |
+| `Rounded` | `True` / `False` | 圆角 |
+
+## 运行时行为
+
+- 在线 https 图片会检查域名是否已确认；未确认则不渲染。
+- Blob URL（来自 `Data Type="Binary"` 或 `Resources Binary`）直接渲染。
+- 不写 `W` 时宽度 100%；不写 `H` 时高度自动。
+- 使用 `object-cover` 裁剪。
+
+## 示例
+
+```xml
+<Image Src="{Data.Avatar}" W="48" H="48" Rounded="True" Alt="头像" />
+
+<Data Name="Cover" Type="Binary" Source="File" Path="./cover.png" />
+<Image Src="{Data.Cover.Url}" W="320" H="180" Rounded="True" />
+```
+
+## 坑
+
+- 远程图片加载失败不会显示占位；需要占位时用 `If` 判断数据状态。
+- 动态 `Src` 的域名也必须在编辑器中确认，否则不渲染。
+- 大图会占用内存；尽量限制 `W/H`。

@@ -1,0 +1,37 @@
+---
+title: "Divider"
+---
+
+## Divider
+
+A 1px divider line using the theme border color.
+
+## Signature
+
+```xml
+<Divider />
+```
+
+## Attributes
+
+None.
+
+## Runtime behavior
+
+- Renders as a div with height 1px and width 100%.
+- The color is the `border` variable, so it adapts to light and dark themes.
+- It takes no part in spacing; add a `Spacer` or the parent's `Gap` when you need room above or below.
+
+## Example
+
+```xml
+<Column Gap="2">
+  <Text Value="第一组" Weight="Semibold" />
+  <Divider />
+  <Text Value="第二组" Weight="Semibold" />
+</Column>
+```
+
+## Gotchas
+
+- In a horizontal parent the width may be decided by flex; wrap it in a `Column` or set `Align="Stretch"` on the parent when you need a fixed full width.

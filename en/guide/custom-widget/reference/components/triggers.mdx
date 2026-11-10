@@ -1,0 +1,63 @@
+---
+title: "Triggers"
+---
+
+## Triggers
+
+Event trigger container. Its direct children are `Trigger` elements.
+
+## Signature
+
+```xml
+<Triggers>
+  <Trigger Event="Loaded" Function="Init" />
+  <Trigger Event="DataChanged" Data="News" Function="RenderNews" />
+  <Trigger Event="Click" Control="RefreshButton" Action="Refresh" />
+  <Trigger Event="Timer" Interval="60000" Function="Tick" Once="False" />
+</Triggers>
+```
+
+## Trigger attributes
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `Event` | `Loaded` / `DataChanged` / `Click` / `Timer` | Required |
+| `Function` | string | Shorthand for calling a function |
+| `Action` | action | Calls an action (either this or `Function`) |
+| `Control` | identifier | `Name` of the target control for Click events |
+| `Data` | string | Data source name for DataChanged events |
+| `Interval` | 1000–3600000 | Timer interval, default 60000 |
+| `Once` | `True` / `False` | Whether the Timer runs only once |
+
+With `Action` you may add action parameters such as `To`, `Url`, `Folder`, `Instance`, and so on.
+
+## Events
+
+| Event | Fires when |
+| :--- | :--- |
+| `Loaded` | Once after the widget mounts |
+| `DataChanged` | The given data source finishes fetching |
+| `Click` | The button/link with the given `Name` is clicked |
+| `Timer` | At each interval |
+
+The maximum rate is 20 times per second.
+
+## Example
+
+```xml
+<Triggers>
+  <Trigger Event="Loaded" Function="Init" />
+  <Trigger Event="Click" Control="RefreshButton" Action="Refresh" />
+  <Trigger Event="Timer" Interval="300000" Function="RefreshStatus" />
+</Triggers>
+
+<Button Name="RefreshButton" Text="刷新" />
+```
+
+## Gotchas
+
+- `Function` and `Action` are mutually exclusive.
+- A Click target must have a `Name`.
+- For DataChanged, `Data` is the data source `Name`, not its type.
+- Timers do not run in the preview.
+- Functions called by triggers are also subject to the sandbox timeout.

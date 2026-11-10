@@ -1,0 +1,161 @@
+---
+title: "QWidget functions and TypeScript"
+---
+
+## QWidget functions and TypeScript
+
+`Function` lets you write TypeScript logic inside a widget. Scripts run in an isolated sandbox iframe with no DOM, network, localStorage, or `import`; they only read inputs and return a plain object.
+
+## Minimal example
+
+```xml
+<Function Name="Greet" Timeout="3000">
+  <Function.Interface>
+    <Struct Name="GreetInput">
+      <Field Name="Name" Type="String" />
+    </Struct>
+  </Function.Interface>
+  <Function.Input Type="GreetInput">Input</Function.Input>
+  <Function.Output Type="String">Message</Function.Output>
+  <Function.Script><![CDATA[
+    return { Message: "Hello " + (Input.Name || "guest") };
+  ]]></Function.Script>
+</Function>
+```
+
+Call it:
+
+```xml
+<TextBox Name="Name" />
+<Button Text="Greet" OnClick="CallFunction" Function="Greet" />
+<Text Value="{Results.Greet.Message}" />
+```
+
+## Structure
+
+### Function
+
+| Attribute | Description |
+| :--- | :--- |
+| `Name` | Required, unique |
+| `Timeout` | 100–10000 ms, default 3000 |
+
+### Function.Interface
+
+```xml
+<Function.Interface>
+  <Struct Name="UserInput">
+    <Field Name="name" Type="String" />
+    <Field Name="age" Type="Number" />
+  </Struct>
+</Function.Interface>
+```
+
+Field types: `String` / `Number` / `Bool` / `DateTime` / `Json` / `Binary`, or another Struct name.
+
+### Function.Input
+
+```xml
+<Function.Input Type="UserInput">Input</Function.Input>
+```
+
+The element text is the script variable name (default `Input`).
+
+### Function.Output
+
+```xml
+<Function.Output Type="String">Message</Function.Output>
+<Function.Output Type="Json">Items</Function.Output>
+```
+
+Results become `{Results.<Function>.<Output>}`.
+
+### Function.Script
+
+TypeScript source; CDATA is recommended:
+
+```xml
+<Function.Script><![CDATA[
+  const list = [1, 2, 3].map((n) => n * 2);
+  return { Items: list };
+]]></Function.Script>
+```
+
+Scripts must return JSON-serializable values; `Date` is serialized as an ISO string.
+
+## Input sources
+
+`Input` is built in this order:
+
+1. `Arguments` JSON from `CallFunction` (supports binding interpolation).
+2. Otherwise, values from `Inputs` matched to the input Struct field names.
+
+```xml
+<Button Text="Search"
+        OnClick="CallFunction"
+        Function="Search">
+  <Button.Arguments><![CDATA[{"Keyword":"{Inputs.Keyword}"}]]></Button.Arguments>
+</Button>
+```
+
+## Script globals
+
+| Variable | Content |
+| :--- | :--- |
+| `Input` | Values assembled from `Function.Input` |
+| `Inputs` | Current values of all input controls |
+| `Resources` | Named resources; Binary resources expose `Base64` / `Url` / `Mime` / `Size` |
+| `Data` | All data sources; unnamed fields are merged into `Data` |
+| `Results` | Previous function/command/plugin results |
+| `Host` | Low-risk host APIs |
+
+## Host
+
+| Method | Description |
+| :--- | :--- |
+| `Host.Notify(message, type?)` | Show a notification (`info` / `success` / `error`) |
+| `Host.OpenUrl(url)` | Open an https URL in the system browser |
+| `Host.Navigate(path)` | Navigate inside the launcher |
+| `Host.Log(message)` | Write to developer logs |
+
+Host calls are one-way. Scripts cannot execute commands or call plugin APIs; use button/trigger actions for that.
+
+## Triggers
+
+```xml
+<Triggers>
+  <Trigger Event="Loaded" Function="Init" />
+  <Trigger Event="DataChanged" Data="News" Function="RenderNews" />
+  <Trigger Event="Click" Control="SearchButton" Function="Search" />
+  <Trigger Event="Timer" Interval="60000" Function="Tick" Once="False" />
+</Triggers>
+```
+
+- `Loaded`: once after mount.
+- `DataChanged`: after the named data source loads.
+- `Click`: when a control with the matching `Name` is clicked.
+- `Timer`: every `Interval` ms, minimum 1000.
+- Rate limit: 20 executions per second.
+
+## Run in the editor
+
+Open the **Functions** tab, select a function, and click **Run**:
+
+- Executes with current `Inputs` and sample data.
+- Shows returned JSON below the editor.
+- Syntax errors are reported from sucrase.
+
+## Sandbox and security
+
+- Scripts run in a sandbox iframe with CSP blocking network, images, media, frames, and workers.
+- No `window`, `document`, `localStorage`, `fetch`, `XMLHttpRequest`, `import`, or `require`.
+- On timeout the iframe is destroyed and recreated.
+- Outputs are validated against `Function.Output`.
+- Remote widgets can contain scripts and update silently; only use widgets you trust.
+
+## Debugging
+
+1. Use **Run** to verify inputs/outputs.
+2. Put intermediate values into outputs or `Host.Log`.
+3. Avoid infinite loops; the sandbox is destroyed on timeout.
+4. Fetch external data with `Data` first; scripts only process loaded data.

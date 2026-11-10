@@ -1,0 +1,138 @@
+---
+title: "QWidget examples"
+---
+
+## QWidget examples
+
+Every example below can be pasted straight into the editor; replace URLs and paths as needed.
+
+## Example 1: daily news
+
+```xml
+<Widget Name="每日新闻" Version="1.0.0"
+        UpdateUrl="https://example.com/news.qwidget">
+  <Data Name="News" Type="Json"
+        Url="https://api.example.com/news" Refresh="3600" />
+
+  <Container Padding="4" Gap="3" Border="True" Radius="Lg" Background="Card">
+    <Text Value="{Data.News.Title}" Size="Lg" Weight="Bold" />
+    <List Items="{Data.News.Items}" As="Item" Gap="2" EmptyText="暂无新闻">
+      <ListItem>
+        <Row Gap="2" Align="Center">
+          <Text Value="{Item.Title}" Size="Sm" Clamp="2" />
+          <Button Text="阅读" Size="Sm" Variant="Ghost"
+                  OnClick="OpenUrl" Url="{Item.Url}" />
+        </Row>
+      </ListItem>
+    </List>
+    <If Test="{State.Error}">
+      <Text Value="数据加载失败" Size="Xs" Color="Destructive" />
+    </If>
+  </Container>
+</Widget>
+```
+
+Key points: named `Data` sources, `List` + `ListItem`, `If Test`, and `OpenUrl` with a dynamic URL.
+
+## Example 2: quick search
+
+```xml
+<Widget Name="快捷搜索" Version="1.0.0">
+  <Container Padding="3" Gap="2">
+    <TextBox Name="Keyword" Placeholder="输入关键词" />
+    <Button Text="搜索" OnClick="CallFunction" Function="Search" />
+    <List Items="{Results.Search.Items}" As="Item" EmptyText="没有结果">
+      <ListItem>
+        <Text Value="{Item.Title}" Size="Sm" />
+      </ListItem>
+    </List>
+  </Container>
+
+  <Function Name="Search" Timeout="3000">
+    <Function.Interface>
+      <Struct Name="SearchInput">
+        <Field Name="Keyword" Type="String" />
+      </Struct>
+      <Struct Name="SearchItem">
+        <Field Name="Title" Type="String" />
+      </Struct>
+    </Function.Interface>
+    <Function.Input Type="SearchInput">Input</Function.Input>
+    <Function.Output Type="Json">Items</Function.Output>
+    <Function.Script><![CDATA[
+      const keyword = (Input.Keyword || "").trim();
+      return {
+        Items: keyword
+          ? [{ Title: "结果 1：" + keyword }, { Title: "结果 2：" + keyword }]
+          : []
+      };
+    ]]></Function.Script>
+  </Function>
+</Widget>
+```
+
+Key points: `Inputs` are assembled automatically from the struct fields, and function results are written to `Results`.
+
+## Example 3: local music card
+
+```xml
+<Widget Name="音乐卡片" Version="1.0.0">
+  <Data Name="Track" Type="Binary" Source="File" Path="C:\Music\song.mp3" />
+  <Container Padding="3" Gap="2">
+    <Text Value="正在播放" Weight="Semibold" />
+    <Media Type="Audio" Source="{Data.Track.Url}"
+           Controls="True" Loop="True" Volume="0.8" />
+  </Container>
+</Widget>
+```
+
+Key points: `Binary` data yields a Blob URL that can go straight into `Media.Source`.
+
+## Example 4: nested widgets
+
+```xml
+<!-- create a local widget named StatusCard first -->
+<Widget Name="Dashboard" Version="1.0.0">
+  <Row Gap="2">
+    <Widget.Using Name="StatusCard" As="Players" />
+    <Widget.Using Name="StatusCard" As="Tps" />
+  </Row>
+  <Text Value="{Children.Players.Data.Value}" Size="Lg" />
+</Widget>
+```
+
+Key points: `As` aliases are unique and the parent reads `Children.*` only.
+
+## Example 5: the three syntaxes side by side
+
+```xml
+<!-- attribute syntax -->
+<Text Value="Hello" />
+
+<!-- content syntax -->
+<Text>Hello</Text>
+
+<!-- property element syntax -->
+<Text><Text.Value>Hello</Text.Value></Text>
+```
+
+## Example 6: shortcuts
+
+```xml
+<Widget Name="快捷入口" Version="1.0.0">
+  <Container Padding="3" Gap="2">
+    <Grid Columns="2" Gap="2">
+      <Button Text="启动游戏" OnClick="Launch" />
+      <Button Text="实例管理" OnClick="Navigate" To="Instances" />
+      <Button Text="资源中心" OnClick="Navigate" To="ResourceCenter" />
+      <Button Text="打开日志" OnClick="OpenFolder" Folder="Logs" />
+    </Grid>
+  </Container>
+</Widget>
+```
+
+## More
+
+- [Layout elements](/en/guide/custom-widget/advanced/layout)
+- [Functions and TypeScript](/en/guide/custom-widget/advanced/functions)
+- [Widget reference](/en/guide/custom-widget/reference/components/widget)

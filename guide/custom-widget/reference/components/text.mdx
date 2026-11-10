@@ -1,0 +1,52 @@
+---
+title: "Text"
+---
+
+## Text
+
+显示文本，支持绑定、字号、字重、颜色、行数限制和对齐。
+
+## 签名
+
+```xml
+<Text Value="{Data.Title}" Size="Lg" Weight="Bold"
+      Color="Default" Clamp="3" Align="Start" />
+```
+
+内容语法与属性元素语法：
+
+```xml
+<Text>{Data.Title}</Text>
+<Text><Text.Value>{Data.Title}</Text.Value></Text>
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Value` | string | 必填 | 文本内容 |
+| `Size` | `Xs` / `Sm` / `Md` / `Lg` / `Xl` / `2Xl` | `Md` | 字号 |
+| `Weight` | `Normal` / `Medium` / `Semibold` / `Bold` | `Normal` | 字重 |
+| `Color` | `Default` / `Muted` / `Primary` / `Destructive` | `Default` | 颜色 |
+| `Clamp` | 1–6 | — | 最大行数，超出省略 |
+| `Align` | `Start` / `Center` / `End` | — | 文本对齐 |
+
+## 运行时行为
+
+- 渲染为块级 `span`，保留换行与自动换行。
+- `Value` 插值后显示；未加载的绑定为空字符串。
+- `Clamp` 使用 CSS line-clamp，需要 `Value` 是普通文本。
+- 字号映射到 Tailwind `text-xs` … `text-2xl`。
+
+## 示例
+
+```xml
+<Text Value="{Data.News.Title}" Size="Lg" Weight="Bold" Clamp="2" />
+<Text Value="{Data.Summary}" Size="Sm" Color="Muted" Clamp="4" />
+```
+
+## 坑
+
+- 多行文本请用 `Clamp` 控制高度，否则会撑高卡片。
+- `Color="Destructive"` 适合错误提示，不要用于普通正文。
+- 文本中的 `{}` 会被当作绑定；要显示字面花括号需拆开或使用资源。

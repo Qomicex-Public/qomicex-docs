@@ -1,0 +1,138 @@
+---
+title: "QWidget 示例"
+---
+
+## QWidget 示例
+
+以下示例都可以直接粘进编辑器，再按需替换 URL / 路径。
+
+## 示例 1：每日新闻
+
+```xml
+<Widget Name="每日新闻" Version="1.0.0"
+        UpdateUrl="https://example.com/news.qwidget">
+  <Data Name="News" Type="Json"
+        Url="https://api.example.com/news" Refresh="3600" />
+
+  <Container Padding="4" Gap="3" Border="True" Radius="Lg" Background="Card">
+    <Text Value="{Data.News.Title}" Size="Lg" Weight="Bold" />
+    <List Items="{Data.News.Items}" As="Item" Gap="2" EmptyText="暂无新闻">
+      <ListItem>
+        <Row Gap="2" Align="Center">
+          <Text Value="{Item.Title}" Size="Sm" Clamp="2" />
+          <Button Text="阅读" Size="Sm" Variant="Ghost"
+                  OnClick="OpenUrl" Url="{Item.Url}" />
+        </Row>
+      </ListItem>
+    </List>
+    <If Test="{State.Error}">
+      <Text Value="数据加载失败" Size="Xs" Color="Destructive" />
+    </If>
+  </Container>
+</Widget>
+```
+
+要点：`Data` 命名源、`List` + `ListItem`、`If Test`、`OpenUrl` 动态 URL。
+
+## 示例 2：快捷搜索
+
+```xml
+<Widget Name="快捷搜索" Version="1.0.0">
+  <Container Padding="3" Gap="2">
+    <TextBox Name="Keyword" Placeholder="输入关键词" />
+    <Button Text="搜索" OnClick="CallFunction" Function="Search" />
+    <List Items="{Results.Search.Items}" As="Item" EmptyText="没有结果">
+      <ListItem>
+        <Text Value="{Item.Title}" Size="Sm" />
+      </ListItem>
+    </List>
+  </Container>
+
+  <Function Name="Search" Timeout="3000">
+    <Function.Interface>
+      <Struct Name="SearchInput">
+        <Field Name="Keyword" Type="String" />
+      </Struct>
+      <Struct Name="SearchItem">
+        <Field Name="Title" Type="String" />
+      </Struct>
+    </Function.Interface>
+    <Function.Input Type="SearchInput">Input</Function.Input>
+    <Function.Output Type="Json">Items</Function.Output>
+    <Function.Script><![CDATA[
+      const keyword = (Input.Keyword || "").trim();
+      return {
+        Items: keyword
+          ? [{ Title: "结果 1：" + keyword }, { Title: "结果 2：" + keyword }]
+          : []
+      };
+    ]]></Function.Script>
+  </Function>
+</Widget>
+```
+
+要点：`Inputs` 自动按 Struct 字段组装、函数结果写入 `Results`。
+
+## 示例 3：本地音乐卡片
+
+```xml
+<Widget Name="音乐卡片" Version="1.0.0">
+  <Data Name="Track" Type="Binary" Source="File" Path="C:\Music\song.mp3" />
+  <Container Padding="3" Gap="2">
+    <Text Value="正在播放" Weight="Semibold" />
+    <Media Type="Audio" Source="{Data.Track.Url}"
+           Controls="True" Loop="True" Volume="0.8" />
+  </Container>
+</Widget>
+```
+
+要点：`Binary` 数据得到 Blob URL，直接给 `Media.Source`。
+
+## 示例 4：嵌套组件
+
+```xml
+<!-- 先创建名为 StatusCard 的本地组件 -->
+<Widget Name="Dashboard" Version="1.0.0">
+  <Row Gap="2">
+    <Widget.Using Name="StatusCard" As="Players" />
+    <Widget.Using Name="StatusCard" As="Tps" />
+  </Row>
+  <Text Value="{Children.Players.Data.Value}" Size="Lg" />
+</Widget>
+```
+
+要点：`As` 别名唯一，父组件只读 `Children.*`。
+
+## 示例 5：三种写法对照
+
+```xml
+<!-- 属性语法 -->
+<Text Value="Hello" />
+
+<!-- 内容语法 -->
+<Text>Hello</Text>
+
+<!-- 属性元素语法 -->
+<Text><Text.Value>Hello</Text.Value></Text>
+```
+
+## 示例 6：快捷入口
+
+```xml
+<Widget Name="快捷入口" Version="1.0.0">
+  <Container Padding="3" Gap="2">
+    <Grid Columns="2" Gap="2">
+      <Button Text="启动游戏" OnClick="Launch" />
+      <Button Text="实例管理" OnClick="Navigate" To="Instances" />
+      <Button Text="资源中心" OnClick="Navigate" To="ResourceCenter" />
+      <Button Text="打开日志" OnClick="OpenFolder" Folder="Logs" />
+    </Grid>
+  </Container>
+</Widget>
+```
+
+## 更多
+
+- [布局组件](/guide/custom-widget/advanced/layout)
+- [函数与 TypeScript](/guide/custom-widget/advanced/functions)
+- [组件字典](/guide/custom-widget/reference/components/widget)

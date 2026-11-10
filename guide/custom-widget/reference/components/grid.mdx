@@ -1,0 +1,84 @@
+---
+title: "Grid"
+---
+
+## Grid
+
+多列网格布局，支持 `Grid.Row` / `Grid.Column` / `Grid.RowSpan` / `Grid.ColumnSpan` 附加属性。
+
+## 签名
+
+```xml
+<Grid Columns="2" Gap="2" Padding="0" Align="Stretch" Justify="Start">
+  ...
+</Grid>
+```
+
+## 属性
+
+| 属性 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Columns` | 1–6 | 是 | 列数 |
+| `Gap` | 0–8 | 否 | 行列间距 |
+| `Padding` | 0–8 | 否 | 内边距 |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | 否 | 单元格对齐 |
+| `Justify` | `Start` / `Center` / `End` / `Between` | 否 | 水平分布 |
+
+## 附加属性
+
+只对 `Grid` 的直接子元素生效：
+
+| 属性 | 说明 |
+| :--- | :--- |
+| `Grid.Row` | 行号，0 起 |
+| `Grid.Column` | 列号，0 起 |
+| `Grid.RowSpan` | 跨行数，默认 1 |
+| `Grid.ColumnSpan` | 跨列数，默认 1 |
+
+属性写法：
+
+```xml
+<Grid Columns="3" Gap="2">
+  <Button Grid.Column="0" Text="A" />
+  <Button Grid.Column="1" Text="B" />
+  <Button Grid.Column="2" Text="C" />
+</Grid>
+```
+
+属性元素写法：
+
+```xml
+<Grid Columns="2" Gap="2">
+  <Button>
+    <Grid.Row>1</Grid.Row>
+    <Grid.Column>0</Grid.Column>
+    <Grid.ColumnSpan>2</Grid.ColumnSpan>
+    <Button.Text>跨两列</Button.Text>
+  </Button>
+</Grid>
+```
+
+## 运行时行为
+
+- 渲染为 CSS Grid，`grid-template-columns` 按 `Columns` 生成。
+- 没有附加属性时按流式顺序自动填充。
+- 每个子元素外包一层网格项；跨行/跨列通过行内样式实现。
+- 行高由内容与 `gap` 决定，不提供固定行高。
+
+## 示例
+
+```xml
+<Grid Columns="2" Gap="2">
+  <Container Padding="3"><Text Value="{Data.A}" /></Container>
+  <Container Padding="3"><Text Value="{Data.B}" /></Container>
+  <Container Padding="3" Grid.ColumnSpan="2">
+    <Text Value="底部整行" />
+  </Container>
+</Grid>
+```
+
+## 坑
+
+- 附加属性写在不属于 Grid 的元素上不会生效。
+- 行号/列号从 0 开始，越界会按 CSS Grid 规则产生隐式轨道，建议显式控制。
+- 没有自动压缩/瀑布流；需要动态高度列表时用 `List`。

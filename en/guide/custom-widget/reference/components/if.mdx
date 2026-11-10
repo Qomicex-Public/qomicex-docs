@@ -1,0 +1,58 @@
+---
+title: "If"
+---
+
+## If
+
+Renders its children conditionally, based on the truthiness of a path.
+
+## Signature
+
+```xml
+<If Test="{State.Error}">
+  <Text Value="加载失败" Color="Destructive" />
+</If>
+```
+
+## Attributes
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `Test` | path | Yes | Path used for the truthiness test |
+
+## Truthiness rules
+
+| Value | Result |
+| :--- | :--- |
+| `True` / non-zero number / non-empty string | Shown |
+| `False` / `0` / empty string | Hidden |
+| `null` / `undefined` | Hidden |
+| Empty array | Hidden |
+| Non-empty array / object | Shown |
+
+## Example
+
+```xml
+<If Test="{Data.News}">
+  <Text Value="{Data.News.Title}" />
+</If>
+
+<If Test="{State.Loading}">
+  <Text Value="加载中…" Color="Muted" />
+</If>
+
+<If Test="{State.Error}">
+  <Text Value="加载失败" Color="Destructive" />
+</If>
+```
+
+## Runtime behavior
+
+- When the condition is false the subtree does not render at all, but `Data` inside it is still prefetched (it was collected at parse time).
+- There is no `Else`; for an either/or case use two opposite conditions, or return the state from a script.
+- `Test` accepts `{...}` or a bare path.
+
+## Gotchas
+
+- An empty array counts as false; to detect "the array exists but is empty", check its length or use a script result.
+- Do not put `Resources` / `Triggers` / `Function` inside `If`; they are only allowed at the root.

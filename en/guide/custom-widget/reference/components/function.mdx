@@ -1,0 +1,88 @@
+---
+title: "Function"
+---
+
+## Function
+
+Defines a TypeScript function inside the widget. Functions run in a sandbox iframe, can only read data, and must return a plain object.
+
+## Signature
+
+```xml
+<Function Name="CreateUser" Timeout="3000">
+  <Function.Interface>
+    <Struct Name="CreateUserInput">
+      <Field Name="name" Type="String" />
+      <Field Name="age" Type="Number" />
+    </Struct>
+    <Struct Name="UserProfile">
+      <Field Name="id" Type="Number" />
+      <Field Name="name" Type="String" />
+      <Field Name="createdAt" Type="DateTime" />
+    </Struct>
+  </Function.Interface>
+
+  <Function.Input Type="CreateUserInput">Input</Function.Input>
+  <Function.Output Type="UserProfile">User</Function.Output>
+  <Function.Output Type="String">Message</Function.Output>
+
+  <Function.Script><![CDATA[
+    return {
+      User: {
+        id: Date.now(),
+        name: Input.name,
+        age: Input.age,
+        createdAt: new Date().toISOString(),
+      },
+      Message: "ok",
+    };
+  ]]></Function.Script>
+</Function>
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | Required | Function name, unique |
+| `Timeout` | 100–10000 | `3000` | Timeout in milliseconds |
+
+## Property elements
+
+| Element | Description |
+| :--- | :--- |
+| `Function.Interface` | Container holding `Struct` elements |
+| `Struct` | `Name` required; contains `Field` elements |
+| `Field` | `Name` and `Type` required |
+| `Function.Input` | `Type` required; body is the variable name, default `Input` |
+| `Function.Output` | `Type` required; body is the output key, multiple allowed |
+| `Function.Script` | TypeScript source, required |
+
+Field/output types: `String` / `Number` / `Bool` / `DateTime` / `Json` / `Binary`, or a Struct name.
+
+## Script variables
+
+`Input`, `Inputs`, `Resources`, `Data`, `Results`, `Host` (`Notify` / `OpenUrl` / `Navigate` / `Log`).
+
+## Results
+
+- Results are written to `{Results.<Function>.<Output>}`.
+- An object must be returned; a missing output key or a basic type mismatch is an error.
+- `Date` is serialized as an ISO string.
+
+## Sandbox
+
+- CSP blocks network, images, media, sub-frames, and workers.
+- No DOM, localStorage, `fetch`, `import` / `require`.
+- On timeout the iframe is destroyed and recreated.
+- Remote widgets may contain scripts and update silently, so only use widgets you trust.
+
+## Editor
+
+The "Functions" tab lets you edit the script, autocomplete `Input` / `Inputs` / `Resources` / `Data` / `Results` / `Host`, and run a test execution.
+
+## Gotchas
+
+- You cannot `await fetch`; load data beforehand with `Data`.
+- You cannot run commands or call the plugin API directly; use button/trigger actions.
+- Prefer CDATA in `Function.Script` so that `<` is not parsed as a tag.

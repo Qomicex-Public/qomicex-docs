@@ -1,0 +1,85 @@
+---
+title: "Plugin API and commands"
+---
+
+## Plugin API and commands
+
+Widgets can call the plugin registry or execute commands through actions. These are powerful; there is no per-call confirmation, and widgets containing them show a risk banner.
+
+## PluginApi
+
+```xml
+<Button Text="Query plugin" OnClick="PluginApi"
+        PluginId="top.qomicex.weather"
+        Method="getWeather">
+  <Button.Arguments><![CDATA[{"city":"{Inputs.City}"}]]></Button.Arguments>
+</Button>
+
+<Text Value="{Results.PluginApi.Value}" />
+```
+
+| Parameter | Required | Description |
+| :--- | :--- | :--- |
+| `PluginId` | Yes | Target plugin id |
+| `Method` | Yes | Registered method name |
+| `Arguments` | No | JSON; an array is passed as the argument list, a single value is wrapped in an array |
+
+Result: `{Results.PluginApi.Value}`.
+
+Requirements:
+
+- The target plugin is loaded and registered the method.
+- Permission checks are handled by the plugin.
+- Missing plugin/method shows an error.
+
+## RunCommand
+
+```xml
+<Button Text="Open explorer" OnClick="RunCommand"
+        Command="explorer ."
+        WorkingDirectory="{Data.GameDir}" />
+```
+
+| Parameter | Required | Description |
+| :--- | :--- | :--- |
+| `Command` | Yes | Command string; `cmd /C` on Windows, `sh -c` elsewhere |
+| `WorkingDirectory` | No | Relative paths use the widget/data directory |
+| `Timeout` | No | 1000–60000 ms, default 10000 |
+
+Results:
+
+| Path | Content |
+| :--- | :--- |
+| `{Results.Command.ExitCode}` | Exit code |
+| `{Results.Command.Stdout}` | Standard output, ≤64KB |
+| `{Results.Command.Stderr}` | Standard error, ≤64KB |
+
+Commands execute through Tauri IPC, not an HTTP endpoint, so arbitrary web pages cannot call the local API directly.
+
+## Preview limits
+
+The editor preview does not execute `RunCommand` / `PluginApi`; clicking shows a preview-disabled message. They only run in the real widget.
+
+## Argument binding
+
+`Arguments` is JSON with `{Inputs.*}` / `{Data.*}` / `{Results.*}` interpolation:
+
+```xml
+<Button Text="Create" OnClick="CallFunction" Function="CreateUser">
+  <Button.Arguments><![CDATA[{
+    "name": "{Inputs.UserName}",
+    "age": 18
+  }]]></Button.Arguments>
+</Button>
+```
+
+- A string that is exactly one binding preserves its type.
+- Mixed text becomes a string.
+- Invalid JSON fails the action.
+
+## Security boundary
+
+- Remote widgets can update silently and introduce these actions; only use trusted widgets.
+- `PluginApi` may expose file, process, and other capabilities.
+- `RunCommand` executes local commands. The launcher developers are not responsible for risks caused by custom widgets.
+- Scripts cannot execute commands or call plugin APIs directly; they must be triggered by button/trigger actions.

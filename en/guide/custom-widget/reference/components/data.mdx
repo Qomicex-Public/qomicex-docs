@@ -1,0 +1,77 @@
+---
+title: "Data"
+---
+
+## Data
+
+Declares a data source. `Data` renders nothing; it only fetches/reads data.
+
+## Signature
+
+```xml
+<Data Name="News" Type="Json" Source="Url"
+      Url="https://api.example.com/news"
+      Refresh="3600" />
+
+<Data Name="Cover" Type="Binary" Source="File"
+      Path="./cover.png" Mime="image/png" />
+```
+
+## Attributes
+
+| Attribute | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `Name` | identifier | No | `Data` | Data source name, unique |
+| `Type` | `Json` / `Text` / `Xml` / `Binary` | No | `Json` | Parse type |
+| `Source` | `Url` / `File` | No | `Url` | Origin |
+| `Url` | https URL | Source=Url | — | Remote address |
+| `Path` | path | Source=File | — | Local path |
+| `Mime` | string | No | — | Binary MIME type |
+| `Refresh` | 0–86400 | No | `3600` | Cache lifetime in seconds |
+
+## Data shape
+
+| Type | Bound value |
+| :--- | :--- |
+| `Json` | Parsed object/array |
+| `Text` | String |
+| `Xml` | `{ Root: { Name, Attributes, Text, Children } }` |
+| `Binary` | `{ Url, Base64, Mime, Size }` |
+
+## Access
+
+- Named source: `{Data.News.Title}` or `{News.Title}`
+- Default source (Name=Data): `{Data.Title}`
+- At most 8 data sources.
+
+## Local paths
+
+- Absolute paths are used as-is.
+- Relative paths: for a locally imported widget the base is the `.qwidget` directory; for a widget imported by URL the base is the launcher data directory.
+- The editor info panel shows the resolved absolute path.
+
+## Caching
+
+- The cache is reused for `Refresh` seconds; `0` means refresh on every mount.
+- Non-binary data is cached in localStorage; binary data is cached in memory only.
+- The `Refresh` action refetches expired data sources.
+
+## Example
+
+```xml
+<Data Name="News" Type="Json" Url="https://api.example.com/news" Refresh="600" />
+<Data Name="Feed" Type="Xml" Url="https://example.com/feed.xml" />
+<Data Name="Cover" Type="Binary" Source="File" Path="./cover.png" />
+
+<Text Value="{Data.News.Title}" />
+<List Items="{Data.News.Items}" As="Item">
+  <ListItem><Text Value="{Item.Title}" /></ListItem>
+</List>
+<Image Src="{Data.Cover.Url}" />
+```
+
+## Gotchas
+
+- `Url` / `Path` are static strings and do not support runtime binding.
+- Online requests require an approved domain; non-https:443 and private-network addresses are rejected.
+- Text/JSON/XML are limited to 1MB, binary to 8MB.

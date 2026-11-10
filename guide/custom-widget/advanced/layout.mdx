@@ -1,0 +1,182 @@
+---
+title: "布局组件"
+---
+
+## 布局组件
+
+QWidget 的布局全部由元素嵌套完成，没有 `Width` / `Height` / `Margin` 这类像素属性；尺寸由主页网格和布局容器决定。
+
+## 容器类型
+
+| 元素 | 作用 | 视觉 |
+| :--- | :--- | :--- |
+| `Container` | 卡片/面板，支持边框、背景、圆角、内边距 | 有 |
+| `Row` | 横向排列 | 无 |
+| `Column` | 纵向排列 | 无 |
+| `Grid` | 多列网格 | 无 |
+| `Tabs` | 选项卡 | 页签栏 |
+| `List` | 数组列表 | 由子项决定 |
+| `If` | 条件渲染 | 无 |
+
+## Container
+
+```xml
+<Container Direction="Column" Padding="4" Gap="3"
+           Border="True" Background="Card" Radius="Lg"
+           Align="Stretch" Justify="Start">
+  ...
+</Container>
+```
+
+| 属性 | 取值 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Direction` | `Row` / `Column` | `Column` | 主轴方向 |
+| `Gap` | 0–8 | `0` | 子元素间距 |
+| `Padding` | 0–8 | `0` | 内边距 |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | — | 交叉轴对齐 |
+| `Justify` | `Start` / `Center` / `End` / `Between` | — | 主轴对齐 |
+| `Border` | `True` / `False` | `True` | 是否显示边框 |
+| `Background` | `Transparent` / `Card` / `Muted` / `Primary` | `Card` | 背景 |
+| `Radius` | `None` / `Sm` / `Md` / `Lg` / `Full` | `Lg` | 圆角 |
+
+`Container` 适合做卡片；只想排版不想加视觉时用 `Row` / `Column`。
+
+## Row / Column
+
+```xml
+<Row Gap="2" Align="Center" Wrap="True">
+  <Button Text="A" />
+  <Button Text="B" />
+  <Button Text="C" />
+</Row>
+```
+
+| 属性 | 取值 | 默认 |
+| :--- | :--- | :--- |
+| `Gap` | 0–8 | `0` |
+| `Padding` | 0–8 | `0` |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | — |
+| `Justify` | `Start` / `Center` / `End` / `Between` | — |
+| `Wrap` | `True` / `False` | `False` |
+
+## Grid
+
+```xml
+<Grid Columns="2" Gap="2" Padding="2">
+  <Button Text="左上" />
+  <Button Text="右上" />
+  <Button Grid.Row="1" Grid.Column="0" Text="左下" />
+  <Button Grid.Row="1" Grid.Column="1" Text="右下" />
+</Grid>
+```
+
+| 属性 | 取值 | 说明 |
+| :--- | :--- | :--- |
+| `Columns` | 1–6，必填 | 列数 |
+| `Gap` | 0–8 | 行列间距 |
+| `Padding` | 0–8 | 内边距 |
+| `Align` / `Justify` | 同容器 | 对齐 |
+
+子元素支持附加属性：
+
+- `Grid.Row`：0 起
+- `Grid.Column`：0 起
+- `Grid.RowSpan`：默认 1
+- `Grid.ColumnSpan`：默认 1
+
+附加属性可写成属性或属性元素：
+
+```xml
+<Button Grid.Row="1" Grid.Column="0" Text="A" />
+<Button>
+  <Grid.Row>1</Grid.Row>
+  <Grid.Column>1</Grid.Column>
+  <Button.Text>B</Button.Text>
+</Button>
+```
+
+不写行列时按流式顺序自动填充。
+
+## Tabs
+
+```xml
+<Tabs Default="0">
+  <TabItem Title="公告">
+    <Text Value="公告内容" />
+  </TabItem>
+  <TabItem Title="快捷入口">
+    <Grid Columns="2" Gap="2">
+      <Button Text="启动" OnClick="Launch" />
+      <Button Text="实例" OnClick="Navigate" To="Instances" />
+    </Grid>
+  </TabItem>
+</Tabs>
+```
+
+- `Tabs.Default`：默认选中索引，0 起。
+- `TabItem.Title`：页签标题，必填。
+- 选中状态只存在内存，不持久化。
+- 所有 `TabItem` 都会在挂载时解析；`Data` 也是预取的，切换页签不闪。
+
+## List
+
+```xml
+<List Items="{Data.News.Items}" As="Item" Gap="2" EmptyText="暂无内容">
+  <ListItem>
+    <Text Value="{Item.Title}" />
+  </ListItem>
+</List>
+```
+
+- `Items`：数组路径，必填；可写 `{Data.Items}` 或 `Data.Items`。
+- `As`：项变量名，默认 `item`（大小写敏感）。
+- `ListItem`：必须且只能一个，内部只能有一个根元素。
+- 项内可用 `{Item.Xxx}` 和 `{Index}`。
+- 最多渲染 200 项；空数组显示 `EmptyText`。
+
+## If
+
+```xml
+<If Test="{State.Error}">
+  <Text Value="加载失败" Color="Destructive" />
+</If>
+```
+
+`Test` 为真值判断：`False` / 空字符串 / `0` / `null` / 空数组视为假。
+
+## Divider / Spacer
+
+```xml
+<Divider />
+<Spacer Size="12" />
+```
+
+- `Divider`：1px 分隔线。
+- `Spacer`：固定像素间距；内部实现同时设置宽高，横向/纵向都可使用。
+
+## 常见布局
+
+**左右分栏**
+
+```xml
+<Row Gap="3">
+  <Container Padding="3" Direction="Column">左侧</Container>
+  <Container Padding="3" Direction="Column">右侧</Container>
+</Row>
+```
+
+**两列卡片**
+
+```xml
+<Grid Columns="2" Gap="2">
+  <Container Padding="3"><Text Value="A" /></Container>
+  <Container Padding="3"><Text Value="B" /></Container>
+</Grid>
+```
+
+## 限制与坑
+
+- 容器内容就是子元素；不要在容器里直接写裸文本。
+- `Grid` 的附加属性只对直接子元素生效。
+- 没有像素宽高，组件尺寸由主页网格的格子决定；需要内部滚动时由外层组件处理。
+- 过深嵌套、大量列表项会拖慢渲染；单组件元素上限 1000。

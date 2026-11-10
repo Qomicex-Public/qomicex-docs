@@ -1,0 +1,57 @@
+---
+title: "Column"
+---
+
+## Column
+
+纵向排列子元素，无视觉背景。
+
+## 签名
+
+```xml
+<Column Gap="2" Padding="0" Align="Stretch" Justify="Start" Wrap="False">
+  ...
+</Column>
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Gap` | 0–8 | `0` | 子元素间距 |
+| `Padding` | 0–8 | `0` | 内边距 |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | — | 交叉轴对齐 |
+| `Justify` | `Start` / `Center` / `End` / `Between` | — | 主轴对齐 |
+| `Wrap` | `True` / `False` | `False` | 是否换行（纵向一般不用） |
+
+## 内容
+
+```xml
+<Column Gap="1">
+  <Text Value="{Data.Title}" Size="Lg" Weight="Bold" />
+  <Text Value="{Data.Description}" Size="Sm" Color="Muted" Clamp="4" />
+  <Button Text="打开" OnClick="OpenUrl" Url="{Data.Url}" />
+</Column>
+```
+
+## 运行时行为
+
+- flex 纵向排列。
+- `Align="Start"` 时子元素按内容宽度；`Stretch` 时占满宽度。
+- `Justify="Between"` 会把剩余空间分配到子元素之间。
+
+## 示例
+
+```xml
+<Column Justify="Between" Gap="2">
+  <Text Value="顶部" />
+  <Text Value="底部" />
+</Column>
+```
+
+## 与 Container 的选择
+
+| 需求 | 用 |
+| :--- | :--- |
+| 只要纵向排布 | `Column` |
+| 需要卡片背景/边框/圆角 | `Container Direction="Column"` |

@@ -1,0 +1,41 @@
+---
+title: "Spacer"
+---
+
+## Spacer
+
+A fixed pixel gap.
+
+## Signature
+
+```xml
+<Spacer Size="12" />
+<Spacer>12</Spacer>
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Size` | 0–96 | `8` | Size in pixels |
+
+## Runtime behavior
+
+- Renders as an empty div with a fixed size; both width and height are set.
+- Provides horizontal spacing inside a `Row` and vertical spacing inside a `Column`.
+- It does not affect text layout or the size of other elements.
+
+## Example
+
+```xml
+<Row Align="Center">
+  <Text Value="A" />
+  <Spacer Size="16" />
+  <Text Value="B" />
+</Row>
+```
+
+## Gotchas
+
+- Prefer the parent's `Gap`; `Spacer` is for fine-grained local spacing.
+- It does not grow inside a flex container by default; the current version provides no `FlexGrow` for filling the remaining space.

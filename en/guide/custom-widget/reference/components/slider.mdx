@@ -1,0 +1,51 @@
+---
+title: "Slider"
+---
+
+## Slider
+
+Slider. The current value goes into `{Inputs.<Name>}`.
+
+## Signature
+
+```xml
+<Slider Name="Volume" Value="50" Min="0" Max="100" Step="1" OnChange="CallFunction" Function="ApplyVolume" />
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | Required | Input key |
+| `Value` | number | `0` | Initial value |
+| `Min` | number | `0` | Minimum |
+| `Max` | number | `100` | Maximum |
+| `Step` | number | `1` | Step |
+| `OnChange` | action | — | Fires while dragging |
+
+## Content syntax
+
+```xml
+<Slider Name="Volume">50</Slider>
+```
+
+## Runtime behavior
+
+- Renders a native `range` input using the theme accent color.
+- Dragging writes a number to `{Inputs.Name}`.
+- `OnChange` fires on every value change; throttle inside the function for high-frequency use.
+- `Min` may exceed `Max`, but the browser then handles it as a range; keep `Min < Max`.
+
+## Example
+
+```xml
+<Column Gap="1">
+  <Text Value="音量 {Inputs.Volume}" Size="Sm" />
+  <Slider Name="Volume" Min="0" Max="100" Value="50" />
+</Column>
+```
+
+## Gotchas
+
+- It cannot be bound to `Media.Volume` directly (`Media.Volume` is a static attribute).
+- The value is a number and is converted to a string automatically when bound into text.

@@ -1,0 +1,47 @@
+---
+title: "ColorPicker"
+---
+
+## ColorPicker
+
+颜色选择器。当前值以 hex 字符串进入 `{Inputs.<Name>}`。
+
+## 签名
+
+```xml
+<ColorPicker Name="Accent" Value="#16A34A" OnChange="CallFunction" Function="ApplyColor" />
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | 必填 | 输入键名 |
+| `Value` | hex color | `#000000` | 初始颜色 |
+| `OnChange` | action | — | 颜色变化时触发 |
+
+## 内容语法
+
+```xml
+<ColorPicker Name="Accent">#16A34A</ColorPicker>
+```
+
+## 运行时行为
+
+- 渲染原生颜色输入框。
+- 用户选择后写入 `{Inputs.Name}`，格式为 `#rrggbb`。
+- `Value` 非合法 hex 时显示黑色。
+
+## 示例
+
+```xml
+<Row Gap="2" Align="Center">
+  <ColorPicker Name="Accent" Value="#16A34A" />
+  <Text Value="{Inputs.Accent}" Size="Sm" />
+</Row>
+```
+
+## 坑
+
+- 只支持 hex 颜色，不支持透明度/渐变色。
+- 当前不能直接修改启动器主题色；需要 `PluginApi` 或等待后续 API。

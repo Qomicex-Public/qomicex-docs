@@ -1,0 +1,45 @@
+---
+title: "组件字典"
+---
+
+## 组件字典
+
+按元素查阅 QWidget 的全部可用组件、属性、内容语法和运行时行为。
+
+| 元素 | 作用 | 内容语法 | 文档 |
+| :--- | :--- | :--- | :--- |
+| `Widget` | 组件根元素 | 子元素 | [Widget](/guide/custom-widget/reference/components/widget) |
+| `Container` | 带边框/背景/圆角的容器 | 子元素 | [Container](/guide/custom-widget/reference/components/container) |
+| `Row` | 横向布局 | 子元素 | [Row](/guide/custom-widget/reference/components/row) |
+| `Column` | 纵向布局 | 子元素 | [Column](/guide/custom-widget/reference/components/column) |
+| `Grid` | 多列网格 + 附加属性 | 子元素 | [Grid](/guide/custom-widget/reference/components/grid) |
+| `Tabs` / `TabItem` | 选项卡 | 子元素 | [Tabs](/guide/custom-widget/reference/components/tabs) |
+| `List` | 数组列表 | `ListItem` | [List](/guide/custom-widget/reference/components/list) |
+| `ListItem` | 列表项模板 | 一个根元素 | [ListItem](/guide/custom-widget/reference/components/list-item) |
+| `If` | 条件渲染 | 子元素 | [If](/guide/custom-widget/reference/components/if) |
+| `Divider` | 分隔线 | — | [Divider](/guide/custom-widget/reference/components/divider) |
+| `Spacer` | 固定间距 | `Size` | [Spacer](/guide/custom-widget/reference/components/spacer) |
+| `Text` | 文本 | `Value` | [Text](/guide/custom-widget/reference/components/text) |
+| `Button` | 按钮 + 动作 | `Text` | [Button](/guide/custom-widget/reference/components/button) |
+| `Link` | 文字链接 | `Text` | [Link](/guide/custom-widget/reference/components/link) |
+| `Image` | 图片 | `Src` | [Image](/guide/custom-widget/reference/components/image) |
+| `Media` | 音频/视频 | `Source` | [Media](/guide/custom-widget/reference/components/media) |
+| `TextBox` | 文本输入 | `Value` | [TextBox](/guide/custom-widget/reference/components/text-box) |
+| `CheckBox` | 勾选框 | `Text` | [CheckBox](/guide/custom-widget/reference/components/check-box) |
+| `Slider` | 滑块 | `Value` | [Slider](/guide/custom-widget/reference/components/slider) |
+| `Select` | 下拉选择 | `Options` | [Select](/guide/custom-widget/reference/components/select) |
+| `Progress` | 进度条 | `Value` | [Progress](/guide/custom-widget/reference/components/progress) |
+| `FilePicker` | 文件选择 | `Text` | [FilePicker](/guide/custom-widget/reference/components/file-picker) |
+| `ColorPicker` | 颜色选择 | `Value` | [ColorPicker](/guide/custom-widget/reference/components/color-picker) |
+| `Data` | 数据源 | `Url` | [Data](/guide/custom-widget/reference/components/data) |
+| `Resources` | 命名资源 | 子元素 | [Resources](/guide/custom-widget/reference/components/resources) |
+| `Triggers` / `Trigger` | 事件触发器 | 子元素 | [Triggers](/guide/custom-widget/reference/components/triggers) |
+| `Function` | TypeScript 函数 | 属性元素 | [Function](/guide/custom-widget/reference/components/function) |
+| `Widget.Using` | 嵌套组件 | 文本引用 | [Widget.Using](/guide/custom-widget/reference/components/using) |
+
+## 约定
+
+- 属性、枚举值均使用大驼峰。
+- 每个组件页包含：签名、属性表、内容语法、运行时行为、示例、坑。
+- 通用语法见 [QWidget XML 语法](/guide/custom-widget/syntax)。
+- 绑定、动作、版本要求分别见[数据绑定](/guide/custom-widget/reference/binding)、[动作参考](/guide/custom-widget/reference/actions)、[版本要求](/guide/custom-widget/reference/version)。

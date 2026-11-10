@@ -1,0 +1,67 @@
+---
+title: "ListItem"
+---
+
+## ListItem
+
+The item template of a `List`. It renders no structure of its own; it only repeats its inner root element once per item.
+
+## Signature
+
+```xml
+<List Items="{Data.Items}" As="Item">
+  <ListItem>
+    <Text Value="{Item.Title}" />
+  </ListItem>
+</List>
+```
+
+## Rules
+
+| Rule | Description |
+| :--- | :--- |
+| Only inside `List` | Parsing fails anywhere else |
+| Only one | A `List` must contain exactly one `ListItem` |
+| Single root element | Wrap multiple elements in `Column`/`Row`/`Container` |
+
+## Scope
+
+Inside `ListItem`:
+
+- `{Item.*}`: the current array item
+- `{Index}`: the current index, 0-based
+
+The variable name comes from the parent `List.As`:
+
+```xml
+<List Items="{Data.Items}" As="News">
+  <ListItem>
+    <Text Value="{News.Title}" />
+  </ListItem>
+</List>
+```
+
+## Runtime behavior
+
+- `List` repeats the `ListItem` root element once per array entry.
+- Each instance has its own `Item`/`Index` scope.
+- There is no selection state, divider, or click event; put a `Button`/`Link` inside the item, or add a `Divider`.
+- `Data` inside the item template still belongs to the component's global scope; it is not a per-item data source.
+
+## Example
+
+```xml
+<List Items="{Data.Servers}" As="Server" Gap="1">
+  <ListItem>
+    <Row Justify="Between" Align="Center">
+      <Text Value="{Server.Name}" />
+      <Text Value="{Server.Players}" Size="Xs" Color="Muted" />
+    </Row>
+  </ListItem>
+</List>
+```
+
+## Gotchas
+
+- Bare text cannot go directly inside `ListItem`; use `Text.Value` or the content syntax of `Text`.
+- `OnClick` on a `Button` inside an item can bind values from the current item, such as `{Item.Url}`.

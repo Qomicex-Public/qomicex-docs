@@ -1,0 +1,61 @@
+---
+title: "Button"
+---
+
+## Button
+
+可点击按钮，可绑定启动器动作或函数。
+
+## 签名
+
+```xml
+<Button Text="启动" Size="Md" Variant="Default"
+        OnClick="Launch" />
+
+<Button OnClick="Navigate" To="Instances">
+  实例管理
+</Button>
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | — | 供 Click 触发器定位 |
+| `Text` | string | 必填 | 按钮文字 |
+| `Variant` | `Default` / `Secondary` / `Outline` / `Ghost` / `Destructive` / `Link` | `Default` | 样式 |
+| `Size` | `Sm` / `Md` / `Lg` | `Md` | 尺寸 |
+| `OnClick` | action | — | 点击动作 |
+
+动作参数直接作为属性/属性元素写在 `Button` 上，见[动作参考](/guide/custom-widget/reference/actions)。
+
+## 内容语法
+
+```xml
+<Button OnClick="Refresh">刷新</Button>
+```
+
+等价于 `Text="刷新"`。
+
+## 运行时行为
+
+- 渲染启动器 `Button` 组件。
+- `OnClick` 为空时按钮可点击但无动作。
+- 点击时先触发同 `Name` 的 `Click` 触发器，再执行 `OnClick`。
+- 预览模式下 `RunCommand` / `PluginApi` 不执行。
+
+## 示例
+
+```xml
+<Row Gap="2">
+  <Button Text="启动" OnClick="Launch" />
+  <Button Text="实例" Variant="Outline" OnClick="Navigate" To="Instances" />
+  <Button Text="更多" Variant="Ghost" OnClick="OpenUrl" Url="https://example.com" />
+</Row>
+```
+
+## 坑
+
+- `OnClick` 的动作参数必须属于该动作；写错会被 XML 校验拒绝。
+- 按钮文字过长会撑宽；需要换行时用 `Text` + 自定义容器，或缩短文字。
+- `Name` 不是显示文本，只是触发器定位键。

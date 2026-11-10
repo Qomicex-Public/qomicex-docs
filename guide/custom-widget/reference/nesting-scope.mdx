@@ -1,0 +1,83 @@
+---
+title: "组件引用与作用域"
+---
+
+## 组件引用与作用域
+
+`Widget.Using` 把另一个 QWidget 放进当前组件。子组件拥有独立的数据、输入、函数结果和触发器；父组件只读访问。
+
+## 引用方式
+
+```xml
+<Widget.Using Name="WeatherCard" As="Weather" />
+<Widget.Using Url="https://example.com/weather.qwidget" As="Weather" />
+<Widget.Using As="Weather">WeatherCard</Widget.Using>
+<Widget.Using As="Weather">https://example.com/weather.qwidget</Widget.Using>
+```
+
+| 属性 | 说明 |
+| :--- | :--- |
+| `Name` | 本地组件名，精确匹配；重名报歧义 |
+| `Url` | 远程组件，https:443 |
+| `As` | 别名，同级唯一；默认从 Name/URL 生成 |
+| `Refresh` | 远程缓存 TTL 秒，默认 6 小时 |
+| `Arguments` | 子组件初始 Inputs，JSON |
+
+## 状态访问
+
+```xml
+<Text Value="{Children.Weather.Data.Temp}" />
+<Text Value="{Children.Weather.Inputs.City}" />
+<Text Value="{Children.Weather.Results.Load.Items.0.Title}" />
+<If Test="{Children.Weather.State.Error}">
+  <Text Value="天气组件加载失败" />
+</If>
+```
+
+| 路径 | 说明 |
+| :--- | :--- |
+| `Children.<As>.Inputs` | 子组件输入控件当前值 |
+| `Children.<As>.Data` | 子组件数据源 |
+| `Children.<As>.Results` | 子组件函数/命令/插件结果 |
+| `Children.<As>.State.Loading` | 加载中 |
+| `Children.<As>.State.Error` | 有错误 |
+
+父组件不能写子组件状态；需要联动时通过 `Arguments` 传初始输入，或把逻辑放在子组件内部。
+
+## Arguments
+
+```xml
+<Widget.Using Name="WeatherCard" As="Weather">
+  <Widget.Using.Arguments><![CDATA[{"city":"{Inputs.City}"}]]></Widget.Using.Arguments>
+</Widget.Using>
+```
+
+- 支持 `{Inputs.*}` / `{Data.*}` / `{Results.*}` 插值。
+- JSON 不合法时显示错误占位。
+- 子组件的 `Inputs` 会用这些值初始化；子组件内部仍可修改自己的输入。
+
+## 依赖解析
+
+- **本地 Name**：从自定义组件列表按名称查找。缺失显示「找不到本地组件」，重名显示歧义。
+- **远程 Url**：通过后端代理拉取并校验；首次引用会拉取，之后按 TTL 静默更新。
+- **导出**：只导出当前组件，不内联依赖；本地依赖缺失时导出前提示。
+- **分享**：依赖组件需要单独分发，或改用 `Url` 引用。
+
+## 循环与深度
+
+- 最大嵌套深度 5。
+- 检测自引用与 A→B→A 循环；检测到后显示错误占位。
+- 单父组件最多 20 个 `Widget.Using` 实例。
+- 别名重复会在解析阶段报错。
+
+## 生命周期
+
+- 子组件独立运行自己的 `Data`、`Triggers`、`Function`。
+- 子组件卸载时清理计时器、脚本沙箱、Blob URL。
+- 同一个本地组件被多次引用时共享数据缓存，但输入/结果各自独立。
+
+## 安全
+
+- 远程嵌套组件与顶层组件使用同一套静默更新逻辑。
+- 其数据域名在父组件编辑器里列出确认。
+- 子组件包含脚本/命令时，父组件编辑器显示风险横幅。

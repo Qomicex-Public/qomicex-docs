@@ -1,0 +1,65 @@
+---
+title: "Tabs"
+---
+
+## Tabs
+
+选项卡容器。直接子元素必须是 `TabItem`。
+
+## 签名
+
+```xml
+<Tabs Default="0">
+  <TabItem Title="页签 1">...</TabItem>
+  <TabItem Title="页签 2">...</TabItem>
+</Tabs>
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Default` | 0–(页签数-1) | `0` | 默认选中索引 |
+
+## TabItem
+
+| 属性 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Title` | string | 是 | 页签标题，支持绑定 |
+
+`TabItem` 的内容是子元素：
+
+```xml
+<TabItem Title="快捷入口">
+  <Grid Columns="2" Gap="2">
+    <Button Text="启动" OnClick="Launch" />
+    <Button Text="实例" OnClick="Navigate" To="Instances" />
+  </Grid>
+</TabItem>
+```
+
+## 运行时行为
+
+- 使用启动器内置 Tabs 组件渲染页签栏。
+- 选中索引存在组件内存，不持久化；重新挂载回到 `Default`。
+- 所有 `TabItem` 都会解析，`Data` 是全局预取的；未激活页签的内容不渲染，切回时再挂载。
+- 页签标题支持 `{Resources.*}` / `{Data.*}` 等绑定。
+
+## 示例
+
+```xml
+<Tabs Default="0">
+  <TabItem Title="公告">
+    <Text Value="{Data.Announcement}" />
+  </TabItem>
+  <TabItem Title="统计">
+    <Text Value="{Data.Online}" />
+  </TabItem>
+</Tabs>
+```
+
+## 坑
+
+- `Tabs` 里不能直接放其它节点；必须包在 `TabItem` 中。
+- 至少一个 `TabItem`，`Default` 越界会解析失败。
+- 隐藏页签的内容在未激活时不渲染，切回时再挂载；`Data` 仍会在组件挂载时预取。

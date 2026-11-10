@@ -1,0 +1,99 @@
+---
+title: "Media and binary"
+---
+
+## Media and binary
+
+Binary data (images, audio, video) can come from online `Data`, local `Data`, base64 in `Resources`, or a path picked with `FilePicker`.
+
+## Media
+
+```xml
+<Data Name="Music" Type="Binary" Source="File" Path="C:\Music\song.mp3" />
+<Media Type="Audio"
+       Source="{Data.Music.Url}"
+       Controls="True"
+       AutoPlay="False"
+       Loop="True"
+       Volume="0.8" />
+```
+
+| Attribute | Values | Default |
+| :--- | :--- | :--- |
+| `Type` | `Audio` / `Video` | `Audio` |
+| `Source` | https / Blob URL | Required |
+| `Controls` | `True` / `False` | `True` |
+| `AutoPlay` | `True` / `False` | `False` |
+| `Loop` | `True` / `False` | `False` |
+| `Poster` | https / Blob URL | — |
+| `Volume` | 0–1 | — |
+| `Muted` | `True` / `False` | `False` |
+
+`AutoPlay` may be blocked by browser policy; playback may need a user interaction first.
+
+## Image
+
+```xml
+<Image Src="{Data.Cover.Url}" W="160" H="90" Rounded="True" Alt="封面" />
+```
+
+| Attribute | Description |
+| :--- | :--- |
+| `Src` | https / Blob URL / data URL |
+| `Alt` | Alternative text |
+| `W` / `H` | Width and height in pixels, 1–2048 |
+| `Rounded` | Rounded corners |
+
+## Binary resources
+
+`Binary` under `Resources` is a base64 literal:
+
+```xml
+<Resources>
+  <Binary Name="Beep" Mime="audio/wav">BASE64...</Binary>
+</Resources>
+
+<Media Type="Audio" Source="{Resources.Beep.Url}" />
+```
+
+The binding yields `{ Url, Base64, Mime, Size }`. `Url` is a Blob URL generated at runtime and released when the widget unmounts.
+
+## FilePicker
+
+Lets the user pick a local file and writes the path into `{Inputs.<Name>}`:
+
+```xml
+<FilePicker Name="MusicPath" Text="选择音乐" Filter="mp3,flac,wav" />
+<Text Value="{Inputs.MusicPath}" />
+```
+
+- `Filter` is a comma-separated list of extensions.
+- The result is a path, not binary content; to play it, read it with `Data Source="File"` or handle it in a script.
+- The browser debug environment has no native file paths; the Tauri desktop environment may be required.
+
+## Local path rules
+
+- Absolute paths are used as-is;
+- Relative paths are based on the widget file directory (local import) or the launcher data directory (URL import);
+- Binary file limit 8MB;
+- The editor information panel shows the resolved absolute path.
+
+## Example: local music card
+
+```xml
+<Widget Name="音乐卡片" Version="1.0.0">
+  <Data Name="Track" Type="Binary" Source="File" Path="C:\Music\song.mp3" />
+  <Container Padding="3" Gap="2">
+    <Text Value="正在播放：song.mp3" Weight="Semibold" />
+    <Media Type="Audio" Source="{Data.Track.Url}" Controls="True" Loop="True" Volume="0.8" />
+  </Container>
+</Widget>
+```
+
+`Data`'s `Path` is currently a static string and cannot be bound to `{Inputs.TrackPath}`; `Media.Volume` is also only read at load time and has no two-way binding. For "pick a file then play it / change the volume immediately", wait for a later version or implement it through a plugin API/command action.
+
+## Limits
+
+- Static image/media domains also need confirmation in the editor.
+- Online binary 8MB, local binary 8MB; larger files raise an error.
+- Blob URLs are only valid for the current widget instance; do not write them into persisted data.

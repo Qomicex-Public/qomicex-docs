@@ -1,0 +1,48 @@
+---
+title: "CheckBox"
+---
+
+## CheckBox
+
+勾选框。当前值进入 `{Inputs.<Name>}`。
+
+## 签名
+
+```xml
+<CheckBox Name="Enable" Text="启用" Checked="False" OnChange="CallFunction" Function="Apply" />
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | 必填 | 输入键名 |
+| `Text` | string | — | 标签文字 |
+| `Checked` | bool / binding | `False` | 初始勾选状态 |
+| `OnChange` | action | — | 切换时触发 |
+
+## 内容语法
+
+```xml
+<CheckBox Name="Enable">启用</CheckBox>
+```
+
+## 运行时行为
+
+- 初始值取 `Checked`；支持 `{Resources.*}` / `{Data.*}` 绑定。
+- 用户切换后写入 `{Inputs.Name}`（布尔）。
+- `OnChange` 在状态改变后触发。
+
+## 示例
+
+```xml
+<CheckBox Name="AutoStart" Text="启动后自动检查更新" />
+<If Test="{Inputs.AutoStart}">
+  <Text Value="已启用" Color="Primary" />
+</If>
+```
+
+## 坑
+
+- `Checked` 绑定只在首次/数据变化时作为初始值；用户操作后以 Inputs 为准。
+- 标签文字为空时只有勾选框，建议配 `Text`。

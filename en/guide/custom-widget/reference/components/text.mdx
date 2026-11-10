@@ -1,0 +1,52 @@
+---
+title: "Text"
+---
+
+## Text
+
+Displays text; supports bindings, font size, font weight, color, line clamping, and alignment.
+
+## Signature
+
+```xml
+<Text Value="{Data.Title}" Size="Lg" Weight="Bold"
+      Color="Default" Clamp="3" Align="Start" />
+```
+
+Content syntax and attribute-element syntax:
+
+```xml
+<Text>{Data.Title}</Text>
+<Text><Text.Value>{Data.Title}</Text.Value></Text>
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Value` | string | Required | Text content |
+| `Size` | `Xs` / `Sm` / `Md` / `Lg` / `Xl` / `2Xl` | `Md` | Font size |
+| `Weight` | `Normal` / `Medium` / `Semibold` / `Bold` | `Normal` | Font weight |
+| `Color` | `Default` / `Muted` / `Primary` / `Destructive` | `Default` | Color |
+| `Clamp` | 1–6 | — | Maximum lines; overflow is ellipsized |
+| `Align` | `Start` / `Center` / `End` | — | Text alignment |
+
+## Runtime behavior
+
+- Renders as a block-level `span`, keeping line breaks and wrapping automatically.
+- `Value` is interpolated before display; an unloaded binding renders as an empty string.
+- `Clamp` uses CSS line-clamp and requires `Value` to be plain text.
+- Sizes map to Tailwind `text-xs` … `text-2xl`.
+
+## Example
+
+```xml
+<Text Value="{Data.News.Title}" Size="Lg" Weight="Bold" Clamp="2" />
+<Text Value="{Data.Summary}" Size="Sm" Color="Muted" Clamp="4" />
+```
+
+## Gotchas
+
+- Use `Clamp` to keep multi-line text in check, otherwise it stretches the card.
+- `Color="Destructive"` is for error messages; do not use it for body text.
+- `{}` in text is treated as a binding; to show literal braces, split them up or use a resource.

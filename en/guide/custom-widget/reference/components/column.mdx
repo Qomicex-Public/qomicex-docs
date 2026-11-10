@@ -1,0 +1,57 @@
+---
+title: "Column"
+---
+
+## Column
+
+Arranges children vertically, with no visual background.
+
+## Signature
+
+```xml
+<Column Gap="2" Padding="0" Align="Stretch" Justify="Start" Wrap="False">
+  ...
+</Column>
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Gap` | 0–8 | `0` | Spacing between children |
+| `Padding` | 0–8 | `0` | Inner padding |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | — | Cross-axis alignment |
+| `Justify` | `Start` / `Center` / `End` / `Between` | — | Main-axis alignment |
+| `Wrap` | `True` / `False` | `False` | Whether children wrap (rarely used vertically) |
+
+## Content
+
+```xml
+<Column Gap="1">
+  <Text Value="{Data.Title}" Size="Lg" Weight="Bold" />
+  <Text Value="{Data.Description}" Size="Sm" Color="Muted" Clamp="4" />
+  <Button Text="打开" OnClick="OpenUrl" Url="{Data.Url}" />
+</Column>
+```
+
+## Runtime behavior
+
+- Vertical flex layout.
+- With `Align="Start"` children take their content width; with `Stretch` they fill the width.
+- `Justify="Between"` distributes the remaining space between children.
+
+## Example
+
+```xml
+<Column Justify="Between" Gap="2">
+  <Text Value="顶部" />
+  <Text Value="底部" />
+</Column>
+```
+
+## Column vs. Container
+
+| Need | Use |
+| :--- | :--- |
+| Vertical layout only | `Column` |
+| Card background / border / radius | `Container Direction="Column"` |

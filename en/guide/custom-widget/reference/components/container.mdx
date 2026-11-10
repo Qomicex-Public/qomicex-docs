@@ -1,0 +1,74 @@
+---
+title: "Container"
+---
+
+## Container
+
+A layout container with visuals: border, background, corner radius, padding. Use `Row` / `Column` when you only need layout.
+
+## Signature
+
+```xml
+<Container Direction="Column" Padding="4" Gap="3"
+           Border="True" Background="Card" Radius="Lg"
+           Align="Stretch" Justify="Start">
+  ...
+</Container>
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Direction` | `Row` / `Column` | `Column` | Main axis direction |
+| `Gap` | 0–8 | `0` | Spacing between children |
+| `Padding` | 0–8 | `0` | Inner padding |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | — | Cross-axis alignment |
+| `Justify` | `Start` / `Center` / `End` / `Between` | — | Main-axis alignment |
+| `Border` | `True` / `False` | `True` | Border |
+| `Background` | `Transparent` / `Card` / `Muted` / `Primary` | `Card` | Background |
+| `Radius` | `None` / `Sm` / `Md` / `Lg` / `Full` | `Lg` | Corner radius |
+
+## Content
+
+Container content is its child elements:
+
+```xml
+<Container Padding="3" Gap="2">
+  <Text Value="标题" Weight="Bold" />
+  <Button Text="操作" OnClick="Refresh" />
+</Container>
+```
+
+Bare text cannot go directly inside a container; use `Text` for text.
+
+## Attribute elements
+
+```xml
+<Container>
+  <Container.Padding>3</Container.Padding>
+  <Container.Background>Muted</Container.Background>
+  <Text Value="内容" />
+</Container>
+```
+
+## Runtime behavior
+
+- Renders as a flex container; `Direction` selects `flex-row` / `flex-col`.
+- `Background="Card"` uses the card background with blur; `Transparent` has no background.
+- `Border` uses the theme border color.
+- Size comes from the parent layout / dashboard grid; there are no pixel width or height attributes.
+
+## Example
+
+```xml
+<Container Padding="4" Gap="3" Radius="Lg" Background="Card">
+  <Text Value="{Data.Title}" Size="Lg" Weight="Bold" />
+  <Text Value="{Data.Summary}" Size="Sm" Color="Muted" Clamp="3" />
+</Container>
+```
+
+## Gotchas
+
+- Nesting several `Card` containers gives you a double background; use `Transparent` for the inner one.
+- `Stretch` makes children fill the cross axis; text may be stretched wide, so pair it with `Align="Start"` when needed.

@@ -1,0 +1,39 @@
+---
+title: "Progress"
+---
+
+## Progress
+
+Progress bar. Read-only display; it does not accept user input.
+
+## Signature
+
+```xml
+<Progress Value="{Data.Downloaded}" Max="100" />
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Value` | number / binding | Required | Current value |
+| `Max` | number | `100` | Maximum |
+
+## Runtime behavior
+
+- Computes the percentage as `Value / Max * 100`, clamped to 0–100.
+- Renders a rounded progress bar using the theme accent color.
+- `Value` may be a binding, a number, or a numeric string.
+
+## Example
+
+```xml
+<Progress Value="{Inputs.Volume}" Max="100" />
+<Text Value="{Inputs.Volume}%" Size="Xs" Color="Muted" />
+```
+
+## Gotchas
+
+- A `Value` above `Max` is clamped to 100%.
+- `Max=0` is treated as 100 to avoid division by zero.
+- No animation, stripes, or segmented progress.

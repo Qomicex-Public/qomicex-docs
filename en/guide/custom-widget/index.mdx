@@ -1,0 +1,85 @@
+---
+title: "Dashboard custom widgets"
+---
+
+## Dashboard custom widgets
+
+Dashboard custom widgets (QWidget) let you describe your own home card in a single `.qwidget` file: layout, text, buttons, inputs, media, data sources, triggers, and TypeScript functions. It is a separate mechanism from plugin `dashboard:widgets`:
+
+| | Custom widget (QWidget) | Plugin widget |
+| :--- | :--- | :--- |
+| Authoring | XML, optional TypeScript | Full plugin (HTML/React/WASM) |
+| Distribution | One `.qwidget` file or URL | `.qplugin` package |
+| Permissions | Domain confirmation + risk notice | Plugin permission system |
+| Best for | Personal cards, shortcuts, small tools | Complex features that need backend/process access |
+
+## Open the editor
+
+1. On the home page, click **Edit layout** in the top-right corner.
+2. Click **＋** on the toolbar.
+3. In the **Custom widgets** section, click **New widget**.
+
+The editor has two tabs:
+
+- **XML**: widget structure with line numbers, syntax highlighting, folding, search, schema completion, and live validation.
+- **Functions**: edit `Function.Script` TypeScript with completion for `Input` / `Inputs` / `Data` / `Resources` / `Results` / `Host`, plus **Run**.
+
+The right side shows preview, domain confirmation, and widget information.
+
+## First widget
+
+```xml
+<Widget Name="My widget" Version="1.0.0">
+  <Resources>
+    <String Name="Greeting" Text="Hello, Qomicex" />
+  </Resources>
+  <Container Padding="4" Gap="3">
+    <Text Value="{Resources.Greeting}" Size="Lg" Weight="Bold" />
+    <Button Text="Instances" OnClick="Navigate" To="Instances" />
+  </Container>
+</Widget>
+```
+
+After saving, the widget appears at the end of the home grid. You can drag, resize, hide, and restore it like built-in widgets.
+
+## Import and export
+
+- **Import from URL**: enter `https://.../*.qwidget`, fetch and validate it, then load it. Once saved, the widget checks for updates silently every 6 hours.
+- **Import file**: choose a local `.qwidget` / `.xml` file. Relative paths are based on that file's directory.
+- **Export file**: save the current XML. Local `Widget.Using Name="..."` dependencies are not inlined; the editor warns about missing dependencies before export.
+
+## Domain confirmation
+
+The right panel lists every domain the widget will access:
+
+- `Data Source="Url"` sources
+- `Widget UpdateUrl` / online import source
+- `Widget.Using Url` nested widgets
+- Static `Image` / `Media` URLs
+
+All domains must be checked before saving. Static images/media only load from confirmed domains; data requests go through the backend proxy with https:443, no redirects, and private-address blocking.
+
+## Updates and risk
+
+Online widgets check for updates silently every 6 hours. Custom widgets can run TypeScript, execute commands, call plugin APIs, and read local files, so:
+
+- The first save of a widget with scripts or dangerous actions shows a risk notice.
+- Widgets with `Function` / `RunCommand` / `PluginApi` show a persistent risk banner in the editor.
+- Only use widgets you trust. The launcher developers are not responsible for risks caused by custom widgets.
+
+## Storage and limits
+
+- Definitions and data caches are stored in local `localStorage`; layout uses the existing home grid storage.
+- XML ≤256KB, depth 16, 1000 elements, 8 data sources, 200 rendered list items.
+- Online text/JSON/XML ≤1MB, binary ≤8MB.
+- Nesting depth ≤5, up to 20 nested instances per parent.
+- Function scripts ≤64KB, default timeout 3 seconds (max 10 seconds).
+
+## Next
+
+- [QWidget XML syntax](/en/guide/custom-widget/syntax)
+- [Layout](/en/guide/custom-widget/advanced/layout)
+- [Functions and TypeScript](/en/guide/custom-widget/advanced/functions)
+- [Examples](/en/guide/custom-widget/examples)
+- [Data binding](/en/guide/custom-widget/reference/binding)
+- [Component reference](/en/guide/custom-widget/reference/components/index)

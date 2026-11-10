@@ -1,0 +1,83 @@
+---
+title: "Widget references and scope"
+---
+
+## Widget references and scope
+
+`Widget.Using` puts another QWidget inside the current widget. The child has its own data, inputs, function results and triggers; the parent gets read-only access.
+
+## Reference forms
+
+```xml
+<Widget.Using Name="WeatherCard" As="Weather" />
+<Widget.Using Url="https://example.com/weather.qwidget" As="Weather" />
+<Widget.Using As="Weather">WeatherCard</Widget.Using>
+<Widget.Using As="Weather">https://example.com/weather.qwidget</Widget.Using>
+```
+
+| Attribute | Description |
+| :--- | :--- |
+| `Name` | Local widget name, exact match; duplicates are reported as ambiguous |
+| `Url` | Remote widget, https:443 |
+| `As` | Alias, unique among siblings; derived from Name/URL by default |
+| `Refresh` | Remote cache TTL in seconds, defaults to 6 hours |
+| `Arguments` | Initial Inputs for the child, JSON |
+
+## Accessing state
+
+```xml
+<Text Value="{Children.Weather.Data.Temp}" />
+<Text Value="{Children.Weather.Inputs.City}" />
+<Text Value="{Children.Weather.Results.Load.Items.0.Title}" />
+<If Test="{Children.Weather.State.Error}">
+  <Text Value="天气组件加载失败" />
+</If>
+```
+
+| Path | Description |
+| :--- | :--- |
+| `Children.<As>.Inputs` | Current values of the child's input controls |
+| `Children.<As>.Data` | Child data sources |
+| `Children.<As>.Results` | Child function/command/plugin results |
+| `Children.<As>.State.Loading` | Loading |
+| `Children.<As>.State.Error` | Has errors |
+
+The parent cannot write child state; for coordination, pass initial inputs through `Arguments` or keep the logic inside the child.
+
+## Arguments
+
+```xml
+<Widget.Using Name="WeatherCard" As="Weather">
+  <Widget.Using.Arguments><![CDATA[{"city":"{Inputs.City}"}]]></Widget.Using.Arguments>
+</Widget.Using>
+```
+
+- Supports `{Inputs.*}` / `{Data.*}` / `{Results.*}` interpolation.
+- Invalid JSON shows an error placeholder.
+- The child's `Inputs` are initialized with these values; the child can still change its own inputs.
+
+## Dependency resolution
+
+- **Local Name**: looked up by name in the custom widget list. Missing shows "local widget not found"; duplicates show an ambiguity error.
+- **Remote Url**: fetched and validated through the backend proxy; fetched on first reference, then updated silently per the TTL.
+- **Export**: only the current widget is exported, dependencies are not inlined; missing local dependencies are reported before export.
+- **Sharing**: dependency widgets must be distributed separately, or referenced by `Url` instead.
+
+## Cycles and depth
+
+- Maximum nesting depth 5.
+- Self references and A→B→A cycles are detected; an error placeholder is shown once detected.
+- At most 20 `Widget.Using` instances per parent widget.
+- Duplicate aliases fail during parsing.
+
+## Lifecycle
+
+- A child runs its own `Data`, `Triggers` and `Function` independently.
+- Unmounting a child cleans up its timers, script sandbox and Blob URLs.
+- The same local widget referenced multiple times shares the data cache, but inputs/results stay independent.
+
+## Security
+
+- Remote nested widgets use the same silent update logic as top-level widgets.
+- Their data domains are listed for confirmation in the parent widget's editor.
+- If a child contains scripts/commands, the parent editor shows a risk banner.

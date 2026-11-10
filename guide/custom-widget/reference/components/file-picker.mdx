@@ -1,0 +1,49 @@
+---
+title: "FilePicker"
+---
+
+## FilePicker
+
+打开系统文件选择框，把选中文件路径写入 `{Inputs.<Name>}`。
+
+## 签名
+
+```xml
+<FilePicker Name="MusicPath" Text="选择音乐" Filter="mp3,flac,wav" />
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | 必填 | 输入键名 |
+| `Text` | string | `选择文件` | 按钮文字 |
+| `Filter` | string | — | 逗号分隔扩展名 |
+| `Value` | string | — | 初始路径 |
+
+## 内容语法
+
+```xml
+<FilePicker Name="MusicPath">选择音乐</FilePicker>
+```
+
+## 运行时行为
+
+- 调用原生文件选择框（需要 Tauri 桌面环境）。
+- 选中后把**路径字符串**写入 Inputs；不读取文件内容。
+- 浏览器调试环境没有原生路径，可能无效果。
+- 路径显示在按钮下方，便于确认。
+
+## 示例
+
+```xml
+<Column Gap="1">
+  <FilePicker Name="LogPath" Text="选择日志文件" Filter="log,txt,gz" />
+  <Text Value="{Inputs.LogPath}" Size="Xs" Color="Muted" />
+</Column>
+```
+
+## 坑
+
+- 选择结果不能直接传给 `Data.Path`（当前不支持运行时绑定）；需要读取内容时用脚本/插件 API，或把路径写进组件后重新加载。
+- `Filter` 只接受扩展名，不要带点或通配符。

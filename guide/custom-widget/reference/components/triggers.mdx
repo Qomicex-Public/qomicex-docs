@@ -1,0 +1,63 @@
+---
+title: "Triggers"
+---
+
+## Triggers
+
+事件触发器容器。直接子元素是 `Trigger`。
+
+## 签名
+
+```xml
+<Triggers>
+  <Trigger Event="Loaded" Function="Init" />
+  <Trigger Event="DataChanged" Data="News" Function="RenderNews" />
+  <Trigger Event="Click" Control="RefreshButton" Action="Refresh" />
+  <Trigger Event="Timer" Interval="60000" Function="Tick" Once="False" />
+</Triggers>
+```
+
+## Trigger 属性
+
+| 属性 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `Event` | `Loaded` / `DataChanged` / `Click` / `Timer` | 必填 |
+| `Function` | string | 调用函数简写 |
+| `Action` | action | 调用动作（与 Function 二选一） |
+| `Control` | identifier | Click 事件目标控件的 `Name` |
+| `Data` | string | DataChanged 事件的数据源名 |
+| `Interval` | 1000–3600000 | Timer 间隔，默认 60000 |
+| `Once` | `True` / `False` | Timer 是否只执行一次 |
+
+`Action` 时可继续写动作参数，如 `To`、`Url`、`Folder`、`Instance` 等。
+
+## 事件
+
+| 事件 | 触发时机 |
+| :--- | :--- |
+| `Loaded` | 组件挂载后一次 |
+| `DataChanged` | 指定数据源完成拉取 |
+| `Click` | 点击指定 `Name` 的按钮/链接 |
+| `Timer` | 按间隔触发 |
+
+频率上限 20 次/秒。
+
+## 示例
+
+```xml
+<Triggers>
+  <Trigger Event="Loaded" Function="Init" />
+  <Trigger Event="Click" Control="RefreshButton" Action="Refresh" />
+  <Trigger Event="Timer" Interval="300000" Function="RefreshStatus" />
+</Triggers>
+
+<Button Name="RefreshButton" Text="刷新" />
+```
+
+## 坑
+
+- `Function` 与 `Action` 只能二选一。
+- Click 目标必须有 `Name`。
+- DataChanged 的 `Data` 是数据源 `Name`，不是类型。
+- Timer 在预览中不执行。
+- 触发器调用的函数也受沙箱超时限制。

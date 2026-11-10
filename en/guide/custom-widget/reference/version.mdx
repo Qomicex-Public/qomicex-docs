@@ -1,0 +1,53 @@
+---
+title: "Version requirement (LauncherVersion)"
+---
+
+## Version requirement (LauncherVersion)
+
+`LauncherVersion` declares the minimum launcher version a widget requires. It is useful for widgets that depend on newer plugin APIs, Data types or actions.
+
+## Syntax
+
+```xml
+<Widget Name="新版组件" Version="1.0.0" LauncherVersion="1.4.0">
+  ...
+</Widget>
+```
+
+Supported:
+
+- `1`
+- `1.4`
+- `1.4.0`
+- `1.4.0-beta.1`
+
+## Runtime behavior
+
+- Launcher version ≥ required version: renders normally.
+- Launcher version < required version: shows an error placeholder "Requires launcher X or later (current Y)" and does not run the widget content.
+- Launcher version unavailable (for example in the browser debug environment): no version gate.
+- Nested widgets check their own `LauncherVersion` independently.
+
+## Editor
+
+The information panel shows:
+
+```text
+LauncherVersion: 1.4.0 (1.5.2)
+```
+
+It is highlighted in red when the current version is below the requirement.
+
+## Difference from other version fields
+
+| Field | Purpose |
+| :--- | :--- |
+| `Widget.Version` | The widget's own version, used for online update notices |
+| `LauncherVersion` | Minimum launcher version required |
+| `UpdateUrl` | Widget update address |
+
+## Recommendations
+
+- You can omit it when you only use APIs already available in the current stable release.
+- Set a minimum version when using new actions, new Data types or new Host APIs.
+- Raise `LauncherVersion` together when a widget update starts requiring more.

@@ -1,0 +1,60 @@
+---
+title: "Select"
+---
+
+## Select
+
+Dropdown selection. The current value goes into `{Inputs.<Name>}`.
+
+## Signature
+
+```xml
+<Select Name="Sort" Options='["最新","最热","名称"]' Value="最新" />
+```
+
+Or an array of objects:
+
+```xml
+<Select Name="Sort"
+        Options='[{"Label":"最新","Value":"new"},{"Label":"最热","Value":"hot"}]'
+        Value="new" />
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | Required | Input key |
+| `Value` | string | — | Initially selected value |
+| `Options` | JSON string | `[]` | Array of strings or of `{Label,Value}` |
+| `OnChange` | action | — | Fires when the selection changes |
+
+## Content syntax
+
+```xml
+<Select Name="Sort">[{"Label":"最新","Value":"new"}]</Select>
+```
+
+Equivalent to `Options`.
+
+## Runtime behavior
+
+- Uses the launcher `Select` component, not a native `<select>`.
+- Options can be bound: `Options="{Data.Options}"`.
+- The selected value is written to `{Inputs.Name}`.
+- `Value` is only the initial value.
+
+## Example
+
+```xml
+<Select Name="Category"
+        Options='[{"Label":"模组","Value":"mod"},{"Label":"资源包","Value":"resourcepack"}]'
+        Value="mod" />
+<Text Value="当前：{Inputs.Category}" />
+```
+
+## Gotchas
+
+- `Options` must be valid JSON; static values are validated at parse time.
+- In an array of objects `Value` must be a string or number; `Label` is what gets displayed.
+- Multiple selection is not available.

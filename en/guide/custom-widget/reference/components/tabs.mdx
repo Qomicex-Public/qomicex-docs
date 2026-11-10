@@ -1,0 +1,65 @@
+---
+title: "Tabs"
+---
+
+## Tabs
+
+A tab container. Every direct child must be a `TabItem`.
+
+## Signature
+
+```xml
+<Tabs Default="0">
+  <TabItem Title="页签 1">...</TabItem>
+  <TabItem Title="页签 2">...</TabItem>
+</Tabs>
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Default` | 0–(tab count - 1) | `0` | Default selected index |
+
+## TabItem
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `Title` | string | Yes | Tab title; supports bindings |
+
+`TabItem` content is its child elements:
+
+```xml
+<TabItem Title="快捷入口">
+  <Grid Columns="2" Gap="2">
+    <Button Text="启动" OnClick="Launch" />
+    <Button Text="实例" OnClick="Navigate" To="Instances" />
+  </Grid>
+</TabItem>
+```
+
+## Runtime behavior
+
+- The tab bar is rendered with the launcher's built-in Tabs component.
+- The selected index lives in component memory and is not persisted; remounting returns to `Default`.
+- All `TabItem`s are parsed; `Data` is fetched globally up front, so switching tabs does not refetch.
+- Tab titles support bindings such as `{Resources.*}` / `{Data.*}`.
+
+## Example
+
+```xml
+<Tabs Default="0">
+  <TabItem Title="公告">
+    <Text Value="{Data.Announcement}" />
+  </TabItem>
+  <TabItem Title="统计">
+    <Text Value="{Data.Online}" />
+  </TabItem>
+</Tabs>
+```
+
+## Gotchas
+
+- Other nodes cannot go directly inside `Tabs`; they must be wrapped in a `TabItem`.
+- At least one `TabItem` is required; an out-of-range `Default` fails parsing.
+- Content in hidden tabs still mounts and runs `Loaded`/`Timer` triggers; use `If` inside the `TabItem` when you need lazy loading.

@@ -1,0 +1,140 @@
+---
+title: "QWidget XML syntax"
+---
+
+## QWidget XML syntax
+
+A QWidget is a single XML file. The root element is always `Widget`; other elements cover layout, controls, data/resources, triggers, functions, and nested references.
+
+## Root element
+
+```xml
+<Widget Name="Daily news" Version="1.0.0" Author="Example"
+        Description="Optional"
+        UpdateUrl="https://example.com/news.qwidget"
+        LauncherVersion="1.4.0">
+  ...
+</Widget>
+```
+
+| Attribute | Required | Description |
+| :--- | :--- | :--- |
+| `Name` | Yes | Display name, ≤64 characters |
+| `Version` | Yes | Widget version, used for update notices |
+| `Author` | No | Author |
+| `Description` | No | Description |
+| `UpdateUrl` | No | Update source, https:443; import URL is used if omitted |
+| `LauncherVersion` | No | Minimum launcher version, see [Version requirements](/en/guide/custom-widget/reference/version) |
+
+## Naming
+
+All elements, attributes, and enum values use PascalCase:
+
+- Elements: `Container`, `Text`, `TextBox`, `Widget.Using`
+- Attributes: `Value`, `Size`, `OnClick`, `EmptyText`
+- Enums: `Lg`, `Bold`, `Center`, `Json`, `Binary`
+
+## Three equivalent syntaxes
+
+The same property can be written as attribute syntax, content syntax, or property-element syntax. Setting the same property twice is an error.
+
+```xml
+<!-- Attribute syntax -->
+<Text Value="Hello" />
+
+<!-- Content syntax (ContentProperty) -->
+<Text>Hello</Text>
+
+<!-- Property-element syntax -->
+<Text><Text.Value>Hello</Text.Value></Text>
+```
+
+ContentProperty mapping:
+
+| Element | Content property |
+| :--- | :--- |
+| `Text` | `Value` |
+| `Button` / `Link` / `CheckBox` / `FilePicker` | `Text` |
+| `TextBox` / `ColorPicker` / `Progress` / `Slider` | `Value` |
+| `Select` | `Options` (JSON) |
+| `Media` | `Source` |
+| `Image` | `Src` |
+| `Spacer` | `Size` |
+| `Data` | `Url` |
+| `String` / `Bool` / `Number` / `Binary` / `Resource` | Text content |
+| Layout/container elements | Child elements |
+
+Property elements can be combined with content:
+
+```xml
+<Text>
+  <Text.Size>Lg</Text.Size>
+  <Text.Weight>Bold</Text.Weight>
+  Hello Qomicex
+</Text>
+```
+
+### Attached properties
+
+Direct children of `Grid` support `Grid.Row`, `Grid.Column`, `Grid.RowSpan`, and `Grid.ColumnSpan`:
+
+```xml
+<Grid Columns="2" Gap="2">
+  <Button Grid.Column="1" Text="Right" />
+  <Button>
+    <Grid.Row>1</Grid.Row>
+    <Button.Text>Next row</Button.Text>
+  </Button>
+</Grid>
+```
+
+## Bindings
+
+String attributes support `{path}` interpolation. When the whole value is a binding, the original type is preserved.
+
+| Namespace | Example | Description |
+| :--- | :--- | :--- |
+| `Data` | `{Data.News.Title}` | Data source; unnamed source is `{Data.Title}` |
+| `Resources` | `{Resources.AppName}` | Named resource |
+| `Inputs` | `{Inputs.Keyword}` | Current control values |
+| `Results` | `{Results.Search.Items}` | Function/command/plugin results |
+| `Children` | `{Children.Weather.Inputs.City}` | Read-only nested state |
+| `State` | `{State.Loading}` / `{State.Error}` | Widget runtime state |
+
+See [Data binding](/en/guide/custom-widget/reference/binding).
+
+## Element overview
+
+| Category | Elements | Docs |
+| :--- | :--- | :--- |
+| Root | `Widget` | [Widget](/en/guide/custom-widget/reference/components/widget) |
+| Layout | `Container` `Row` `Column` `Grid` | [Layout](/en/guide/custom-widget/advanced/layout) |
+| Tabs | `Tabs` `TabItem` | [Tabs](/en/guide/custom-widget/reference/components/tabs) |
+| List | `List` `ListItem` | [List](/en/guide/custom-widget/reference/components/list) |
+| Conditional | `If` | [If](/en/guide/custom-widget/reference/components/if) |
+| Spacing | `Divider` `Spacer` | [Divider](/en/guide/custom-widget/reference/components/divider) |
+| Content | `Text` `Button` `Link` `Image` `Media` | [Text](/en/guide/custom-widget/reference/components/text) |
+| Input | `TextBox` `CheckBox` `Slider` `Select` | [TextBox](/en/guide/custom-widget/reference/components/text-box) |
+| Display | `Progress` `FilePicker` `ColorPicker` | [Progress](/en/guide/custom-widget/reference/components/progress) |
+| Data | `Data` | [Data](/en/guide/custom-widget/reference/components/data) |
+| Resources | `Resources` `String` `Bool` `Number` `Binary` `Resource` | [Resources](/en/guide/custom-widget/reference/components/resources) |
+| Events | `Triggers` `Trigger` | [Triggers](/en/guide/custom-widget/reference/components/triggers) |
+| Functions | `Function` `Struct` `Field` | [Function](/en/guide/custom-widget/reference/components/function) |
+| Nesting | `Widget.Using` | [Widget.Using](/en/guide/custom-widget/reference/components/using) |
+
+## Actions
+
+Buttons, links, and triggers use `OnClick` / `OnChange` / `Action`:
+
+`Launch`, `SetDefaultInstance`, `OpenInstance`, `Navigate`, `OpenUrl`, `OpenFolder`, `Copy`, `SelectAccount`, `Install`, `Refresh`, `CallFunction`, `RunCommand`, `PluginApi`.
+
+See [Actions](/en/guide/custom-widget/reference/actions).
+
+## Limits
+
+- XML ≤256KB, depth ≤16, elements ≤1000.
+- Data sources ≤8; rendered list items ≤200.
+- Online text ≤1MB, binary ≤8MB; local binary ≤8MB.
+- Nesting depth ≤5; ≤20 nested instances per parent.
+- Function scripts ≤64KB; default timeout 3 seconds, max 10 seconds.
+- `DOCTYPE` / `ENTITY` are rejected; unknown elements/attributes and duplicate properties fail validation.

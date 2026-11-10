@@ -1,0 +1,92 @@
+---
+title: "动作参考"
+---
+
+## 动作参考
+
+按钮、链接、输入控件和触发器通过动作与启动器交互。动作名使用大驼峰。
+
+## 动作表
+
+| 动作 | 参数 | 说明 |
+| :--- | :--- | :--- |
+| `Launch` | `Instance?` | 启动默认实例；指定时按名称/id 查找 |
+| `SetDefaultInstance` | `Instance` | 设为默认实例 |
+| `OpenInstance` | `Instance` | 打开实例详情 |
+| `Navigate` | `To` | 站内跳转 |
+| `OpenUrl` | `Url` | 系统浏览器打开 https |
+| `OpenFolder` | `Folder` | 打开目录 |
+| `Copy` | `Value` | 复制文本 |
+| `SelectAccount` | — | 选择默认账户 |
+| `Install` | `ProjectId` `Source` `Category` | 跳转资源详情页 |
+| `Refresh` | — | 重新拉取本组件数据 |
+| `CallFunction` | `Function` `Arguments?` | 执行 QWidget 函数 |
+| `RunCommand` | `Command` `WorkingDirectory?` `Timeout?` | 执行本机命令 |
+| `PluginApi` | `PluginId` `Method` `Arguments?` | 调用插件注册方法 |
+
+## 枚举值
+
+- `Navigate.To`：`Instances` / `Downloads` / `Accounts` / `ResourceCenter` / `Settings` / `Connect` / `Running`
+- `OpenFolder.Folder`：`Game` / `Logs` / `Data` / `Screenshots`
+- `Install.Source`：`Curseforge` / `Modrinth` / `Ftb`
+- `Install.Category`：`Mod` / `Modpack` / `Shader` / `Resourcepack` / `Datapack` / `Save`
+
+## 写法
+
+属性语法：
+
+```xml
+<Button Text="启动" OnClick="Launch" />
+<Button Text="资源" OnClick="Navigate" To="ResourceCenter" />
+<Button Text="官网" OnClick="OpenUrl" Url="https://example.com" />
+```
+
+属性元素写法：
+
+```xml
+<Button>
+  <Button.OnClick>CallFunction</Button.OnClick>
+  <Button.Function>Search</Button.Function>
+  <Button.Arguments><![CDATA[{"Keyword":"{Inputs.Keyword}"}]]></Button.Arguments>
+  <Button.Text>搜索</Button.Text>
+</Button>
+```
+
+## Results
+
+| 动作 | 结果 |
+| :--- | :--- |
+| `CallFunction` | `{Results.<Function>.<Output>}` |
+| `RunCommand` | `{Results.Command.ExitCode}` / `.Stdout` / `.Stderr` |
+| `PluginApi` | `{Results.PluginApi.Value}` |
+
+## 触发器
+
+```xml
+<Triggers>
+  <Trigger Event="Loaded" Function="Init" />
+  <Trigger Event="Click" Control="RefreshButton" Action="Refresh" />
+  <Trigger Event="Timer" Interval="60000" Function="Tick" />
+</Triggers>
+```
+
+`Trigger` 可以写 `Function` 简写，或写 `Action` + 动作参数。`Function` 与 `Action` 二选一。
+
+## 安全与预览
+
+- 编辑器预览不执行 `RunCommand` / `PluginApi`。
+- `RunCommand` 通过 Tauri IPC 执行，输出上限 64KB，超时可设 1–60 秒。
+- `PluginApi` 目标插件必须已加载并注册方法。
+- 远程组件可以静默更新并引入这些动作；只使用可信组件。
+
+## 常见错误
+
+| 错误 | 原因 |
+| :--- | :--- |
+| `invalidAction` | 动作名拼错或不在白名单 |
+| `missingAttribute` | 必填参数缺失，如 `OpenUrl` 没有 `Url` |
+| `invalidAttribute` | 枚举值大小写/拼写错误 |
+| `invalidUrl` | 非 https:443 |
+| 未知实例 | `Instance` 名称/id 不匹配 |
+| 插件注册表不可用 | 目标插件未加载或不在主窗口环境 |
+| 命令超时 | 超过 `Timeout` 或默认 10 秒 |

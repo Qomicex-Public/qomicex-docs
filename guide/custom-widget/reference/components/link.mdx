@@ -1,0 +1,52 @@
+---
+title: "Link"
+---
+
+## Link
+
+文字链接。可打开外部 URL、执行动作或作为 Click 触发器目标。
+
+## 签名
+
+```xml
+<Link Text="访问官网" Url="https://example.com" />
+<Link Text="实例" OnClick="Navigate" To="Instances" />
+```
+
+## 属性
+
+| 属性 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `Name` | identifier | 供 Click 触发器定位 |
+| `Text` | string | 链接文字，必填 |
+| `Url` | https URL | 外部链接；没有 `OnClick` 时点击自动 `OpenUrl` |
+| `OnClick` | action | 点击动作 |
+| `To` | nav target | `OnClick="Navigate"` 时的目标 |
+
+## 内容语法
+
+```xml
+<Link Url="https://example.com">访问官网</Link>
+```
+
+## 运行时行为
+
+- 渲染为无下划线、悬停显示下划线的按钮样式链接。
+- 有 `Url` 且没有 `OnClick` 时，点击调用 `OpenUrl`。
+- 有 `OnClick` 时按动作执行；`Url` 仅作为元数据。
+- 外部链接使用系统浏览器打开。
+
+## 示例
+
+```xml
+<Column Gap="1">
+  <Link Text="GitHub" Url="https://github.com/Qomicex-Public" />
+  <Link Text="实例管理" OnClick="Navigate" To="Instances" />
+  <Link Text="打开日志目录" OnClick="OpenFolder" Folder="Logs" />
+</Column>
+```
+
+## 坑
+
+- `Url` 必须是 https:443；本地/内网地址会被拒绝。
+- 只是文字链接，不支持富文本或多段内容。

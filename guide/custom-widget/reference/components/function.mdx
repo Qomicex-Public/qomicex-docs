@@ -1,0 +1,88 @@
+---
+title: "Function"
+---
+
+## Function
+
+在组件内定义 TypeScript 函数。函数在 sandbox iframe 中执行，只能读取数据并返回纯对象。
+
+## 签名
+
+```xml
+<Function Name="CreateUser" Timeout="3000">
+  <Function.Interface>
+    <Struct Name="CreateUserInput">
+      <Field Name="name" Type="String" />
+      <Field Name="age" Type="Number" />
+    </Struct>
+    <Struct Name="UserProfile">
+      <Field Name="id" Type="Number" />
+      <Field Name="name" Type="String" />
+      <Field Name="createdAt" Type="DateTime" />
+    </Struct>
+  </Function.Interface>
+
+  <Function.Input Type="CreateUserInput">Input</Function.Input>
+  <Function.Output Type="UserProfile">User</Function.Output>
+  <Function.Output Type="String">Message</Function.Output>
+
+  <Function.Script><![CDATA[
+    return {
+      User: {
+        id: Date.now(),
+        name: Input.name,
+        age: Input.age,
+        createdAt: new Date().toISOString(),
+      },
+      Message: "ok",
+    };
+  ]]></Function.Script>
+</Function>
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | 必填 | 函数名，唯一 |
+| `Timeout` | 100–10000 | `3000` | 超时毫秒 |
+
+## 属性元素
+
+| 元素 | 说明 |
+| :--- | :--- |
+| `Function.Interface` | 容器，包含 `Struct` |
+| `Struct` | `Name` 必填；包含 `Field` |
+| `Field` | `Name`、`Type` 必填 |
+| `Function.Input` | `Type` 必填；内容为变量名，默认 `Input` |
+| `Function.Output` | `Type` 必填；内容为输出键名，可多个 |
+| `Function.Script` | TypeScript 源码，必填 |
+
+字段/输出类型：`String` / `Number` / `Bool` / `DateTime` / `Json` / `Binary`，或 Struct 名称。
+
+## 脚本变量
+
+`Input`、`Inputs`、`Resources`、`Data`、`Results`、`Host`（`Notify` / `OpenUrl` / `Navigate` / `Log`）。
+
+## 结果
+
+- 结果写入 `{Results.<Function>.<Output>}`。
+- 必须返回对象；缺少输出键或基础类型不符会报错。
+- `Date` 序列化为 ISO 字符串。
+
+## 沙箱
+
+- CSP 禁止网络、图片、媒体、子框架、worker。
+- 无 DOM、localStorage、`fetch`、`import` / `require`。
+- 超时销毁 iframe 并重建。
+- 远程组件可含脚本并静默更新，只使用可信组件。
+
+## 编辑器
+
+「函数」页签可编辑脚本、补全 `Input` / `Inputs` / `Resources` / `Data` / `Results` / `Host`，并「试运行」。
+
+## 坑
+
+- 不能 `await fetch`；数据请提前用 `Data`。
+- 不能直接执行命令或调用插件 API；用按钮/触发器动作。
+- `Function.Script` 建议用 CDATA，避免 `<` 被当作标签。

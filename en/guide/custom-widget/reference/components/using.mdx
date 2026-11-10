@@ -1,0 +1,79 @@
+---
+title: "Widget.Using"
+---
+
+## Widget.Using
+
+Embeds another QWidget into the current widget as a node.
+
+## Signature
+
+```xml
+<Widget.Using Name="WeatherCard" As="Weather" />
+<Widget.Using Url="https://example.com/weather.qwidget" As="Weather" />
+<Widget.Using As="Weather">WeatherCard</Widget.Using>
+<Widget.Using As="Weather">https://example.com/weather.qwidget</Widget.Using>
+
+<Widget.Using Name="WeatherCard" As="Weather">
+  <Widget.Using.Arguments><![CDATA[{"city":"{Inputs.City}"}]]></Widget.Using.Arguments>
+</Widget.Using>
+```
+
+## Attributes
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `Name` | string | Local widget name, exact match |
+| `Url` | https URL | Remote widget |
+| `As` | identifier | Alias of the child widget, unique among siblings |
+| `Refresh` | 60–86400 | Remote cache TTL in seconds, default 6 hours |
+| `Arguments` | JSON | Initial Inputs, supports binding interpolation |
+
+`Name` and `Url` are mutually exclusive; the value can also be written as the tag body.
+
+## Content
+
+`Widget.Using` adds no extra container of its own; the child renders in place. The parent decides the outer size.
+
+## Scope
+
+The parent can only read:
+
+```xml
+<Text Value="{Children.Weather.Data.Temp}" />
+<Text Value="{Children.Weather.Inputs.City}" />
+<Text Value="{Children.Weather.Results.Load.Items.0.Title}" />
+```
+
+`Children.<As>.State.Loading` / `.Error` are available too.
+
+## Resolution
+
+- Local `Name`: exact match against the custom widget list; a missing or duplicated name shows an error placeholder.
+- Remote `Url`: fetched through the backend proxy, silently refreshed every 6 hours.
+- Export does not inline dependencies; missing local widgets are reported before export.
+
+## Limits
+
+- Depth ≤5; self-references and A→B→A cycles are detected.
+- At most 20 instances per parent widget.
+- Duplicate aliases fail to parse.
+- When the child unmounts, timers, script sandboxes, and blob URLs are cleaned up.
+
+## Example
+
+```xml
+<Row Gap="2">
+  <Widget.Using Name="StatusCard" As="Players" />
+  <Widget.Using Name="StatusCard" As="Tps">
+    <Widget.Using.Arguments><![CDATA[{"mode":"tps"}]]></Widget.Using.Arguments>
+  </Widget.Using>
+</Row>
+<Text Value="{Children.Players.Data.Value}" />
+```
+
+## Gotchas
+
+- `Name` is the display name, not the file name.
+- Children have their own Inputs/Data/Results; the parent cannot write them.
+- Remote child data domains are approved in the parent widget's editor.

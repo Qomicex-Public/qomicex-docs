@@ -1,0 +1,74 @@
+---
+title: "Widget"
+---
+
+## Widget
+
+The root element of a component. A `.qwidget` file can contain exactly one `Widget`.
+
+## Signature
+
+```xml
+<Widget Name="每日新闻" Version="1.0.0"
+        Author="示例" Description="可选说明"
+        UpdateUrl="https://example.com/news.qwidget"
+        LauncherVersion="1.4.0">
+  ...
+</Widget>
+```
+
+## Attributes
+
+| Attribute | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `Name` | string | Yes | — | Display name, ≤64 characters |
+| `Version` | string | Yes | — | Component version |
+| `Author` | string | No | — | Author |
+| `Description` | string | No | — | Description |
+| `UpdateUrl` | https URL | No | Import URL | Online update source |
+| `LauncherVersion` | semver | No | — | Minimum launcher version |
+
+## Child elements
+
+Direct children of `Widget` can be:
+
+- Layout/control nodes: `Container`, `Row`, `Column`, `Grid`, `Text`, `Button`, and so on
+- `Data`
+- `Resources`
+- `Triggers`
+- `Function`
+- `Widget.Using`
+
+`Data` can also appear inside any layout container; `Resources`, `Triggers`, and `Function` are only allowed at the root.
+
+## Attribute elements
+
+Root attributes also accept the attribute-element syntax:
+
+```xml
+<Widget>
+  <Widget.Name>示例</Widget.Name>
+  <Widget.Version>1.0.0</Widget.Version>
+  <Text Value="Hello" />
+</Widget>
+```
+
+## Runtime behavior
+
+1. Parse and strictly validate the XML: unknown elements/attributes, duplicate attributes, and invalid URLs/enums are hard errors.
+2. Parse `Data` and start fetching; parse `Resources`; parse `Function`/`Triggers`.
+3. Run the `Loaded` trigger.
+4. Render nodes; the parent component reads the snapshot through `Children`.
+5. Online components check for updates on a 6-hour TTL.
+
+## Limitations
+
+- XML ≤256KB, depth ≤16, elements ≤1000.
+- Data sources ≤8, nested instances ≤20.
+- An unnamed data source is named `Data` by default.
+
+## Related
+
+- [QWidget XML syntax](/en/guide/custom-widget/syntax)
+- [Data binding](/en/guide/custom-widget/reference/binding)
+- [Version requirements](/en/guide/custom-widget/reference/version)

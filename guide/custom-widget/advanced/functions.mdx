@@ -1,0 +1,167 @@
+---
+title: "QWidget 函数与 TypeScript"
+---
+
+## QWidget 函数与 TypeScript
+
+`Function` 让你在组件里写 TypeScript 逻辑。脚本在隔离的 sandbox iframe 中执行，不能访问 DOM、网络、localStorage 或 `import`，只能读取传入的数据并返回一个纯对象。
+
+## 最小示例
+
+```xml
+<Function Name="Greet" Timeout="3000">
+  <Function.Interface>
+    <Struct Name="GreetInput">
+      <Field Name="Name" Type="String" />
+    </Struct>
+  </Function.Interface>
+  <Function.Input Type="GreetInput">Input</Function.Input>
+  <Function.Output Type="String">Message</Function.Output>
+  <Function.Script><![CDATA[
+    return { Message: "Hello " + (Input.Name || "guest") };
+  ]]></Function.Script>
+</Function>
+```
+
+调用：
+
+```xml
+<TextBox Name="Name" />
+<Button Text="问候" OnClick="CallFunction" Function="Greet" />
+<Text Value="{Results.Greet.Message}" />
+```
+
+## 结构
+
+### Function
+
+| 属性 | 说明 |
+| :--- | :--- |
+| `Name` | 函数名，必填，唯一 |
+| `Timeout` | 超时毫秒，100–10000，默认 3000 |
+
+### Function.Interface
+
+定义结构体：
+
+```xml
+<Function.Interface>
+  <Struct Name="UserInput">
+    <Field Name="name" Type="String" />
+    <Field Name="age" Type="Number" />
+  </Struct>
+</Function.Interface>
+```
+
+字段类型：`String` / `Number` / `Bool` / `DateTime` / `Json` / `Binary`，或另一个 Struct 名称。
+
+### Function.Input
+
+声明输入变量的类型：
+
+```xml
+<Function.Input Type="UserInput">Input</Function.Input>
+```
+
+标签文本是脚本里的变量名，默认 `Input`。
+
+### Function.Output
+
+声明返回值必须包含的键和类型：
+
+```xml
+<Function.Output Type="String">Message</Function.Output>
+<Function.Output Type="Json">Items</Function.Output>
+```
+
+结果写入 `{Results.<Function>.<Output>}`。
+
+### Function.Script
+
+TypeScript 代码，建议用 CDATA：
+
+```xml
+<Function.Script><![CDATA[
+  const list = [1, 2, 3].map((n) => n * 2);
+  return { Items: list };
+]]></Function.Script>
+```
+
+脚本只能返回可 JSON 序列化的值；`Date` 会被序列化为 ISO 字符串。
+
+## 输入从哪里来
+
+调用函数时按以下优先级构建 `Input`：
+
+1. `CallFunction` 的 `Arguments` JSON（支持绑定插值）。
+2. 没写 `Arguments` 时，按函数 `Input` Struct 的字段名从 `Inputs` 取值。
+
+```xml
+<Button Text="搜索"
+        OnClick="CallFunction"
+        Function="Search">
+  <Button.Arguments><![CDATA[{"Keyword":"{Inputs.Keyword}"}]]></Button.Arguments>
+</Button>
+```
+
+## 脚本可用变量
+
+| 变量 | 内容 |
+| :--- | :--- |
+| `Input` | 按 `Function.Input` 组装的输入 |
+| `Inputs` | 所有 `TextBox` / `CheckBox` / `Slider` / `Select` / `FilePicker` / `ColorPicker` 当前值 |
+| `Resources` | `Resources` 中定义的命名资源；Binary 资源包含 `Base64` / `Url` / `Mime` / `Size` |
+| `Data` | 所有数据源；未命名源字段直接合并到 `Data` |
+| `Results` | 之前的函数/命令/插件 API 结果 |
+| `Host` | 低风险宿主 API，见下 |
+
+## Host
+
+| 方法 | 说明 |
+| :--- | :--- |
+| `Host.Notify(message, type?)` | 弹出通知；`type` 可为 `info` / `success` / `error` |
+| `Host.OpenUrl(url)` | 用系统浏览器打开 https 链接 |
+| `Host.Navigate(path)` | 站内跳转，如 `/instances` |
+| `Host.Log(message)` | 写入开发者日志 |
+
+Host 调用是单向的，不会返回值。脚本不能执行命令或调用插件 API；这两类能力只能通过按钮/触发器动作触发。
+
+## 触发器
+
+```xml
+<Triggers>
+  <Trigger Event="Loaded" Function="Init" />
+  <Trigger Event="DataChanged" Data="News" Function="RenderNews" />
+  <Trigger Event="Click" Control="SearchButton" Function="Search" />
+  <Trigger Event="Timer" Interval="60000" Function="Tick" Once="False" />
+</Triggers>
+```
+
+- `Loaded`：组件挂载后执行一次。
+- `DataChanged`：指定数据源完成拉取后执行。
+- `Click`：点击指定 `Name` 的按钮/链接时执行。
+- `Timer`：按 `Interval` 毫秒执行，最小 1000。
+- 触发频率上限 20 次/秒。
+
+## 编辑器中的试运行
+
+在「函数」页签选择函数，点击 **试运行**：
+
+- 使用当前 `Inputs` 和示例数据执行；
+- 返回 JSON 直接显示在编辑器下方；
+- 语法错误由 sucrase 转译结果标记在编辑器里。
+
+## 沙箱与安全
+
+- 脚本在 `sandbox` iframe 中执行，CSP 禁止网络、图片、媒体、子框架和 worker。
+- 无法访问 `window`、`document`、`localStorage`、`fetch`、`XMLHttpRequest`、`import` / `require`。
+- 超时后销毁 iframe 并重建；下一次调用不受影响。
+- 返回对象会按 `Function.Output` 做基础类型校验，缺失或类型不符会报错。
+- 远程组件可以包含脚本并静默更新；只使用你信任的组件。
+
+## 调试建议
+
+1. 先用「试运行」确认输入/输出。
+2. 把中间结果放进 `Output` 或 `Host.Log`。
+3. 避免在脚本里写无限循环；超时后沙箱会被销毁。
+4. 需要外部数据时提前用 `Data` 拉取，脚本只处理已加载的数据。

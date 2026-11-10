@@ -1,0 +1,57 @@
+---
+title: "Row"
+---
+
+## Row
+
+横向排列子元素，无视觉背景。
+
+## 签名
+
+```xml
+<Row Gap="2" Padding="0" Align="Center" Justify="Start" Wrap="False">
+  ...
+</Row>
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Gap` | 0–8 | `0` | 子元素间距 |
+| `Padding` | 0–8 | `0` | 内边距 |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | — | 交叉轴对齐 |
+| `Justify` | `Start` / `Center` / `End` / `Between` | — | 主轴对齐 |
+| `Wrap` | `True` / `False` | `False` | 是否换行 |
+
+## 内容
+
+子元素：
+
+```xml
+<Row Gap="2" Align="Center">
+  <Image Src="{Data.Avatar}" W="32" H="32" Rounded="True" />
+  <Text Value="{Data.Name}" />
+  <Button Text="详情" Size="Sm" OnClick="OpenUrl" Url="{Data.Url}" />
+</Row>
+```
+
+## 运行时行为
+
+- flex 横向排列；`Wrap="True"` 时 `flex-wrap`。
+- 空间不足时子元素可能被压缩，必要时给子元素 `Text` 设置 `Clamp` 或调整内容。
+- `Justify="Between"` 常用于左右两端对齐。
+
+## 示例
+
+```xml
+<Row Justify="Between" Align="Center">
+  <Text Value="状态" Weight="Semibold" />
+  <Text Value="{State.Loading}" Color="Muted" />
+</Row>
+```
+
+## 坑
+
+- 文本不会自动省略；用 `Clamp` 限制行数。
+- 横向内容过长可能导致溢出，建议配合 `Container` 的 `Direction="Column"` 或 `Wrap`。

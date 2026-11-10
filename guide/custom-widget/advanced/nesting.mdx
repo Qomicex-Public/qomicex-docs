@@ -1,0 +1,107 @@
+---
+title: "Widget 嵌套与复用"
+---
+
+## Widget 嵌套与复用
+
+`Widget.Using` 把一个已有组件放进当前组件，用来做可复用卡片、布局片段或组合式页面。
+
+## 引用本地组件
+
+```xml
+<Widget.Using Name="WeatherCard" As="Weather" />
+```
+
+- `Name` 精确匹配自定义组件列表里的 `Widget Name`。
+- 重名视为歧义，编辑器会标记；缺失时显示错误占位。
+- `As` 是当前组件内的别名，同级必须唯一；不写时从 Name 生成。
+
+## 引用远程组件
+
+```xml
+<Widget.Using Url="https://example.com/weather.qwidget" As="Weather" />
+```
+
+- URL 必须 https:443，走启动器后端代理。
+- 首次引用拉取并校验；之后按 6 小时 TTL 静默更新。
+- 远程组件的数据域名需要在父组件编辑器里确认。
+
+## 文本简写
+
+```xml
+<Widget.Using As="Weather">WeatherCard</Widget.Using>
+<Widget.Using As="Weather">https://example.com/weather.qwidget</Widget.Using>
+```
+
+内容以 `https://` 开头视为 URL，否则视为本地组件名。
+
+## 传初始输入
+
+```xml
+<Widget.Using Name="WeatherCard" As="Weather">
+  <Widget.Using.Arguments><![CDATA[{"city":"{Inputs.City}"}]]></Widget.Using.Arguments>
+</Widget.Using>
+```
+
+`Arguments` 是 JSON，支持 `{Inputs.*}` / `{Data.*}` 插值；子组件的 `Inputs` 会用这些值初始化。
+
+## 读取子组件状态
+
+父组件只能读，不能改：
+
+| 路径 | 内容 |
+| :--- | :--- |
+| `{Children.Weather.Inputs.City}` | 子组件输入值 |
+| `{Children.Weather.Data.News.Items}` | 子组件数据 |
+| `{Children.Weather.Results.Search.Items}` | 子组件函数结果 |
+| `{Children.Weather.State.Loading}` | 子组件加载状态 |
+| `{Children.Weather.State.Error}` | 子组件错误状态 |
+
+```xml
+<Text Value="{Children.Weather.Data.Temp}" Size="Lg" />
+```
+
+## 依赖与导出
+
+- 导出只导出当前 `.qwidget`，不会自动内联本地依赖。
+- 信息面板会列出本地依赖的状态：已解析 / 本地缺失 / 名称重复 / 远程。
+- 导出时若有缺失的本地依赖，会提示你单独分发这些组件。
+- 分享一个完整页面时，建议把依赖逐个导出，或全部使用 `Url` 引用。
+
+## 循环与深度
+
+- 深度上限 5 层。
+- 检测自引用与 A→B→A 循环，发现后显示错误占位，不影响父组件其他内容。
+- 单父组件最多 20 个嵌套实例。
+
+## 生命周期
+
+- 子组件有独立的 `Inputs` / `Data` / `Results` / `Triggers` / 脚本沙箱。
+- 子组件卸载时，其计时器、脚本沙箱和 Blob URL 会一起清理。
+- 同一个本地组件被引用两次会共享数据缓存，但输入和函数结果各自独立。
+
+## 示例：可复用状态卡
+
+```xml
+<!-- StatusCard 组件 -->
+<Widget Name="StatusCard" Version="1.0.0">
+  <Container Padding="3" Gap="1">
+    <Text Value="{Data.Title}" Weight="Semibold" />
+    <Text Value="{Data.Value}" Size="2Xl" />
+  </Container>
+  <Data Name="Data" Type="Json" Url="https://example.com/status.json" />
+</Widget>
+
+<!-- 父组件 -->
+<Widget Name="Home" Version="1.0.0">
+  <Row Gap="2">
+    <Widget.Using Name="StatusCard" As="Players" />
+    <Widget.Using Name="StatusCard" As="Tps" />
+  </Row>
+</Widget>
+```
+
+## 相关
+
+- [组件引用与作用域](/guide/custom-widget/reference/nesting-scope)
+- [Widget.Using 参考](/guide/custom-widget/reference/components/using)

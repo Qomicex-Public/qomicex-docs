@@ -1,0 +1,92 @@
+---
+title: "Actions reference"
+---
+
+## Actions reference
+
+Buttons, links, input controls and triggers interact with the launcher through actions. Action names use PascalCase.
+
+## Action table
+
+| Action | Parameters | Description |
+| :--- | :--- | :--- |
+| `Launch` | `Instance?` | Launch the default instance; looks it up by name/id when given |
+| `SetDefaultInstance` | `Instance` | Set as the default instance |
+| `OpenInstance` | `Instance` | Open the instance details |
+| `Navigate` | `To` | In-app navigation |
+| `OpenUrl` | `Url` | Open https in the system browser |
+| `OpenFolder` | `Folder` | Open a directory |
+| `Copy` | `Value` | Copy text |
+| `SelectAccount` | — | Choose the default account |
+| `Install` | `ProjectId` `Source` `Category` | Jump to a resource details page |
+| `Refresh` | — | Refetch this widget's data |
+| `CallFunction` | `Function` `Arguments?` | Run a QWidget function |
+| `RunCommand` | `Command` `WorkingDirectory?` `Timeout?` | Run a local command |
+| `PluginApi` | `PluginId` `Method` `Arguments?` | Call a plugin-registered method |
+
+## Enum values
+
+- `Navigate.To`: `Instances` / `Downloads` / `Accounts` / `ResourceCenter` / `Settings` / `Connect` / `Running`
+- `OpenFolder.Folder`: `Game` / `Logs` / `Data` / `Screenshots`
+- `Install.Source`: `Curseforge` / `Modrinth` / `Ftb`
+- `Install.Category`: `Mod` / `Modpack` / `Shader` / `Resourcepack` / `Datapack` / `Save`
+
+## Syntax
+
+Attribute syntax:
+
+```xml
+<Button Text="启动" OnClick="Launch" />
+<Button Text="资源" OnClick="Navigate" To="ResourceCenter" />
+<Button Text="官网" OnClick="OpenUrl" Url="https://example.com" />
+```
+
+Property element syntax:
+
+```xml
+<Button>
+  <Button.OnClick>CallFunction</Button.OnClick>
+  <Button.Function>Search</Button.Function>
+  <Button.Arguments><![CDATA[{"Keyword":"{Inputs.Keyword}"}]]></Button.Arguments>
+  <Button.Text>搜索</Button.Text>
+</Button>
+```
+
+## Results
+
+| Action | Result |
+| :--- | :--- |
+| `CallFunction` | `{Results.<Function>.<Output>}` |
+| `RunCommand` | `{Results.Command.ExitCode}` / `.Stdout` / `.Stderr` |
+| `PluginApi` | `{Results.PluginApi.Value}` |
+
+## Triggers
+
+```xml
+<Triggers>
+  <Trigger Event="Loaded" Function="Init" />
+  <Trigger Event="Click" Control="RefreshButton" Action="Refresh" />
+  <Trigger Event="Timer" Interval="60000" Function="Tick" />
+</Triggers>
+```
+
+A `Trigger` can use the `Function` shorthand, or `Action` plus action parameters. `Function` and `Action` are mutually exclusive.
+
+## Security and preview
+
+- The editor preview does not execute `RunCommand` / `PluginApi`.
+- `RunCommand` runs through Tauri IPC, output is capped at 64KB, and the timeout can be set from 1 to 60 seconds.
+- The target plugin of `PluginApi` must be loaded and have the method registered.
+- Remote widgets can update silently and bring these actions in; only use trusted widgets.
+
+## Common errors
+
+| Error | Cause |
+| :--- | :--- |
+| `invalidAction` | Misspelled action name, or not in the allowlist |
+| `missingAttribute` | Required parameter missing, e.g. `OpenUrl` without `Url` |
+| `invalidAttribute` | Enum value in the wrong case or misspelled |
+| `invalidUrl` | Not https:443 |
+| Unknown instance | `Instance` name/id does not match |
+| Plugin registry unavailable | Target plugin not loaded, or not in the main window environment |
+| Command timed out | Exceeded `Timeout`, or the 10-second default |

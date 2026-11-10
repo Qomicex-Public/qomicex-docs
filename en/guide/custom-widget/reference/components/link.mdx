@@ -1,0 +1,52 @@
+---
+title: "Link"
+---
+
+## Link
+
+A text link. It can open an external URL, run an action, or act as a `Click` trigger target.
+
+## Signature
+
+```xml
+<Link Text="访问官网" Url="https://example.com" />
+<Link Text="实例" OnClick="Navigate" To="Instances" />
+```
+
+## Attributes
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `Name` | identifier | Key used by `Click` triggers to target the link |
+| `Text` | string | Link text; required |
+| `Url` | https URL | External link; without `OnClick` a click calls `OpenUrl` |
+| `OnClick` | action | Click action |
+| `To` | nav target | Target used with `OnClick="Navigate"` |
+
+## Content syntax
+
+```xml
+<Link Url="https://example.com">访问官网</Link>
+```
+
+## Runtime behavior
+
+- Renders as a button-styled link: no underline until hover.
+- With a `Url` and no `OnClick`, a click calls `OpenUrl`.
+- With an `OnClick`, the action runs; `Url` is metadata only.
+- External links open in the system browser.
+
+## Example
+
+```xml
+<Column Gap="1">
+  <Link Text="GitHub" Url="https://github.com/Qomicex-Public" />
+  <Link Text="实例管理" OnClick="Navigate" To="Instances" />
+  <Link Text="打开日志目录" OnClick="OpenFolder" Folder="Logs" />
+</Column>
+```
+
+## Gotchas
+
+- `Url` must be https on port 443; local and intranet addresses are rejected.
+- Text link only; no rich text or multi-paragraph content.

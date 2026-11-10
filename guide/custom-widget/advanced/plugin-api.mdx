@@ -1,0 +1,85 @@
+---
+title: "插件 API 与命令调用"
+---
+
+## 插件 API 与命令调用
+
+自定义组件可以通过动作调用插件注册表或执行命令。这两类动作能力很强，运行时不做逐次确认；含这些动作的组件会显示风险横幅。
+
+## PluginApi
+
+```xml
+<Button Text="查询插件" OnClick="PluginApi"
+        PluginId="top.qomicex.weather"
+        Method="getWeather">
+  <Button.Arguments><![CDATA[{"city":"{Inputs.City}"}]]></Button.Arguments>
+</Button>
+
+<Text Value="{Results.PluginApi.Value}" />
+```
+
+| 参数 | 必填 | 说明 |
+| :--- | :--- | :--- |
+| `PluginId` | 是 | 目标插件 id |
+| `Method` | 是 | 插件注册的方法名 |
+| `Arguments` | 否 | JSON；整个数组会作为参数列表，单个值会包成数组 |
+
+结果写入 `{Results.PluginApi.Value}`。
+
+调用前提：
+
+- 目标插件已加载并注册了该方法；
+- 方法本身存在的权限检查由插件侧负责；
+- 插件不存在或方法未注册时，动作报错并在消息框显示。
+
+## RunCommand
+
+```xml
+<Button Text="打开资源管理器" OnClick="RunCommand"
+        Command="explorer ."
+        WorkingDirectory="{Data.GameDir}" />
+```
+
+| 参数 | 必填 | 说明 |
+| :--- | :--- | :--- |
+| `Command` | 是 | 命令字符串，Windows 用 `cmd /C`，其他平台用 `sh -c` |
+| `WorkingDirectory` | 否 | 工作目录；相对路径按组件目录/数据目录解析 |
+| `Timeout` | 否 | 毫秒，1000–60000，默认 10000 |
+
+结果写入：
+
+| 路径 | 内容 |
+| :--- | :--- |
+| `{Results.Command.ExitCode}` | 退出码 |
+| `{Results.Command.Stdout}` | 标准输出，≤64KB |
+| `{Results.Command.Stderr}` | 标准错误，≤64KB |
+
+命令通过 Tauri IPC 执行，不走 HTTP 端点，避免任意网页直接调用本地 API。
+
+## 预览限制
+
+编辑器的预览区不执行 `RunCommand` / `PluginApi`，即使按钮可点击也只会提示预览中禁用。真正运行时才执行。
+
+## 参数绑定
+
+`Arguments` 是 JSON 文本，支持 `{Inputs.*}` / `{Data.*}` / `{Results.*}` 插值：
+
+```xml
+<Button Text="创建" OnClick="CallFunction" Function="CreateUser">
+  <Button.Arguments><![CDATA[{
+    "name": "{Inputs.UserName}",
+    "age": 18
+  }]]></Button.Arguments>
+</Button>
+```
+
+- 整个字符串值就是一个绑定时，保留原始类型（数字仍是数字）。
+- 混合文本会变成字符串。
+- JSON 不合法时动作报错。
+
+## 安全边界
+
+- 远程组件可以静默更新并引入这些动作；只使用你信任的组件。
+- `PluginApi` 能调用插件暴露的方法，可能包含文件、进程等能力。
+- `RunCommand` 能执行本机命令。启动器开发者不对自定义组件造成的安全风险负责。
+- 脚本本身不能直接执行命令或调用插件 API；必须由按钮或触发器动作触发。

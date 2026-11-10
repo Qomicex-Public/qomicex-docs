@@ -1,0 +1,57 @@
+---
+title: "Row"
+---
+
+## Row
+
+Arranges children horizontally, with no visual background.
+
+## Signature
+
+```xml
+<Row Gap="2" Padding="0" Align="Center" Justify="Start" Wrap="False">
+  ...
+</Row>
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Gap` | 0–8 | `0` | Spacing between children |
+| `Padding` | 0–8 | `0` | Inner padding |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | — | Cross-axis alignment |
+| `Justify` | `Start` / `Center` / `End` / `Between` | — | Main-axis alignment |
+| `Wrap` | `True` / `False` | `False` | Whether children wrap |
+
+## Content
+
+Child elements:
+
+```xml
+<Row Gap="2" Align="Center">
+  <Image Src="{Data.Avatar}" W="32" H="32" Rounded="True" />
+  <Text Value="{Data.Name}" />
+  <Button Text="详情" Size="Sm" OnClick="OpenUrl" Url="{Data.Url}" />
+</Row>
+```
+
+## Runtime behavior
+
+- Horizontal flex layout; `Wrap="True"` adds `flex-wrap`.
+- Children may be squeezed when space runs out; set `Clamp` on a child `Text` or trim the content when needed.
+- `Justify="Between"` is the common way to push children to both ends.
+
+## Example
+
+```xml
+<Row Justify="Between" Align="Center">
+  <Text Value="状态" Weight="Semibold" />
+  <Text Value="{State.Loading}" Color="Muted" />
+</Row>
+```
+
+## Gotchas
+
+- Text is not truncated automatically; use `Clamp` to limit the line count.
+- Long horizontal content can overflow; use `Wrap`, or a `Container` with `Direction="Column"`.

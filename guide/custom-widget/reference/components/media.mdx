@@ -1,0 +1,52 @@
+---
+title: "Media"
+---
+
+## Media
+
+音频/视频播放器，支持在线 URL 和 Blob URL。
+
+## 签名
+
+```xml
+<Media Type="Audio" Source="{Data.Music.Url}"
+       Controls="True" AutoPlay="False" Loop="True"
+       Volume="0.8" Muted="False" />
+
+<Media Type="Video" Source="https://example.com/a.mp4"
+       Poster="https://example.com/cover.png" />
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Type` | `Audio` / `Video` | `Audio` | 媒体类型 |
+| `Source` | URL | 必填 | https / Blob URL |
+| `Controls` | `True` / `False` | `True` | 显示播放控件 |
+| `AutoPlay` | `True` / `False` | `False` | 自动播放 |
+| `Loop` | `True` / `False` | `False` | 循环 |
+| `Poster` | URL | — | 视频封面 |
+| `Volume` | 0–1 | — | 初始音量 |
+| `Muted` | `True` / `False` | `False` | 静音 |
+
+## 运行时行为
+
+- `Audio` 渲染 `<audio>`，`Video` 渲染 `<video>`。
+- 在线 https 源检查域名确认；Blob URL 直接播放。
+- `Volume` 只在加载时读取，不支持双向绑定。
+- `AutoPlay` 可能被浏览器策略阻止，需要用户交互。
+- 对象 URL 在组件卸载时释放。
+
+## 示例
+
+```xml
+<Data Name="Music" Type="Binary" Source="File" Path="C:\Music\song.mp3" />
+<Media Type="Audio" Source="{Data.Music.Url}" Controls="True" Loop="True" />
+```
+
+## 坑
+
+- 在线音频/视频需要服务端支持 CORS 或 Range 请求；失败时播放器会报错。
+- 远程媒体域名必须在编辑器中确认。
+- 没有播放列表、进度事件或脚本控制接口；复杂播放器需要等待后续版本。

@@ -1,0 +1,45 @@
+---
+title: "Image"
+---
+
+## Image
+
+Displays an image. Supports online URLs, blob URLs, and data URLs.
+
+## Signature
+
+```xml
+<Image Src="{Data.Cover.Url}" Alt="封面" W="160" H="90" Rounded="True" />
+<Image>https://example.com/a.png</Image>
+```
+
+## Attributes
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `Src` | URL | Required; https / Blob / data URL |
+| `Alt` | string | Alternative text |
+| `W` / `H` | 1–2048 | Width and height in pixels |
+| `Rounded` | `True` / `False` | Rounded corners |
+
+## Runtime behavior
+
+- For online https images the domain must be approved; unapproved domains are not rendered.
+- Blob URLs (from `Data Type="Binary"` or `Resources Binary`) render directly.
+- Without `W` the width is 100%; without `H` the height is automatic.
+- Cropping uses `object-cover`.
+
+## Example
+
+```xml
+<Image Src="{Data.Avatar}" W="48" H="48" Rounded="True" Alt="头像" />
+
+<Data Name="Cover" Type="Binary" Source="File" Path="./cover.png" />
+<Image Src="{Data.Cover.Url}" W="320" H="180" Rounded="True" />
+```
+
+## Gotchas
+
+- A failed remote image shows no placeholder; use `If` on the data state when you need one.
+- Domains of a dynamic `Src` must also be approved in the editor, otherwise nothing renders.
+- Large images consume memory; keep `W`/`H` small.

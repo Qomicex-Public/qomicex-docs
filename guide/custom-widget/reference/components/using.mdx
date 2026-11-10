@@ -1,0 +1,79 @@
+---
+title: "Widget.Using"
+---
+
+## Widget.Using
+
+把另一个 QWidget 作为节点嵌入当前组件。
+
+## 签名
+
+```xml
+<Widget.Using Name="WeatherCard" As="Weather" />
+<Widget.Using Url="https://example.com/weather.qwidget" As="Weather" />
+<Widget.Using As="Weather">WeatherCard</Widget.Using>
+<Widget.Using As="Weather">https://example.com/weather.qwidget</Widget.Using>
+
+<Widget.Using Name="WeatherCard" As="Weather">
+  <Widget.Using.Arguments><![CDATA[{"city":"{Inputs.City}"}]]></Widget.Using.Arguments>
+</Widget.Using>
+```
+
+## 属性
+
+| 属性 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `Name` | string | 本地组件名，精确匹配 |
+| `Url` | https URL | 远程组件 |
+| `As` | identifier | 子组件别名，同级唯一 |
+| `Refresh` | 60–86400 | 远程缓存 TTL 秒，默认 6 小时 |
+| `Arguments` | JSON | 初始 Inputs，支持绑定插值 |
+
+`Name` 与 `Url` 二选一；也可以把值写在标签内容里。
+
+## 内容
+
+`Widget.Using` 本身不渲染额外容器，子组件内容按原位渲染。父组件决定外层尺寸。
+
+## 作用域
+
+父组件只读：
+
+```xml
+<Text Value="{Children.Weather.Data.Temp}" />
+<Text Value="{Children.Weather.Inputs.City}" />
+<Text Value="{Children.Weather.Results.Load.Items.0.Title}" />
+```
+
+`Children.<As>.State.Loading` / `.Error` 也可用。
+
+## 解析
+
+- 本地 `Name`：从自定义组件列表精确匹配；缺失/重名显示错误占位。
+- 远程 `Url`：后端代理拉取，6 小时 TTL 静默更新。
+- 导出不内联依赖；本地缺失时导出前提示。
+
+## 限制
+
+- 深度 ≤5；检测自引用和 A→B→A 循环。
+- 单父组件 ≤20 个实例。
+- 别名重复解析失败。
+- 子组件卸载时清理计时器、脚本沙箱、Blob URL。
+
+## 示例
+
+```xml
+<Row Gap="2">
+  <Widget.Using Name="StatusCard" As="Players" />
+  <Widget.Using Name="StatusCard" As="Tps">
+    <Widget.Using.Arguments><![CDATA[{"mode":"tps"}]]></Widget.Using.Arguments>
+  </Widget.Using>
+</Row>
+<Text Value="{Children.Players.Data.Value}" />
+```
+
+## 坑
+
+- `Name` 是显示名，不是文件名。
+- 子组件有独立 Inputs/Data/Results；父组件不能写。
+- 远程子组件的数据域名在父组件编辑器确认。

@@ -1,0 +1,150 @@
+---
+title: "Data 数据使用"
+---
+
+## Data 数据使用
+
+`Data` 声明一个数据源。它不渲染 UI，只负责拉取/读取数据，供绑定和脚本使用。
+
+## 基本写法
+
+```xml
+<Data Name="News" Type="Json" Source="Url"
+      Url="https://api.example.com/news"
+      Refresh="3600" />
+```
+
+| 属性 | 必填 | 说明 |
+| :--- | :--- | :--- |
+| `Name` | 否 | 数据源名，默认 `Data`；同一组件内唯一 |
+| `Type` | 否 | `Json` / `Text` / `Xml` / `Binary`，默认 `Json` |
+| `Source` | 否 | `Url` / `File`，默认 `Url` |
+| `Url` | Source=Url 时必填 | https:443 |
+| `Path` | Source=File 时必填 | 绝对路径，或相对组件目录/数据目录 |
+| `Mime` | 否 | 二进制 MIME；不写时用响应头或扩展名 |
+| `Refresh` | 否 | 缓存秒数，0–86400，默认 3600；0 表示每次挂载都刷新 |
+
+## 四种类型
+
+### Json
+
+响应体按 JSON 解析，得到对象/数组：
+
+```xml
+<Text Value="{Data.News.Title}" />
+<List Items="{Data.News.Items}" As="Item">
+  <ListItem><Text Value="{Item.Title}" /></ListItem>
+</List>
+```
+
+JSON 解析失败会进入错误状态，保留旧缓存（如果有）。
+
+### Text
+
+响应体原样返回字符串：
+
+```xml
+<Data Name="Notice" Type="Text" Url="https://example.com/notice.txt" />
+<Text Value="{Data.Notice}" />
+```
+
+### Xml
+
+解析为可绑定的树：
+
+```ts
+{
+  Root: {
+    Name: string
+    Attributes: Record<string, string>
+    Text: string
+    Children: XmlNode[]
+  }
+}
+```
+
+```xml
+<Data Name="Feed" Type="Xml" Url="https://example.com/feed.xml" />
+<Text Value="{Data.Feed.Root.Children.0.Text}" />
+<List Items="{Data.Feed.Root.Children}" As="Node">
+  <ListItem><Text Value="{Node.Text}" /></ListItem>
+</List>
+```
+
+### Binary
+
+得到：
+
+```ts
+{ Url: string; Base64: string; Mime: string; Size: number }
+```
+
+`Url` 是 Blob URL，可直接给 `Image` / `Media`：
+
+```xml
+<Data Name="Cover" Type="Binary" Source="File" Path="./cover.png" />
+<Image Src="{Data.Cover.Url}" />
+```
+
+## 在线与本地
+
+**在线**：
+
+- 只允许 https:443；
+- 统一经启动器后端代理，禁止重定向，拒绝回环/内网/保留地址；
+- 文本/JSON/XML 上限 1MB，二进制上限 8MB；
+- 域名需要在编辑器里勾选确认。
+
+**本地**：
+
+```xml
+<Data Name="Music" Type="Binary" Source="File" Path="C:\Music\a.mp3" />
+<Data Name="Config" Type="Json" Source="File" Path="./config.json" />
+```
+
+路径规则：
+
+- 绝对路径原样使用；
+- 相对路径：本地导入的组件以 `.qwidget` 所在目录为基准；URL 导入的组件以启动器数据目录为基准；
+- 编辑器信息面板显示解析后的绝对路径。
+
+## 缓存与刷新
+
+- 非二进制结果按 `Refresh` 缓存到 localStorage；重新挂载时未过期直接使用。
+- 二进制只缓存在内存，避免 base64 撑爆本地存储。
+- `Refresh="0"` 表示每次挂载都重新读取/请求。
+- 手动刷新：按钮动作 `Refresh`，会重新拉取本组件所有过期数据源。
+
+## 绑定多个数据源
+
+每个 `Data` 有独立 `Name`：
+
+```xml
+<Data Name="News" Type="Json" Url="https://api.example.com/news" />
+<Data Name="Weather" Type="Json" Url="https://api.example.com/weather" />
+
+<Text Value="{Data.News.Title}" />
+<Text Value="{Data.Weather.Temp}" />
+<Text Value="{Weather.Temp}" />
+```
+
+- 命名源同时可以直接用 `{News.*}` / `{Weather.*}` 访问。
+- 未命名的数据源（默认名 `Data`）字段会合并到 `{Data.*}`。
+- 最多 8 个数据源。
+
+## 状态
+
+```xml
+<Text Value="{State.Loading}" />
+<If Test="{State.Error}">
+  <Text Value="数据加载失败" Color="Destructive" />
+</If>
+```
+
+`State.Loading` 为任意数据源正在加载；`State.Error` 为至少一个数据源失败。
+
+## 限制
+
+- 数据源 ≤8；单个组件数据缓存总量 2MB。
+- 在线请求超时 15 秒（前端请求 20 秒）。
+- 二进制对象 URL 在组件卸载时释放。

@@ -1,0 +1,52 @@
+---
+title: "Media"
+---
+
+## Media
+
+Audio/video player. Supports online URLs and blob URLs.
+
+## Signature
+
+```xml
+<Media Type="Audio" Source="{Data.Music.Url}"
+       Controls="True" AutoPlay="False" Loop="True"
+       Volume="0.8" Muted="False" />
+
+<Media Type="Video" Source="https://example.com/a.mp4"
+       Poster="https://example.com/cover.png" />
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Type` | `Audio` / `Video` | `Audio` | Media type |
+| `Source` | URL | Required | https / Blob URL |
+| `Controls` | `True` / `False` | `True` | Show playback controls |
+| `AutoPlay` | `True` / `False` | `False` | Autoplay |
+| `Loop` | `True` / `False` | `False` | Loop |
+| `Poster` | URL | — | Video poster |
+| `Volume` | 0–1 | — | Initial volume |
+| `Muted` | `True` / `False` | `False` | Muted |
+
+## Runtime behavior
+
+- `Audio` renders `<audio>`, `Video` renders `<video>`.
+- Online https sources require an approved domain; blob URLs play directly.
+- `Volume` is read only on load; two-way binding is not supported.
+- `AutoPlay` may be blocked by browser policy and needs user interaction.
+- Object URLs are released when the component unmounts.
+
+## Example
+
+```xml
+<Data Name="Music" Type="Binary" Source="File" Path="C:\Music\song.mp3" />
+<Media Type="Audio" Source="{Data.Music.Url}" Controls="True" Loop="True" />
+```
+
+## Gotchas
+
+- Online audio/video needs server support for CORS or range requests; otherwise the player reports an error.
+- Remote media domains must be approved in the editor.
+- No playlists, progress events, or script control interfaces; complex players have to wait for a later release.

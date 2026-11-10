@@ -1,0 +1,39 @@
+---
+title: "Progress"
+---
+
+## Progress
+
+进度条。只读展示，不接收用户输入。
+
+## 签名
+
+```xml
+<Progress Value="{Data.Downloaded}" Max="100" />
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Value` | number / binding | 必填 | 当前值 |
+| `Max` | number | `100` | 最大值 |
+
+## 运行时行为
+
+- 计算百分比：`Value / Max * 100`，限制在 0–100。
+- 渲染为圆角进度条，颜色使用主题强调色。
+- `Value` 可以是绑定、数字或数字字符串。
+
+## 示例
+
+```xml
+<Progress Value="{Inputs.Volume}" Max="100" />
+<Text Value="{Inputs.Volume}%" Size="Xs" Color="Muted" />
+```
+
+## 坑
+
+- `Value` 超出 `Max` 会被钳制到 100%。
+- `Max=0` 时按 100 处理，避免除零。
+- 没有动画/条纹/多段进度。

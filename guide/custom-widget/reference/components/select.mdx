@@ -1,0 +1,60 @@
+---
+title: "Select"
+---
+
+## Select
+
+下拉选择。当前值进入 `{Inputs.<Name>}`。
+
+## 签名
+
+```xml
+<Select Name="Sort" Options='["最新","最热","名称"]' Value="最新" />
+```
+
+或对象数组：
+
+```xml
+<Select Name="Sort"
+        Options='[{"Label":"最新","Value":"new"},{"Label":"最热","Value":"hot"}]'
+        Value="new" />
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | 必填 | 输入键名 |
+| `Value` | string | — | 初始选中值 |
+| `Options` | JSON string | `[]` | 字符串数组或 `{Label,Value}` 数组 |
+| `OnChange` | action | — | 选择变化时触发 |
+
+## 内容语法
+
+```xml
+<Select Name="Sort">[{"Label":"最新","Value":"new"}]</Select>
+```
+
+等价于 `Options`。
+
+## 运行时行为
+
+- 使用启动器 `Select` 组件，不是原生 `<select>`。
+- 选项可绑定：`Options="{Data.Options}"`。
+- 选中值写入 `{Inputs.Name}`。
+- `Value` 只作为初始值。
+
+## 示例
+
+```xml
+<Select Name="Category"
+        Options='[{"Label":"模组","Value":"mod"},{"Label":"资源包","Value":"resourcepack"}]'
+        Value="mod" />
+<Text Value="当前：{Inputs.Category}" />
+```
+
+## 坑
+
+- `Options` 必须是合法 JSON；静态模式在解析时校验。
+- 对象数组的 `Value` 必须是字符串或数字；显示用 `Label`。
+- 没有多选。

@@ -1,0 +1,41 @@
+---
+title: "Spacer"
+---
+
+## Spacer
+
+固定像素间距。
+
+## 签名
+
+```xml
+<Spacer Size="12" />
+<Spacer>12</Spacer>
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Size` | 0–96 | `8` | 像素尺寸 |
+
+## 运行时行为
+
+- 渲染为固定宽高的空 div，同时设置 width / height。
+- 在 `Row` 中提供横向间距，在 `Column` 中提供纵向间距。
+- 不参与文字排版，不影响其它元素的尺寸。
+
+## 示例
+
+```xml
+<Row Align="Center">
+  <Text Value="A" />
+  <Spacer Size="16" />
+  <Text Value="B" />
+</Row>
+```
+
+## 坑
+
+- 优先使用父容器的 `Gap`；`Spacer` 适合局部精细间距。
+- 在 flex 容器中默认不伸缩；需要占满剩余空间时当前版本不提供 `FlexGrow`。

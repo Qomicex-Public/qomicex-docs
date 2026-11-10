@@ -1,0 +1,37 @@
+---
+title: "Divider"
+---
+
+## Divider
+
+一条 1px 分隔线，使用主题边框色。
+
+## 签名
+
+```xml
+<Divider />
+```
+
+## 属性
+
+无。
+
+## 运行时行为
+
+- 渲染为高度 1px、宽度 100% 的 div。
+- 颜色为 `border` 变量，自动适配亮/暗色。
+- 不参与间距计算；需要上下留白时配合 `Spacer` 或父容器的 `Gap`。
+
+## 示例
+
+```xml
+<Column Gap="2">
+  <Text Value="第一组" Weight="Semibold" />
+  <Divider />
+  <Text Value="第二组" Weight="Semibold" />
+</Column>
+```
+
+## 坑
+
+- 横向父容器中宽度可能由 flex 决定；需要固定宽度时外用 `Column` 或设置父容器 `Align="Stretch"`。

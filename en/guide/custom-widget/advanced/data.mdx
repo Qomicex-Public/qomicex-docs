@@ -1,0 +1,150 @@
+---
+title: "Using data"
+---
+
+## Using data
+
+`Data` declares a data source. It renders no UI; it only fetches/reads data for bindings and scripts.
+
+## Basic form
+
+```xml
+<Data Name="News" Type="Json" Source="Url"
+      Url="https://api.example.com/news"
+      Refresh="3600" />
+```
+
+| Attribute | Required | Description |
+| :--- | :--- | :--- |
+| `Name` | No | Data source name, defaults to `Data`; unique within a widget |
+| `Type` | No | `Json` / `Text` / `Xml` / `Binary`, default `Json` |
+| `Source` | No | `Url` / `File`, default `Url` |
+| `Url` | Required when Source=Url | https:443 |
+| `Path` | Required when Source=File | Absolute path, or relative to the widget directory/data directory |
+| `Mime` | No | Binary MIME; defaults to the response header or file extension |
+| `Refresh` | No | Cache seconds, 0–86400, default 3600; 0 refreshes on every mount |
+
+## The four types
+
+### Json
+
+The response body is parsed as JSON, giving an object/array:
+
+```xml
+<Text Value="{Data.News.Title}" />
+<List Items="{Data.News.Items}" As="Item">
+  <ListItem><Text Value="{Item.Title}" /></ListItem>
+</List>
+```
+
+A JSON parse failure moves the source into the error state and keeps the old cache, if any.
+
+### Text
+
+The response body is returned as a plain string:
+
+```xml
+<Data Name="Notice" Type="Text" Url="https://example.com/notice.txt" />
+<Text Value="{Data.Notice}" />
+```
+
+### Xml
+
+Parsed into a bindable tree:
+
+```ts
+{
+  Root: {
+    Name: string
+    Attributes: Record<string, string>
+    Text: string
+    Children: XmlNode[]
+  }
+}
+```
+
+```xml
+<Data Name="Feed" Type="Xml" Url="https://example.com/feed.xml" />
+<Text Value="{Data.Feed.Root.Children.0.Text}" />
+<List Items="{Data.Feed.Root.Children}" As="Node">
+  <ListItem><Text Value="{Node.Text}" /></ListItem>
+</List>
+```
+
+### Binary
+
+Yields:
+
+```ts
+{ Url: string; Base64: string; Mime: string; Size: number }
+```
+
+`Url` is a Blob URL and can be passed straight to `Image` / `Media`:
+
+```xml
+<Data Name="Cover" Type="Binary" Source="File" Path="./cover.png" />
+<Image Src="{Data.Cover.Url}" />
+```
+
+## Online and local
+
+**Online**:
+
+- Only https:443 is allowed;
+- Requests go through the launcher backend proxy, redirects are forbidden, and loopback/intranet/reserved addresses are rejected;
+- Text/JSON/XML limit 1MB, binary limit 8MB;
+- Domains must be checked and confirmed in the editor.
+
+**Local**:
+
+```xml
+<Data Name="Music" Type="Binary" Source="File" Path="C:\Music\a.mp3" />
+<Data Name="Config" Type="Json" Source="File" Path="./config.json" />
+```
+
+Path rules:
+
+- Absolute paths are used as-is;
+- Relative paths: for locally imported widgets they resolve against the directory of the `.qwidget`; for URL-imported widgets they resolve against the launcher data directory;
+- The editor information panel shows the resolved absolute path.
+
+## Cache and refresh
+
+- Non-binary results are cached in localStorage per `Refresh`; on remount an unexpired value is used directly.
+- Binary results are cached in memory only, so base64 does not blow up local storage.
+- `Refresh="0"` re-reads/refetches on every mount.
+- Manual refresh: the `Refresh` button action refetches all expired data sources of this widget.
+
+## Binding multiple data sources
+
+Each `Data` has its own `Name`:
+
+```xml
+<Data Name="News" Type="Json" Url="https://api.example.com/news" />
+<Data Name="Weather" Type="Json" Url="https://api.example.com/weather" />
+
+<Text Value="{Data.News.Title}" />
+<Text Value="{Data.Weather.Temp}" />
+<Text Value="{Weather.Temp}" />
+```
+
+- Named sources are also directly reachable as `{News.*}` / `{Weather.*}`.
+- Fields of unnamed sources (default name `Data`) are merged into `{Data.*}`.
+- At most 8 data sources.
+
+## State
+
+```xml
+<Text Value="{State.Loading}" />
+<If Test="{State.Error}">
+  <Text Value="数据加载失败" Color="Destructive" />
+</If>
+```
+
+`State.Loading` is true while any data source is loading; `State.Error` is true when at least one data source failed.
+
+## Limits
+
+- At most 8 data sources; total data cache per widget 2MB.
+- Online request timeout 15 seconds (frontend request 20 seconds).
+- Binary object URLs are released when the widget unmounts.

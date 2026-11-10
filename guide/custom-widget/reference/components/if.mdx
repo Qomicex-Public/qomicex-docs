@@ -1,0 +1,58 @@
+---
+title: "If"
+---
+
+## If
+
+按路径真值条件渲染子元素。
+
+## 签名
+
+```xml
+<If Test="{State.Error}">
+  <Text Value="加载失败" Color="Destructive" />
+</If>
+```
+
+## 属性
+
+| 属性 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Test` | path | 是 | 真值判断路径 |
+
+## 真值规则
+
+| 值 | 结果 |
+| :--- | :--- |
+| `True` / 非零数字 / 非空字符串 | 显示 |
+| `False` / `0` / 空字符串 | 隐藏 |
+| `null` / `undefined` | 隐藏 |
+| 空数组 | 隐藏 |
+| 非空数组 / 对象 | 显示 |
+
+## 示例
+
+```xml
+<If Test="{Data.News}">
+  <Text Value="{Data.News.Title}" />
+</If>
+
+<If Test="{State.Loading}">
+  <Text Value="加载中…" Color="Muted" />
+</If>
+
+<If Test="{State.Error}">
+  <Text Value="加载失败" Color="Destructive" />
+</If>
+```
+
+## 运行时行为
+
+- 条件为假时，子树完全不渲染，内部 `Data` 仍会预取（解析阶段已收集）。
+- 没有 `Else`；需要二选一时用两个相反条件，或在脚本里返回状态。
+- `Test` 支持 `{...}` 或直接路径。
+
+## 坑
+
+- 空数组视为假；需要判断“数组存在但为空”时请检查长度或使用脚本结果。
+- 不要在 `If` 里放 `Resources` / `Triggers` / `Function`；这些只允许根级。

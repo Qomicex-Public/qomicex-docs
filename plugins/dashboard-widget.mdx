@@ -5,6 +5,8 @@ title: "主页小组件（dashboard:widgets）"
 
 主页是一个**可编辑的小组件网格**（类似手机桌面）：内置的水印、账户、公告、实例启动栏都是网格中的组件，插件也可以把自己的 UI 作为组件加入网格，与内置组件一样由用户拖动排列、调整大小、添加和移除。
 
+<Note>本页讲的是**插件小组件**（`dashboard:widgets` 槽位）。如果用户想直接写 XML 组件，请看 [主页自定义组件](/guide/custom-widget/index)，两套机制互不影响。</Note>
+
 ## 快速开始
 
 在 `manifest.json` 的 `contributes.slots` 中声明 `dashboard:widgets` 槽位：

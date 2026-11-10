@@ -1,0 +1,85 @@
+---
+title: "主页自定义组件"
+---
+
+## 主页自定义组件
+
+主页自定义组件（QWidget）让你用一个 `.qwidget` 文件描述自己的主页卡片：布局、文本、按钮、输入框、媒体、数据请求、触发器和 TypeScript 函数都可以写在里面。它和插件提供的 `dashboard:widgets` 是两套机制：
+
+| | 自定义组件（QWidget） | 插件小组件 |
+| :--- | :--- | :--- |
+| 作者门槛 | 写 XML，可选 TypeScript | 写完整插件（HTML/React/WASM） |
+| 分发 | 单个 `.qwidget` 文件或 URL | `.qplugin` 插件包 |
+| 权限 | 域名确认 + 风险提示 | 插件权限系统 |
+| 适合 | 个人主页卡片、快捷入口、小型工具 | 复杂功能、需要后端/进程能力 |
+
+## 打开编辑器
+
+1. 主页右上角点击 **编辑布局**。
+2. 点击工具条的 **＋**。
+3. 在「自定义组件」区域点击 **新建组件**。
+
+编辑器包含两个页签：
+
+- **XML**：组件结构，带行号、语法高亮、折叠、搜索、Schema 补全和实时校验。
+- **函数**：编辑 `Function.Script` 的 TypeScript，支持 `Input` / `Inputs` / `Data` / `Resources` / `Results` / `Host` 补全和「试运行」。
+
+右侧是预览、域名确认和组件信息面板。
+
+## 第一个组件
+
+```xml
+<Widget Name="我的组件" Version="1.0.0">
+  <Resources>
+    <String Name="Greeting" Text="你好，Qomicex" />
+  </Resources>
+  <Container Padding="4" Gap="3">
+    <Text Value="{Resources.Greeting}" Size="Lg" Weight="Bold" />
+    <Button Text="实例管理" OnClick="Navigate" To="Instances" />
+  </Container>
+</Widget>
+```
+
+保存后组件会出现在主页网格末尾；你可以像内置组件一样拖动、缩放、隐藏和恢复。
+
+## 导入与导出
+
+- **从 URL 导入**：填入 `https://.../*.qwidget`，拉取并校验后加载；保存后会按 6 小时 TTL 静默检查更新。
+- **导入文件**：选择本地 `.qwidget` / `.xml` 文件；相对路径以该文件所在目录为基准。
+- **导出文件**：保存当前 XML；本地 `Widget.Using Name="..."` 依赖不会自动内联，导出前会提示缺失依赖。
+
+## 域名确认
+
+组件会自动访问的域名会列在右侧「允许访问的域名」中，包括：
+
+- `Data Source="Url"` 的数据源
+- `Widget UpdateUrl` / 在线导入来源
+- `Widget.Using Url` 的嵌套组件
+- 静态 `Image` / `Media` 地址
+
+全部勾选后才能保存。运行时只加载已确认域名的静态图片/媒体；数据请求统一经后端代理，仍限制 https:443、禁止重定向、拒绝回环/内网地址。
+
+## 在线更新与风险
+
+在线组件按 6 小时 TTL **静默检查更新**，不做二次确认。自定义组件可以运行 TypeScript、执行命令、调用插件 API 和读取本地文件，因此：
+
+- 首次保存含脚本或危险动作的组件会弹出风险提示。
+- 含 `Function` / `RunCommand` / `PluginApi` 的组件在编辑器顶部常驻风险横幅。
+- 请只使用你信任的组件。启动器开发者不对自定义组件造成的安全风险负责。
+
+## 存储与限制
+
+- 组件定义与数据缓存保存在本机 `localStorage`，布局沿用主页网格的本地存储。
+- XML 上限 256KB，深度 16，元素 1000，数据源 8 个，列表渲染 200 项。
+- 在线文本/JSON/XML 上限 1MB，二进制上限 8MB。
+- 嵌套深度 5，单父组件最多 20 个嵌套实例。
+- 函数脚本 64KB，默认超时 3 秒（最大 10 秒）。
+
+## 下一步
+
+- [QWidget XML 语法](/guide/custom-widget/syntax)
+- [布局组件](/guide/custom-widget/advanced/layout)
+- [函数与 TypeScript](/guide/custom-widget/advanced/functions)
+- [示例](/guide/custom-widget/examples)
+- [数据绑定](/guide/custom-widget/reference/binding)
+- [组件字典](/guide/custom-widget/reference/components/widget)

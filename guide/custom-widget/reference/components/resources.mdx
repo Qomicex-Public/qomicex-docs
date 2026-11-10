@@ -1,0 +1,68 @@
+---
+title: "Resources"
+---
+
+## Resources
+
+命名资源容器。资源可以是字符串、布尔、数字、二进制或通用 `Resource`，通过 `{Resources.Name}` 访问。
+
+## 签名
+
+```xml
+<Resources>
+  <String Name="AppName">Qomicex</String>
+  <Bool Name="ShowTip" Text="True" />
+  <Number Name="PageSize">10</Number>
+  <Binary Name="Beep" Mime="audio/wav">BASE64...</Binary>
+  <Resource Name="Alias" Type="String">...</Resource>
+</Resources>
+```
+
+## 子元素
+
+| 元素 | 值 | 属性 |
+| :--- | :--- | :--- |
+| `String` | 字符串 | `Name` `Text` |
+| `Bool` | 布尔 | `Name` `Text` |
+| `Number` | 数字 | `Name` `Text` |
+| `Binary` | base64 → `{ Url, Base64, Mime, Size }` | `Name` `Mime` `Text` |
+| `Resource` | 按 `Type` 解析 | `Name` `Type` `Mime` `Text` |
+
+`Text` 属性和标签文本等价：
+
+```xml
+<String Name="A">hello</String>
+<String Name="A" Text="hello" />
+```
+
+## 运行时行为
+
+- `String` → 字符串
+- `Bool` → `Text`/内容为 `True` / `true` 时为 true
+- `Number` → Number
+- `Binary` → 生成 Blob URL，可直接给 `Image` / `Media`
+- `Resource Type="Json"` → JSON 解析
+- 资源名在组件内唯一；重复会解析失败
+
+## 示例
+
+```xml
+<Resources>
+  <String Name="Greeting" Text="你好，Qomicex" />
+  <Bool Name="ShowFooter" Text="True" />
+  <Number Name="MaxItems">5</Number>
+</Resources>
+
+<Column Gap="2">
+  <Text Value="{Resources.Greeting}" Size="Lg" Weight="Bold" />
+  <If Test="{Resources.ShowFooter}">
+    <Text Value="Powered by Qomicex" Size="Xs" Color="Muted" />
+  </If>
+</Column>
+```
+
+## 坑
+
+- Binary 的 base64 会占 XML 体积；大文件用 `Data Type="Binary"` 而不是资源字面量。
+- 资源是静态值，不支持运行时更新。
+- `Resource` 的 `Type` 支持 `String` / `Bool` / `Number` / `Binary` / `Json`。

@@ -1,0 +1,107 @@
+---
+title: "Nesting and reuse"
+---
+
+## Nesting and reuse
+
+`Widget.Using` places an existing widget inside the current one, for reusable cards, layout fragments or composed pages.
+
+## Referencing a local widget
+
+```xml
+<Widget.Using Name="WeatherCard" As="Weather" />
+```
+
+- `Name` must exactly match the `Widget Name` in the custom widget list.
+- Duplicate names count as ambiguous and are flagged in the editor; a missing widget shows an error placeholder.
+- `As` is the alias inside the current widget and must be unique among siblings; when omitted it is derived from Name.
+
+## Referencing a remote widget
+
+```xml
+<Widget.Using Url="https://example.com/weather.qwidget" As="Weather" />
+```
+
+- The URL must be https:443 and goes through the launcher backend proxy.
+- It is fetched and validated on first reference; afterwards it updates silently on a 6-hour TTL.
+- The data domains of remote widgets must be confirmed in the parent widget's editor.
+
+## Text shorthand
+
+```xml
+<Widget.Using As="Weather">WeatherCard</Widget.Using>
+<Widget.Using As="Weather">https://example.com/weather.qwidget</Widget.Using>
+```
+
+Content starting with `https://` is treated as a URL, anything else as a local widget name.
+
+## Passing initial input
+
+```xml
+<Widget.Using Name="WeatherCard" As="Weather">
+  <Widget.Using.Arguments><![CDATA[{"city":"{Inputs.City}"}]]></Widget.Using.Arguments>
+</Widget.Using>
+```
+
+`Arguments` is JSON and supports `{Inputs.*}` / `{Data.*}` interpolation; the child widget's `Inputs` are initialized with these values.
+
+## Reading child state
+
+The parent can read but not write:
+
+| Path | Contents |
+| :--- | :--- |
+| `{Children.Weather.Inputs.City}` | Child input values |
+| `{Children.Weather.Data.News.Items}` | Child data |
+| `{Children.Weather.Results.Search.Items}` | Child function results |
+| `{Children.Weather.State.Loading}` | Child loading state |
+| `{Children.Weather.State.Error}` | Child error state |
+
+```xml
+<Text Value="{Children.Weather.Data.Temp}" Size="Lg" />
+```
+
+## Dependencies and export
+
+- Export only writes the current `.qwidget`; local dependencies are not inlined.
+- The information panel lists the status of local dependencies: resolved / missing locally / duplicate name / remote.
+- If a local dependency is missing at export time, you are prompted to distribute those widgets separately.
+- To share a complete page, export the dependencies one by one, or reference everything by `Url`.
+
+## Cycles and depth
+
+- Maximum depth is 5 levels.
+- Self references and A→B→A cycles are detected; once found, an error placeholder is shown and the rest of the parent widget still works.
+- At most 20 nested instances per parent widget.
+
+## Lifecycle
+
+- A child widget has its own `Inputs` / `Data` / `Results` / `Triggers` / script sandbox.
+- When a child unmounts, its timers, script sandbox and Blob URLs are cleaned up with it.
+- Referencing the same local widget twice shares the data cache, but inputs and function results stay independent.
+
+## Example: reusable status card
+
+```xml
+<!-- StatusCard widget -->
+<Widget Name="StatusCard" Version="1.0.0">
+  <Container Padding="3" Gap="1">
+    <Text Value="{Data.Title}" Weight="Semibold" />
+    <Text Value="{Data.Value}" Size="2Xl" />
+  </Container>
+  <Data Name="Data" Type="Json" Url="https://example.com/status.json" />
+</Widget>
+
+<!-- parent widget -->
+<Widget Name="Home" Version="1.0.0">
+  <Row Gap="2">
+    <Widget.Using Name="StatusCard" As="Players" />
+    <Widget.Using Name="StatusCard" As="Tps" />
+  </Row>
+</Widget>
+```
+
+## Related
+
+- [Widget references and scope](/en/guide/custom-widget/reference/nesting-scope)
+- [Widget.Using reference](/en/guide/custom-widget/reference/components/using)

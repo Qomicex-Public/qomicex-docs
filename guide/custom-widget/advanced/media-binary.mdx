@@ -1,0 +1,99 @@
+---
+title: "媒体与二进制"
+---
+
+## 媒体与二进制
+
+二进制数据（图片、音频、视频）可以来自在线 `Data`、本地 `Data`、`Resources` 的 base64，或 `FilePicker` 选中的路径。
+
+## Media
+
+```xml
+<Data Name="Music" Type="Binary" Source="File" Path="C:\Music\song.mp3" />
+<Media Type="Audio"
+       Source="{Data.Music.Url}"
+       Controls="True"
+       AutoPlay="False"
+       Loop="True"
+       Volume="0.8" />
+```
+
+| 属性 | 取值 | 默认 |
+| :--- | :--- | :--- |
+| `Type` | `Audio` / `Video` | `Audio` |
+| `Source` | https / Blob URL | 必填 |
+| `Controls` | `True` / `False` | `True` |
+| `AutoPlay` | `True` / `False` | `False` |
+| `Loop` | `True` / `False` | `False` |
+| `Poster` | https / Blob URL | — |
+| `Volume` | 0–1 | — |
+| `Muted` | `True` / `False` | `False` |
+
+`AutoPlay` 可能被浏览器策略阻止；需要用户交互后才能播放。
+
+## Image
+
+```xml
+<Image Src="{Data.Cover.Url}" W="160" H="90" Rounded="True" Alt="封面" />
+```
+
+| 属性 | 说明 |
+| :--- | :--- |
+| `Src` | https / Blob URL / data URL |
+| `Alt` | 替代文本 |
+| `W` / `H` | 像素宽高，1–2048 |
+| `Rounded` | 是否圆角 |
+
+## 二进制资源
+
+`Resources` 的 `Binary` 是 base64 字面量：
+
+```xml
+<Resources>
+  <Binary Name="Beep" Mime="audio/wav">BASE64...</Binary>
+</Resources>
+
+<Media Type="Audio" Source="{Resources.Beep.Url}" />
+```
+
+绑定得到 `{ Url, Base64, Mime, Size }`。`Url` 是运行时生成的 Blob URL，组件卸载时释放。
+
+## FilePicker
+
+让用户选择本地文件，把路径写入 `{Inputs.<Name>}`：
+
+```xml
+<FilePicker Name="MusicPath" Text="选择音乐" Filter="mp3,flac,wav" />
+<Text Value="{Inputs.MusicPath}" />
+```
+
+- `Filter` 是逗号分隔扩展名。
+- 选择结果不是二进制内容，只是路径；需要播放时用 `Data Source="File"` 读取，或由脚本处理。
+- 浏览器调试环境没有原生文件路径，可能需要 Tauri 桌面环境。
+
+## 本地路径规则
+
+- 绝对路径原样；
+- 相对路径基于组件文件目录（本地导入）或启动器数据目录（URL 导入）；
+- 二进制文件上限 8MB；
+- 编辑器信息面板显示解析后的绝对路径。
+
+## 示例：本地音乐卡片
+
+```xml
+<Widget Name="音乐卡片" Version="1.0.0">
+  <Data Name="Track" Type="Binary" Source="File" Path="C:\Music\song.mp3" />
+  <Container Padding="3" Gap="2">
+    <Text Value="正在播放：song.mp3" Weight="Semibold" />
+    <Media Type="Audio" Source="{Data.Track.Url}" Controls="True" Loop="True" Volume="0.8" />
+  </Container>
+</Widget>
+```
+
+当前 `Data` 的 `Path` 是静态字符串，不能直接绑定 `{Inputs.TrackPath}`；`Media.Volume` 也只在加载时读取，不支持双向绑定。需要“选文件后立即播放/调音量”时，请等待后续版本，或通过插件 API/命令动作实现。
+
+## 限制
+
+- 静态图片/媒体域名也需要在编辑器中确认。
+- 在线二进制 8MB、本地二进制 8MB；超过会报错。
+- Blob URL 只在当前组件实例有效，不要写进持久化数据。

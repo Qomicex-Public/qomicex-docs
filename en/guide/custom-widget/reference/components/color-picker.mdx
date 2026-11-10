@@ -1,0 +1,47 @@
+---
+title: "ColorPicker"
+---
+
+## ColorPicker
+
+Color picker. The current value goes into `{Inputs.<Name>}` as a hex string.
+
+## Signature
+
+```xml
+<ColorPicker Name="Accent" Value="#16A34A" OnChange="CallFunction" Function="ApplyColor" />
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | Required | Input key |
+| `Value` | hex color | `#000000` | Initial color |
+| `OnChange` | action | — | Fires when the color changes |
+
+## Content syntax
+
+```xml
+<ColorPicker Name="Accent">#16A34A</ColorPicker>
+```
+
+## Runtime behavior
+
+- Renders a native color input.
+- The user's choice is written to `{Inputs.Name}` in `#rrggbb` format.
+- A `Value` that is not valid hex displays as black.
+
+## Example
+
+```xml
+<Row Gap="2" Align="Center">
+  <ColorPicker Name="Accent" Value="#16A34A" />
+  <Text Value="{Inputs.Accent}" Size="Sm" />
+</Row>
+```
+
+## Gotchas
+
+- Only hex colors are supported; no alpha or gradients.
+- It cannot change the launcher theme color directly yet; use `PluginApi` or wait for a later API.

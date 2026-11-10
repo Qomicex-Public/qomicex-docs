@@ -1,0 +1,95 @@
+---
+title: "Data binding"
+---
+
+## Data binding
+
+String attributes of a QWidget support `{path}` interpolation. Binding is read-only: values come from data sources, resources, control inputs, function results or nested widgets.
+
+## Namespaces
+
+| Namespace | Form | Source |
+| :--- | :--- | :--- |
+| `Data` | `{Data.News.Title}` | `Data` elements |
+| `Resources` | `{Resources.AppName}` | `Resources` elements |
+| `Inputs` | `{Inputs.Keyword}` | Current value of input controls |
+| `Results` | `{Results.Search.Items}` | Functions / commands / plugin API |
+| `Children` | `{Children.Weather.Data.Temp}` | Read-only nested widget state |
+| `State` | `{State.Loading}` / `{State.Error}` | Widget state |
+
+## Data sources
+
+```xml
+<Data Name="News" Type="Json" Url="https://api.example.com/news" />
+<Data Type="Json" Url="https://api.example.com/default" />
+```
+
+- Named source: `{Data.News.Title}`, or directly `{News.Title}`.
+- Unnamed source, default name `Data`: fields merge into `{Data.Title}`.
+- Name conflicts are rejected by XML validation.
+
+## Interpolation rules
+
+- `Value="Hello {Inputs.Name}"` → string concatenation.
+- `Value="{Inputs.Age}"` → the original type is preserved (number/boolean/object), suitable for JSON such as `Arguments`, `Select.Options`.
+- Path not found → empty string.
+- Interpolating an object/array into a string → JSON text.
+- Paths only allow object properties and array indexes; the prototype chain is not accessible.
+
+## List scope
+
+```xml
+<List Items="{Data.Items}" As="Item">
+  <ListItem>
+    <Text Value="{Item.Title}" />
+    <Text Value="{Index}" />
+  </ListItem>
+</List>
+```
+
+- `{Item.*}`: the current item; the variable name comes from `As`.
+- `{Index}`: the 0-based index of the current item.
+- With nested lists, the inner list shadows `Item` / `Index`.
+
+## Type reference
+
+| Value | Binding result |
+| :--- | :--- |
+| JSON object/array | Object/array; JSON.stringify when interpolated into a string |
+| Text | String |
+| Xml | `{ Root: { Name, Attributes, Text, Children } }` |
+| Binary | `{ Url, Base64, Mime, Size }` |
+| Resources String/Bool/Number | Corresponding primitive type |
+| Resources Binary | `{ Url, Base64, Mime, Size }` |
+| Function output | Per the `Function.Output` type |
+| Command result | `{ ExitCode, Stdout, Stderr }` |
+| PluginApi result | `{ Value }` |
+
+## State
+
+```xml
+<Text Value="{State.Loading}" />
+<If Test="{State.Error}">
+  <Text Value="加载失败" Color="Destructive" />
+</If>
+```
+
+`State.Loading` / `State.Error` are booleans.
+
+## Using bindings in action parameters
+
+```xml
+<Button Text="打开" OnClick="OpenUrl" Url="{Data.Link}" />
+<Button Text="提交" OnClick="CallFunction" Function="Save">
+  <Button.Arguments><![CDATA[{"name":"{Inputs.Name}","age":18}]]></Button.Arguments>
+</Button>
+```
+
+`Arguments` is parsed as JSON first, then string values are interpolated deeply; when a whole string is a single binding the original type is preserved.
+
+## Common mistakes
+
+- Binding paths are case-sensitive: `{data.Title}` differs from `{Data.Title}`.
+- Bindings are empty while a data source is still loading; use `If Test="{State.Loading}"` to show a placeholder.
+- Static `Data.Url` / `Data.Path` do not support runtime binding; for dynamic data use a function or the plugin API.
+- `List.Items` must be an array; an object renders an empty list.

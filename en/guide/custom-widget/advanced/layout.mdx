@@ -1,0 +1,182 @@
+---
+title: "Layout elements"
+---
+
+## Layout elements
+
+QWidget layouts are built entirely from nested elements. There are no pixel properties like `Width` / `Height` / `Margin`; size is decided by the dashboard grid and the layout containers.
+
+## Container types
+
+| Element | Purpose | Visual |
+| :--- | :--- | :--- |
+| `Container` | Card/panel with border, background, radius and padding | Yes |
+| `Row` | Horizontal arrangement | No |
+| `Column` | Vertical arrangement | No |
+| `Grid` | Multi-column grid | No |
+| `Tabs` | Tab pages | Tab bar |
+| `List` | Array list | Decided by items |
+| `If` | Conditional rendering | No |
+
+## Container
+
+```xml
+<Container Direction="Column" Padding="4" Gap="3"
+           Border="True" Background="Card" Radius="Lg"
+           Align="Stretch" Justify="Start">
+  ...
+</Container>
+```
+
+| Attribute | Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Direction` | `Row` / `Column` | `Column` | Main axis |
+| `Gap` | 0–8 | `0` | Space between children |
+| `Padding` | 0–8 | `0` | Inner padding |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | — | Cross-axis alignment |
+| `Justify` | `Start` / `Center` / `End` / `Between` | — | Main-axis alignment |
+| `Border` | `True` / `False` | `True` | Show a border |
+| `Background` | `Transparent` / `Card` / `Muted` / `Primary` | `Card` | Background |
+| `Radius` | `None` / `Sm` / `Md` / `Lg` / `Full` | `Lg` | Corner radius |
+
+Use `Container` for cards; when you only want arrangement without visuals, use `Row` / `Column`.
+
+## Row / Column
+
+```xml
+<Row Gap="2" Align="Center" Wrap="True">
+  <Button Text="A" />
+  <Button Text="B" />
+  <Button Text="C" />
+</Row>
+```
+
+| Attribute | Values | Default |
+| :--- | :--- | :--- |
+| `Gap` | 0–8 | `0` |
+| `Padding` | 0–8 | `0` |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | — |
+| `Justify` | `Start` / `Center` / `End` / `Between` | — |
+| `Wrap` | `True` / `False` | `False` |
+
+## Grid
+
+```xml
+<Grid Columns="2" Gap="2" Padding="2">
+  <Button Text="左上" />
+  <Button Text="右上" />
+  <Button Grid.Row="1" Grid.Column="0" Text="左下" />
+  <Button Grid.Row="1" Grid.Column="1" Text="右下" />
+</Grid>
+```
+
+| Attribute | Values | Description |
+| :--- | :--- | :--- |
+| `Columns` | 1–6, required | Column count |
+| `Gap` | 0–8 | Row and column spacing |
+| `Padding` | 0–8 | Inner padding |
+| `Align` / `Justify` | Same as containers | Alignment |
+
+Children support attached properties:
+
+- `Grid.Row`: starts at 0
+- `Grid.Column`: starts at 0
+- `Grid.RowSpan`: default 1
+- `Grid.ColumnSpan`: default 1
+
+Attached properties can be written as attributes or as property elements:
+
+```xml
+<Button Grid.Row="1" Grid.Column="0" Text="A" />
+<Button>
+  <Grid.Row>1</Grid.Row>
+  <Grid.Column>1</Grid.Column>
+  <Button.Text>B</Button.Text>
+</Button>
+```
+
+When no row or column is given, children fill the grid in flow order.
+
+## Tabs
+
+```xml
+<Tabs Default="0">
+  <TabItem Title="公告">
+    <Text Value="公告内容" />
+  </TabItem>
+  <TabItem Title="快捷入口">
+    <Grid Columns="2" Gap="2">
+      <Button Text="启动" OnClick="Launch" />
+      <Button Text="实例" OnClick="Navigate" To="Instances" />
+    </Grid>
+  </TabItem>
+</Tabs>
+```
+
+- `Tabs.Default`: initially selected index, 0-based.
+- `TabItem.Title`: tab title, required.
+- Selection lives in memory only and is not persisted.
+- All `TabItem` elements are parsed on mount, and `Data` is prefetched too, so switching tabs does not flash.
+
+## List
+
+```xml
+<List Items="{Data.News.Items}" As="Item" Gap="2" EmptyText="暂无内容">
+  <ListItem>
+    <Text Value="{Item.Title}" />
+  </ListItem>
+</List>
+```
+
+- `Items`: array path, required; either `{Data.Items}` or `Data.Items`.
+- `As`: item variable name, defaults to `item` (case-sensitive).
+- `ListItem`: exactly one is required, and it may contain only one root element.
+- Inside an item you can use `{Item.Xxx}` and `{Index}`.
+- At most 200 items are rendered; an empty array shows `EmptyText`.
+
+## If
+
+```xml
+<If Test="{State.Error}">
+  <Text Value="加载失败" Color="Destructive" />
+</If>
+```
+
+`Test` is a truthiness check: `False` / empty string / `0` / `null` / empty array count as false.
+
+## Divider / Spacer
+
+```xml
+<Divider />
+<Spacer Size="12" />
+```
+
+- `Divider`: a 1px separator line.
+- `Spacer`: fixed pixel spacing; it sets both width and height, so it works horizontally and vertically.
+
+## Common layouts
+
+**Two-column split**
+
+```xml
+<Row Gap="3">
+  <Container Padding="3" Direction="Column">左侧</Container>
+  <Container Padding="3" Direction="Column">右侧</Container>
+</Row>
+```
+
+**Two-column cards**
+
+```xml
+<Grid Columns="2" Gap="2">
+  <Container Padding="3"><Text Value="A" /></Container>
+  <Container Padding="3"><Text Value="B" /></Container>
+</Grid>
+```
+
+## Limits and gotchas
+
+- A container's content is its children; do not put bare text directly inside a container.
+- `Grid` attached properties only apply to direct children.
+- There is no pixel width or height: the widget size is decided by the dashboard grid cell. If you need internal scrolling, handle it in the outer widget.
+- Deep nesting and long lists slow down rendering; the per-widget element limit is 1000.

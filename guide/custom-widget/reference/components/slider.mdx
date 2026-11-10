@@ -1,0 +1,51 @@
+---
+title: "Slider"
+---
+
+## Slider
+
+滑块。当前值进入 `{Inputs.<Name>}`。
+
+## 签名
+
+```xml
+<Slider Name="Volume" Value="50" Min="0" Max="100" Step="1" OnChange="CallFunction" Function="ApplyVolume" />
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | 必填 | 输入键名 |
+| `Value` | number | `0` | 初始值 |
+| `Min` | number | `0` | 最小值 |
+| `Max` | number | `100` | 最大值 |
+| `Step` | number | `1` | 步长 |
+| `OnChange` | action | — | 拖动时触发 |
+
+## 内容语法
+
+```xml
+<Slider Name="Volume">50</Slider>
+```
+
+## 运行时行为
+
+- 渲染原生 `range` 输入，主题强调色。
+- 用户拖动时写入数字到 `{Inputs.Name}`。
+- `OnChange` 每次值变化触发；高频操作建议在函数内做节流。
+- `Min` 可以大于 `Max`，但会被浏览器按范围处理，建议保持 `Min < Max`。
+
+## 示例
+
+```xml
+<Column Gap="1">
+  <Text Value="音量 {Inputs.Volume}" Size="Sm" />
+  <Slider Name="Volume" Min="0" Max="100" Value="50" />
+</Column>
+```
+
+## 坑
+
+- 当前不能直接绑定到 `Media.Volume`（`Media.Volume` 是静态属性）。
+- 值是数字，绑定到文本时自动转字符串。

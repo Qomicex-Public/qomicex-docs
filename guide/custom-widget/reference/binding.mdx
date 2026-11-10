@@ -1,0 +1,95 @@
+---
+title: "数据绑定"
+---
+
+## 数据绑定
+
+QWidget 的字符串属性支持 `{路径}` 插值。绑定是只读的：值来自数据源、资源、控件输入、函数结果或嵌套组件。
+
+## 命名空间
+
+| 命名空间 | 写法 | 来源 |
+| :--- | :--- | :--- |
+| `Data` | `{Data.News.Title}` | `Data` 元素 |
+| `Resources` | `{Resources.AppName}` | `Resources` 元素 |
+| `Inputs` | `{Inputs.Keyword}` | 输入控件当前值 |
+| `Results` | `{Results.Search.Items}` | 函数 / 命令 / 插件 API |
+| `Children` | `{Children.Weather.Data.Temp}` | 嵌套组件只读状态 |
+| `State` | `{State.Loading}` / `{State.Error}` | 组件状态 |
+
+## 数据源
+
+```xml
+<Data Name="News" Type="Json" Url="https://api.example.com/news" />
+<Data Type="Json" Url="https://api.example.com/default" />
+```
+
+- 命名源：`{Data.News.Title}`，也可以直接用 `{News.Title}`。
+- 未命名源默认名 `Data`：字段合并到 `{Data.Title}`。
+- 同名冲突由 XML 校验拒绝。
+
+## 插值规则
+
+- `Value="Hello {Inputs.Name}"` → 字符串拼接。
+- `Value="{Inputs.Age}"` → 保留原始类型（数字/布尔/对象），适合 `Arguments`、`Select.Options` 等 JSON。
+- 找不到路径 → 空字符串。
+- 对象/数组插值到字符串 → JSON 文本。
+- 路径只允许对象属性与数组下标，不能访问原型链。
+
+## 列表作用域
+
+```xml
+<List Items="{Data.Items}" As="Item">
+  <ListItem>
+    <Text Value="{Item.Title}" />
+    <Text Value="{Index}" />
+  </ListItem>
+</List>
+```
+
+- `{Item.*}`：当前项；变量名由 `As` 决定。
+- `{Index}`：当前项下标，0 起。
+- 嵌套 List 时内层覆盖 `Item` / `Index`。
+
+## 类型参考
+
+| 值 | 绑定结果 |
+| :--- | :--- |
+| JSON 对象/数组 | 对象/数组；插值到字符串时 JSON.stringify |
+| Text | 字符串 |
+| Xml | `{ Root: { Name, Attributes, Text, Children } }` |
+| Binary | `{ Url, Base64, Mime, Size }` |
+| Resources String/Bool/Number | 对应基础类型 |
+| Resources Binary | `{ Url, Base64, Mime, Size }` |
+| Function 输出 | 按 `Function.Output` 类型 |
+| Command 结果 | `{ ExitCode, Stdout, Stderr }` |
+| PluginApi 结果 | `{ Value }` |
+
+## State
+
+```xml
+<Text Value="{State.Loading}" />
+<If Test="{State.Error}">
+  <Text Value="加载失败" Color="Destructive" />
+</If>
+```
+
+`State.Loading` / `State.Error` 是布尔值。
+
+## 在动作参数中使用
+
+```xml
+<Button Text="打开" OnClick="OpenUrl" Url="{Data.Link}" />
+<Button Text="提交" OnClick="CallFunction" Function="Save">
+  <Button.Arguments><![CDATA[{"name":"{Inputs.Name}","age":18}]]></Button.Arguments>
+</Button>
+```
+
+`Arguments` 先按 JSON 解析，再对字符串值做深度插值；整个字符串是一个绑定时保留原始类型。
+
+## 常见错误
+
+- 绑定路径大小写敏感：`{data.Title}` 与 `{Data.Title}` 不同。
+- 数据源未加载时绑定为空；用 `If Test="{State.Loading}"` 显示占位。
+- 静态 `Data.Url` / `Data.Path` 不支持运行时绑定；需要动态数据时用函数或插件 API。
+- `List.Items` 必须是数组；对象会显示空列表。

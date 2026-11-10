@@ -1,0 +1,68 @@
+---
+title: "Resources"
+---
+
+## Resources
+
+Named resource container. A resource can be a string, boolean, number, binary, or a generic `Resource`, accessed through `{Resources.Name}`.
+
+## Signature
+
+```xml
+<Resources>
+  <String Name="AppName">Qomicex</String>
+  <Bool Name="ShowTip" Text="True" />
+  <Number Name="PageSize">10</Number>
+  <Binary Name="Beep" Mime="audio/wav">BASE64...</Binary>
+  <Resource Name="Alias" Type="String">...</Resource>
+</Resources>
+```
+
+## Child elements
+
+| Element | Value | Attributes |
+| :--- | :--- | :--- |
+| `String` | String | `Name` `Text` |
+| `Bool` | Boolean | `Name` `Text` |
+| `Number` | Number | `Name` `Text` |
+| `Binary` | base64 → `{ Url, Base64, Mime, Size }` | `Name` `Mime` `Text` |
+| `Resource` | Parsed according to `Type` | `Name` `Type` `Mime` `Text` |
+
+The `Text` attribute is equivalent to the tag body:
+
+```xml
+<String Name="A">hello</String>
+<String Name="A" Text="hello" />
+```
+
+## Runtime behavior
+
+- `String` → string
+- `Bool` → true when `Text`/body is `True` / `true`
+- `Number` → Number
+- `Binary` → produces a blob URL that can be passed to `Image` / `Media` directly
+- `Resource Type="Json"` → JSON parse
+- Resource names are unique within a widget; duplicates fail to parse
+
+## Example
+
+```xml
+<Resources>
+  <String Name="Greeting" Text="你好，Qomicex" />
+  <Bool Name="ShowFooter" Text="True" />
+  <Number Name="MaxItems">5</Number>
+</Resources>
+
+<Column Gap="2">
+  <Text Value="{Resources.Greeting}" Size="Lg" Weight="Bold" />
+  <If Test="{Resources.ShowFooter}">
+    <Text Value="Powered by Qomicex" Size="Xs" Color="Muted" />
+  </If>
+</Column>
+```
+
+## Gotchas
+
+- Base64 in Binary inflates the XML size; use `Data Type="Binary"` for large files instead of resource literals.
+- Resources are static values and cannot be updated at runtime.
+- `Resource` `Type` supports `String` / `Bool` / `Number` / `Binary` / `Json`.

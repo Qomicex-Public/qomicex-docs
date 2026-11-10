@@ -1,0 +1,49 @@
+---
+title: "FilePicker"
+---
+
+## FilePicker
+
+Opens the system file dialog and writes the selected file path into `{Inputs.<Name>}`.
+
+## Signature
+
+```xml
+<FilePicker Name="MusicPath" Text="选择音乐" Filter="mp3,flac,wav" />
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | Required | Input key |
+| `Text` | string | `选择文件` | Button text |
+| `Filter` | string | — | Comma-separated extensions |
+| `Value` | string | — | Initial path |
+
+## Content syntax
+
+```xml
+<FilePicker Name="MusicPath">选择音乐</FilePicker>
+```
+
+## Runtime behavior
+
+- Calls the native file dialog (requires the Tauri desktop environment).
+- Writes the **path string** into Inputs after selection; file contents are not read.
+- In the browser debug environment there is no native path, so it may have no effect.
+- The path is shown under the button for confirmation.
+
+## Example
+
+```xml
+<Column Gap="1">
+  <FilePicker Name="LogPath" Text="选择日志文件" Filter="log,txt,gz" />
+  <Text Value="{Inputs.LogPath}" Size="Xs" Color="Muted" />
+</Column>
+```
+
+## Gotchas
+
+- The selection cannot be passed to `Data.Path` directly (runtime binding is not supported); to read the contents use the script/plugin API, or write the path into the component and reload.
+- `Filter` accepts extensions only; do not include dots or wildcards.

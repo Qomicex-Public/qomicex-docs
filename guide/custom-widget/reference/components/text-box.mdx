@@ -1,0 +1,59 @@
+---
+title: "TextBox"
+---
+
+## TextBox
+
+文本输入框。当前值进入 `{Inputs.<Name>}`，可被绑定和函数读取。
+
+## 签名
+
+```xml
+<TextBox Name="Keyword" Value="" Placeholder="输入关键词"
+         Multiline="False" Password="False" ReadOnly="False"
+         MaxLength="100" OnChange="CallFunction" Function="Search" />
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | 必填 | 输入键名 |
+| `Value` | string | — | 初始值，支持绑定 |
+| `Placeholder` | string | — | 占位文本 |
+| `Multiline` | `True` / `False` | `False` | 多行文本域 |
+| `Password` | `True` / `False` | `False` | 密码输入 |
+| `ReadOnly` | `True` / `False` | `False` | 只读 |
+| `MaxLength` | 0–10000 | — | 最大长度 |
+| `OnChange` | action | — | 每次输入触发 |
+
+## 内容语法
+
+```xml
+<TextBox Name="Keyword">初始值</TextBox>
+```
+
+等价于 `Value="初始值"`。
+
+## 运行时行为
+
+- 初始值取 `Value` 插值结果；之后由内部 `Inputs` 状态控制。
+- 用户输入立即写入 `{Inputs.Name}`。
+- `OnChange` 每次输入都触发；需要防抖时用函数内部处理。
+- `Password` 只影响显示，不加密存储。
+
+## 示例
+
+```xml
+<Column Gap="2">
+  <TextBox Name="City" Placeholder="城市" />
+  <Button Text="查询" OnClick="CallFunction" Function="GetWeather" />
+  <Text Value="{Results.GetWeather.City}" />
+</Column>
+```
+
+## 坑
+
+- `Value` 是初始值，不是双向绑定；外部数据变化不会覆盖用户输入。
+- `{Inputs.Name}` 大小写敏感。
+- 多行输入需要显式 `Multiline="True"`。
