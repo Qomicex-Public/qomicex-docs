@@ -154,6 +154,43 @@ When no row or column is given, children fill the grid in flow order.
 - `Divider`: a 1px separator line.
 - `Spacer`: fixed pixel spacing; it sets both width and height, so it works horizontally and vertically.
 
+## Adaptive sizing
+
+A custom widget renders inside a dashboard grid cell whose width and height change when the user resizes it:
+
+- Top-level `Container` / `Row` / `Column` / `Grid` / `Tabs` / `List` stretch to the cell height; `Text`, `Button`, and similar nodes keep their content height.
+- The widget scrolls when content exceeds the cell; a top-level `List` or `Tabs` content area scrolls internally first.
+- Wrap the whole card in one top-level `Container` or `Column` so its background/border fills the cell; multiple top-level nodes follow content height and may leave empty space below.
+- `Justify="Between"` separates top and bottom content; `Row Wrap="True"` reflows when the cell gets narrower.
+- `Grid` columns are fixed and do not change with width; use fewer `Columns` or `Row Wrap` for narrow cards.
+
+### Declarative breakpoints
+
+```xml
+<Text When="Size.Width &lt;= 1" Value="Narrow" />
+<Grid When="Size.Width &gt;= 2" Columns="2">...</Grid>
+```
+
+`When` supports `Size.Width` / `Size.Height` / `Size.PixelWidth` / `Size.PixelHeight` with `<`, `<=`, `>`, `>=`, `==`, `!=`, joined by `and` / `or`. In XML attributes, write `<` as `&lt;`.
+
+### Script breakpoints
+
+```xml
+<Triggers>
+  <Trigger Event="Resize" Function="OnResize" />
+</Triggers>
+
+<Function Name="OnResize">
+  <Function.Script><![CDATA[
+    await Host.SetProperty("Title", "Visible", Size.Width > 1);
+    await Host.SetProperty("InfoGrid", "Columns", Size.Width >= 3 ? 3 : 2);
+    return {};
+  ]]></Function.Script>
+</Function>
+```
+
+`Resize` fires after a debounce when size changes; use a `Loaded` function to read the initial `Size`.
+
 ## Common layouts
 
 **Two-column split**

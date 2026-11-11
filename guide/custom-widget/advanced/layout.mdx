@@ -154,6 +154,43 @@ QWidget 的布局全部由元素嵌套完成，没有 `Width` / `Height` / `Marg
 - `Divider`：1px 分隔线。
 - `Spacer`：固定像素间距；内部实现同时设置宽高，横向/纵向都可使用。
 
+## 自适应尺寸
+
+自定义组件渲染在主页网格单元内，宽度和高度随用户拖动改变：
+
+- 顶层 `Container` / `Row` / `Column` / `Grid` / `Tabs` / `List` 会拉伸到网格单元高度；`Text`、`Button` 等普通节点保持内容高度。
+- 整个组件在内容超出网格单元时滚动；顶层 `List` 和 `Tabs` 的内容区会优先自己滚动。
+- 用单个顶层 `Container` 或 `Column` 包住整张卡片，背景/边框才能铺满；多个顶层节点会按内容高度排列，底部可能留空。
+- `Justify="Between"` 可把顶部和底部内容分开；`Row Wrap="True"` 适合宽度变窄时换行。
+- `Grid` 的列数固定，不会随宽度自动改变；窄卡片请减少 `Columns` 或改用 `Row Wrap`。
+
+### 声明式断点
+
+```xml
+<Text When="Size.Width &lt;= 1" Value="窄" />
+<Grid When="Size.Width &gt;= 2" Columns="2">...</Grid>
+```
+
+`When` 支持 `Size.Width` / `Size.Height` / `Size.PixelWidth` / `Size.PixelHeight`，运算符 `<`、`<=`、`>`、`>=`、`==`、`!=`，可用 `and` / `or` 连接。XML 属性里的 `<` 写成 `&lt;`。
+
+### 脚本式断点
+
+```xml
+<Triggers>
+  <Trigger Event="Resize" Function="OnResize" />
+</Triggers>
+
+<Function Name="OnResize">
+  <Function.Script><![CDATA[
+    await Host.SetProperty("Title", "Visible", Size.Width > 1);
+    await Host.SetProperty("InfoGrid", "Columns", Size.Width >= 3 ? 3 : 2);
+    return {};
+  ]]></Function.Script>
+</Function>
+```
+
+`Resize` 在尺寸变化后防抖触发；首次布局可在 `Loaded` 函数里读取 `Size`。
+
 ## 常见布局
 
 **左右分栏**

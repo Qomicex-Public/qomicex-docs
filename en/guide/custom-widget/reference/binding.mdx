@@ -15,6 +15,7 @@ String attributes of a QWidget support `{path}` interpolation. Binding is read-o
 | `Inputs` | `{Inputs.Keyword}` | Current value of input controls |
 | `Results` | `{Results.Search.Items}` | Functions / commands / plugin API |
 | `Children` | `{Children.Weather.Data.Temp}` | Read-only nested widget state |
+| `Size` | `{Size.Width}` / `{Size.PixelWidth}` | Current widget size: grid columns/rows and pixels |
 | `State` | `{State.Loading}` / `{State.Error}` | Widget state |
 
 ## Data sources
@@ -76,6 +77,20 @@ String attributes of a QWidget support `{path}` interpolation. Binding is read-o
 
 `State.Loading` / `State.Error` are booleans.
 
+## Size
+
+```xml
+<Text Value="{Size.Width} × {Size.Height}" />
+<Text Value="{Size.PixelWidth}px" />
+```
+
+| Field | Meaning |
+| :--- | :--- |
+| `Size.Width` / `Size.Height` | Grid columns/rows; nested widgets inherit the parent grid size |
+| `Size.PixelWidth` / `Size.PixelHeight` | Actual rendered pixel size |
+
+`Size` works in normal bindings, declarative `When` conditions, and `Resize` trigger functions.
+
 ## Using bindings in action parameters
 
 ```xml
@@ -91,5 +106,5 @@ String attributes of a QWidget support `{path}` interpolation. Binding is read-o
 
 - Binding paths are case-sensitive: `{data.Title}` differs from `{Data.Title}`.
 - Bindings are empty while a data source is still loading; use `If Test="{State.Loading}"` to show a placeholder.
-- Static `Data.Url` / `Data.Path` do not support runtime binding; for dynamic data use a function or the plugin API.
+- Static `Data.Url` / `Data.Path` do not support runtime binding; use `{Inputs.*}` for dynamic data sources.
 - `List.Items` must be an array; an object renders an empty list.

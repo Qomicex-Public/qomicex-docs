@@ -107,7 +107,8 @@ Scripts must return JSON-serializable values; `Date` is serialized as an ISO str
 | `Resources` | Named resources; Binary resources expose `Base64` / `Url` / `Mime` / `Size` |
 | `Data` | All data sources; unnamed fields are merged into `Data` |
 | `Results` | Previous function/command/plugin results |
-| `Host` | Low-risk host APIs |
+| `Size` | `Width` / `Height` (grid) and `PixelWidth` / `PixelHeight` |
+| `Host` | Host APIs |
 
 ## Host
 
@@ -119,6 +120,7 @@ All `Host` methods are asynchronous and return a `Promise`; you may `await` them
 | `Host.OpenUrl(url)` | Open an https URL in the system browser |
 | `Host.Navigate(path)` | Navigate inside the launcher |
 | `Host.Log(message)` | Write to developer logs |
+| `Host.GetSize()` | Read `{ Width, Height, PixelWidth, PixelHeight }` |
 | `Host.SetProperty(Target, Property, Value)` | Write a visual property and return the stored value |
 | `Host.GetProperty(Target, Property)` | Read the current visual property |
 | `Host.Invoke(Target, Method, Args?)` | Invoke a component method; `Args` may be an array or a single value |
@@ -186,6 +188,7 @@ Scripts still cannot execute commands or call plugin APIs directly; those remain
   <Trigger Event="DataChanged" Data="News" Function="RenderNews" />
   <Trigger Event="Click" Control="SearchButton" Function="Search" />
   <Trigger Event="Timer" Interval="60000" Function="Tick" Once="False" />
+  <Trigger Event="Resize" Function="OnResize" />
 </Triggers>
 ```
 
@@ -193,6 +196,7 @@ Scripts still cannot execute commands or call plugin APIs directly; those remain
 - `DataChanged`: after the named data source loads.
 - `Click`: when a control with the matching `Name` is clicked.
 - `Timer`: every `Interval` ms, minimum 1000.
+- `Resize`: 150ms after the grid or pixel size changes; use `Loaded` for the initial layout.
 - Rate limit: 20 executions per second.
 
 ## Run in the editor

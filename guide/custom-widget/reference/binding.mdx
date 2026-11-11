@@ -15,6 +15,7 @@ QWidget 的字符串属性支持 `{路径}` 插值。绑定是只读的：值来
 | `Inputs` | `{Inputs.Keyword}` | 输入控件当前值 |
 | `Results` | `{Results.Search.Items}` | 函数 / 命令 / 插件 API |
 | `Children` | `{Children.Weather.Data.Temp}` | 嵌套组件只读状态 |
+| `Size` | `{Size.Width}` / `{Size.PixelWidth}` | 当前组件尺寸：网格列/行与实际像素 |
 | `State` | `{State.Loading}` / `{State.Error}` | 组件状态 |
 
 ## 数据源
@@ -76,6 +77,20 @@ QWidget 的字符串属性支持 `{路径}` 插值。绑定是只读的：值来
 
 `State.Loading` / `State.Error` 是布尔值。
 
+## Size
+
+```xml
+<Text Value="{Size.Width} × {Size.Height}" />
+<Text Value="{Size.PixelWidth}px" />
+```
+
+| 字段 | 含义 |
+| :--- | :--- |
+| `Size.Width` / `Size.Height` | 网格列数/行数；嵌套组件沿用父级网格尺寸 |
+| `Size.PixelWidth` / `Size.PixelHeight` | 组件实际渲染像素尺寸 |
+
+`Size` 可用于普通绑定，也可用 `When` 做声明式断点，或在 `Resize` 触发器函数里读取。
+
 ## 在动作参数中使用
 
 ```xml
@@ -91,5 +106,5 @@ QWidget 的字符串属性支持 `{路径}` 插值。绑定是只读的：值来
 
 - 绑定路径大小写敏感：`{data.Title}` 与 `{Data.Title}` 不同。
 - 数据源未加载时绑定为空；用 `If Test="{State.Loading}"` 显示占位。
-- 静态 `Data.Url` / `Data.Path` 不支持运行时绑定；需要动态数据时用函数或插件 API。
+- 静态 `Data.Url` / `Data.Path` 不支持运行时绑定；动态数据源用 `{Inputs.*}`。
 - `List.Items` 必须是数组；对象会显示空列表。

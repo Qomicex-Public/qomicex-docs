@@ -113,7 +113,8 @@ TypeScript 代码，建议用 CDATA：
 | `Resources` | `Resources` 中定义的命名资源；Binary 资源包含 `Base64` / `Url` / `Mime` / `Size` |
 | `Data` | 所有数据源；未命名源字段直接合并到 `Data` |
 | `Results` | 之前的函数/命令/插件 API 结果 |
-| `Host` | 低风险宿主 API，见下 |
+| `Size` | 当前组件尺寸：`Width` / `Height`（网格）、`PixelWidth` / `PixelHeight`（像素） |
+| `Host` | 宿主 API，见下 |
 
 ## Host
 
@@ -125,6 +126,7 @@ TypeScript 代码，建议用 CDATA：
 | `Host.OpenUrl(url)` | 用系统浏览器打开 https 链接 |
 | `Host.Navigate(path)` | 站内跳转，如 `/instances` |
 | `Host.Log(message)` | 写入开发者日志 |
+| `Host.GetSize()` | 读取当前尺寸 `{ Width, Height, PixelWidth, PixelHeight }` |
 | `Host.SetProperty(Target, Property, Value)` | 修改组件的可视属性，返回写入后的值 |
 | `Host.GetProperty(Target, Property)` | 读取组件的当前可视属性 |
 | `Host.Invoke(Target, Method, Args?)` | 调用组件方法；`Args` 可传数组或单值 |
@@ -192,6 +194,7 @@ TypeScript 代码，建议用 CDATA：
   <Trigger Event="DataChanged" Data="News" Function="RenderNews" />
   <Trigger Event="Click" Control="SearchButton" Function="Search" />
   <Trigger Event="Timer" Interval="60000" Function="Tick" Once="False" />
+  <Trigger Event="Resize" Function="OnResize" />
 </Triggers>
 ```
 
@@ -199,6 +202,7 @@ TypeScript 代码，建议用 CDATA：
 - `DataChanged`：指定数据源完成拉取后执行。
 - `Click`：点击指定 `Name` 的按钮/链接时执行。
 - `Timer`：按 `Interval` 毫秒执行，最小 1000。
+- `Resize`：网格或像素尺寸变化后防抖 150ms 执行；首次尺寸请用 `Loaded`。
 - 触发频率上限 20 次/秒。
 
 ## 编辑器中的试运行

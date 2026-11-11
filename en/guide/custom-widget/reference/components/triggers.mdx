@@ -21,7 +21,7 @@ Event trigger container. Its direct children are `Trigger` elements.
 
 | Attribute | Type | Description |
 | :--- | :--- | :--- |
-| `Event` | `Loaded` / `DataChanged` / `Click` / `Timer` | Required |
+| `Event` | `Loaded` / `DataChanged` / `Click` / `Timer` / `Resize` | Required |
 | `Function` | string | Shorthand for calling a function |
 | `Action` | action | Calls an action (either this or `Function`) |
 | `Control` | identifier | `Name` of the target control for Click events |
@@ -39,6 +39,7 @@ With `Action` you may add action parameters such as `To`, `Url`, `Folder`, `Inst
 | `DataChanged` | The given data source finishes fetching |
 | `Click` | The button/link with the given `Name` is clicked |
 | `Timer` | At each interval |
+| `Resize` | 150ms after grid or pixel size changes |
 
 The maximum rate is 20 times per second.
 
@@ -49,6 +50,7 @@ The maximum rate is 20 times per second.
   <Trigger Event="Loaded" Function="Init" />
   <Trigger Event="Click" Control="RefreshButton" Action="Refresh" />
   <Trigger Event="Timer" Interval="300000" Function="RefreshStatus" />
+  <Trigger Event="Resize" Function="OnResize" />
 </Triggers>
 
 <Button Name="RefreshButton" Text="刷新" />

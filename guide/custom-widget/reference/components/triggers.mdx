@@ -21,7 +21,7 @@ title: "Triggers"
 
 | 属性 | 类型 | 说明 |
 | :--- | :--- | :--- |
-| `Event` | `Loaded` / `DataChanged` / `Click` / `Timer` | 必填 |
+| `Event` | `Loaded` / `DataChanged` / `Click` / `Timer` / `Resize` | 必填 |
 | `Function` | string | 调用函数简写 |
 | `Action` | action | 调用动作（与 Function 二选一） |
 | `Control` | identifier | Click 事件目标控件的 `Name` |
@@ -39,6 +39,7 @@ title: "Triggers"
 | `DataChanged` | 指定数据源完成拉取 |
 | `Click` | 点击指定 `Name` 的按钮/链接 |
 | `Timer` | 按间隔触发 |
+| `Resize` | 组件网格或像素尺寸变化后，防抖 150ms 触发 |
 
 频率上限 20 次/秒。
 
@@ -49,6 +50,7 @@ title: "Triggers"
   <Trigger Event="Loaded" Function="Init" />
   <Trigger Event="Click" Control="RefreshButton" Action="Refresh" />
   <Trigger Event="Timer" Interval="300000" Function="RefreshStatus" />
+  <Trigger Event="Resize" Function="OnResize" />
 </Triggers>
 
 <Button Name="RefreshButton" Text="刷新" />

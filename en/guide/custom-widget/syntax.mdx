@@ -42,13 +42,17 @@ Except for the `Widget` root and non-visual elements such as `Data`, `Resources`
 | :--- | :--- | :--- |
 | `Target` | No | Script target key, unique within the widget; used by `Host.SetProperty` / `Host.GetProperty` / `Host.Invoke` |
 | `Visible` | No | Default `True`; when `False` the node is not rendered and scripts can toggle it |
+| `When` | No | Size condition such as `Size.Width &lt;= 1`; the node is not rendered when false |
 
 `Target` and an input control's `Name` are separate namespaces: `Name` still drives `{Inputs.Name}` and `Trigger Control="Name"`, while `Target` only addresses the UI from scripts.
 
 ```xml
 <Text Target="Status" Value="Idle" />
 <Button Target="Refresh" Text="Refresh" OnClick="CallFunction" Function="Refresh" />
+<Text When="Size.Width &lt;= 1" Value="Narrow" />
 ```
+
+`When` supports `Size.Width` / `Size.Height` / `Size.PixelWidth` / `Size.PixelHeight`, operators `<`, `<=`, `>`, `>=`, `==`, `!=`, joined by `and` / `or`; write `<` as `&lt;` in XML attributes.
 
 See [Functions and TypeScript](/en/guide/custom-widget/advanced/functions#host) for script examples.
 
