@@ -207,7 +207,8 @@ TypeScript 代码，建议用 CDATA：
 
 - 使用当前 `Inputs` 和示例数据执行；
 - 返回 JSON 直接显示在编辑器下方；
-- 语法错误由 sucrase 转译结果标记在编辑器里。
+- 语法错误由 sucrase 转译结果标记在编辑器里；
+- 试运行只验证输入/输出；`Host.SetProperty` / `Host.Invoke` 对 UI 的修改在主页实际运行时生效，不会改动编辑器预览。
 
 ## 沙箱与安全
 
