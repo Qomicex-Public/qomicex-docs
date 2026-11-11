@@ -43,11 +43,13 @@ title: "Widget.Using"
 <!-- WeatherData.qwidget：纯数据源，没有可视节点 -->
 <Widget Name="天气数据" Version="1.0.0">
   <Data Name="Weather" Type="Json"
-        Url="https://api.example.com/weather?city={Inputs.City}" />
+        Url="https://api.example.com/weather" />
   <Function Name="Summary">
     <Function.Output Type="String">Text</Function.Output>
     <Function.Script><![CDATA[
-      return { Text: Data.Weather.temperature + "°C" };
+      const city = Inputs.City || "Shanghai";
+      const item = Data.Weather && Data.Weather[city];
+      return { Text: item ? item.temperature + "°C" : "--" };
     ]]></Function.Script>
   </Function>
   <Triggers>
@@ -59,7 +61,7 @@ title: "Widget.Using"
 <Widget.Using Name="天气数据" As="Weather">
   <Widget.Using.Arguments><![CDATA[{"City":"Shanghai"}]]></Widget.Using.Arguments>
 </Widget.Using>
-<Text Value="{Children.Weather.Data.Weather.temperature}" />
+<Text Value="{Children.Weather.Data.Weather.Shanghai.temperature}" />
 <Text Value="{Children.Weather.Results.Summary.Text}" />
 ```
 
@@ -68,6 +70,7 @@ title: "Widget.Using"
 - 子组件里 `Data Name="Weather"` 的数据在父组件中是 `Children.<As>.Data.Weather.*`；未命名数据源才直接合并到 `Children.<As>.Data.*`。
 - `Function` 结果在 `Children.<As>.Results.<Function>.*`。
 - 纯数据源也受嵌套深度、实例数和数据源数量限制。
+- **当前 `Data.Url` / `Data.Path` 是静态字符串，不支持 `{Inputs.*}` 插值。** `Widget.Using.Arguments` 只能初始化子组件 `Inputs`，供 `Function`、`If` 和绑定使用，不能直接改变请求 URL；需要按输入取数时，让接口返回多组数据后由 `Function` 选择，或等待 URL 参数化能力。
 
 ## 作用域
 

@@ -43,11 +43,13 @@ A widget can have no layout or visual nodes at all and contain only `Data`, `Res
 <!-- WeatherData.qwidget: a pure data-source widget with no visual nodes -->
 <Widget Name="Weather data" Version="1.0.0">
   <Data Name="Weather" Type="Json"
-        Url="https://api.example.com/weather?city={Inputs.City}" />
+        Url="https://api.example.com/weather" />
   <Function Name="Summary">
     <Function.Output Type="String">Text</Function.Output>
     <Function.Script><![CDATA[
-      return { Text: Data.Weather.temperature + "°C" };
+      const city = Inputs.City || "Shanghai";
+      const item = Data.Weather && Data.Weather[city];
+      return { Text: item ? item.temperature + "°C" : "--" };
     ]]></Function.Script>
   </Function>
   <Triggers>
@@ -59,7 +61,7 @@ A widget can have no layout or visual nodes at all and contain only `Data`, `Res
 <Widget.Using Name="Weather data" As="Weather">
   <Widget.Using.Arguments><![CDATA[{"City":"Shanghai"}]]></Widget.Using.Arguments>
 </Widget.Using>
-<Text Value="{Children.Weather.Data.Weather.temperature}" />
+<Text Value="{Children.Weather.Data.Weather.Shanghai.temperature}" />
 <Text Value="{Children.Weather.Results.Summary.Text}" />
 ```
 
@@ -68,6 +70,7 @@ Naming rules:
 - A named child source such as `Data Name="Weather"` is exposed as `Children.<As>.Data.Weather.*`; only unnamed sources merge directly into `Children.<As>.Data.*`.
 - Function results are exposed as `Children.<As>.Results.<Function>.*`.
 - Pure data sources still count toward nesting depth, instance count, and data-source limits.
+- **`Data.Url` / `Data.Path` are currently static strings; `{Inputs.*}` interpolation is not supported.** `Widget.Using.Arguments` initializes the child `Inputs` for `Function`, `If`, and bindings, but cannot change the request URL directly. To fetch by input, return multiple groups from the endpoint and select in a `Function`, or wait for URL parameterization support.
 
 ## Scope
 
