@@ -102,6 +102,20 @@ String attributes of a QWidget support `{path}` interpolation. Binding is read-o
 
 `Arguments` is parsed as JSON first, then string values are interpolated deeply; when a whole string is a single binding the original type is preserved.
 
+## WPF-style Binding
+
+```xml
+<Text Value="{Binding Data.News.Title, Converter=Upper}" />
+<TextBox Value="{Binding Inputs.Price, Converter=Money, Mode=TwoWay}" />
+<Text Value="{MultiBinding Paths='Inputs.First|Inputs.Last', Converter=Join, ConverterParameter=' '}" />
+```
+
+- `{Binding Path, Converter=Name, ConverterParameter='...', Mode=...}`
+- `{MultiBinding Paths='a|b', Converter=Name, ...}` with paths separated by `|`
+- Existing `{Data.foo}` shorthand remains valid
+- `Mode`: `OneWay` (default) / `TwoWay` / `OneWayToSource`
+- See [Converters](/en/guide/custom-widget/advanced/converters) for definitions and built-in types
+
 ## Common mistakes
 
 - Binding paths are case-sensitive: `{data.Title}` differs from `{Data.Title}`.

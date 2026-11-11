@@ -159,6 +159,37 @@ XML 属性中的 `<` 必须写成 `&lt;`，`<=` 写成 `&lt;=`。没有空格时
 
 `Resize` 在网格或像素尺寸变化后防抖 150ms 触发；首次尺寸布局请使用 `Loaded`。
 
+## Converter
+
+| 属性 | 可选值 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | 必填 | 绑定里通过 `Converter=Name` 引用 |
+| `Type` | `String` / `Number` / `Bool` / `DateTime` / `Json` / `Format` / `Map` / `BoolToVisibility` / `Upper` / `Lower` / `Join` / `Script` | `String` | 转换类型 |
+| `Format` | 字符串 | — | `Format` / `DateTime` 的默认格式 |
+| `MapEntry.From` | 字符串 | 必填 | Map 源值 |
+| `MapEntry.To` | 字符串 | 必填 | Map 目标值 |
+
+绑定语法：
+
+```xml
+<Text Value="{Binding Data.News.Title, Converter=Upper}" />
+<TextBox Value="{Binding Inputs.Price, Converter=Money, Mode=TwoWay}" />
+<Text Value="{MultiBinding Paths='Inputs.First|Inputs.Last', Converter=Join, ConverterParameter=' '}" />
+```
+
+## Animation
+
+| 元素 | 主要属性 | 说明 |
+| :--- | :--- | :--- |
+| `FadeIn` | `From` / `To` | 透明度进入 |
+| `SlideIn` | `Direction` / `Distance` | 从方向滑入 |
+| `ScaleTo` | `From` / `To` | 缩放到目标值 |
+| `RotateTo` | `From` / `To` | 旋转到目标角度 |
+| `Pulse` | — | 循环缩放 |
+| `Spin` | — | 循环旋转 |
+
+所有动画共用：`Duration`（毫秒，默认 300）、`Delay`（默认 0）、`Easing`（默认 `Ease`）、`Repeat`（数字或 `Infinite`，默认 1）、`Trigger`（`Loaded` / `Hover` / `Click`，默认 `Loaded`）。
+
 ## 属性写法
 
 - 枚举值大小写敏感，必须使用本文的大驼峰写法。

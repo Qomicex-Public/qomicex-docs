@@ -1,0 +1,93 @@
+---
+title: "Converter 值转换"
+---
+
+## Converter 值转换
+
+Converter 位于绑定源和目标值之间，用于格式化、类型转换和双向回写。
+
+## 定义 Converter
+
+```xml
+<Widget.Converters>
+  <Converter Name="Upper" Type="Upper" />
+  <Converter Name="Money" Type="Format" Format="N2" />
+  <Converter Name="Visible" Type="BoolToVisibility" />
+  <Converter Name="Label" Type="Map">
+    <MapEntry From="True" To="开" />
+    <MapEntry From="False" To="关" />
+  </Converter>
+  <Converter Name="Double" Type="Script">
+    <Converter.Convert>return Number(value) * 2</Converter.Convert>
+    <Converter.ConvertBack>return Number(value) / 2</Converter.ConvertBack>
+  </Converter>
+</Widget.Converters>
+```
+
+## 在绑定中使用
+
+```xml
+<Text Value="{Binding Data.news.title, Converter=Upper}" />
+<TextBox Value="{Binding Inputs.price, Converter=Money, ConverterParameter='N2', Mode=TwoWay}" />
+```
+
+- `Converter` 使用当前 XML 中的 `Converter.Name`
+- `ConverterParameter` 可选，优先级高于 Converter 的 `Format`
+- `Mode`：`OneWay`（默认）/ `TwoWay` / `OneWayToSource`
+- 旧的 `{Data.foo}`、`{Inputs.foo}` 写法继续有效
+
+## MultiBinding
+
+```xml
+<Text Value="{MultiBinding Paths='Inputs.first|Inputs.last', Converter=Join, ConverterParameter=' '}" />
+```
+
+`Paths` 用 `|` 分隔。多值 Converter 的脚本会收到 `values` 数组；非脚本内置转换器只取第一个值，`Join` 会连接全部值。
+
+## 内置类型
+
+| Type | 说明 |
+| :--- | :--- |
+| `String` | 转为字符串 |
+| `Number` | 转为数字，失败返回空 |
+| `Bool` | 转为布尔值 |
+| `DateTime` | 按 `Format` 或参数格式化日期 |
+| `Json` | 序列化为 JSON 字符串 |
+| `Format` | 数字格式化，如 `N2` |
+| `Map` | 按 `MapEntry` 精确匹配 |
+| `BoolToVisibility` | `true` → `Visible`，`false` → `Collapsed` |
+| `Upper` / `Lower` | 大小写转换 |
+| `Join` | 多值连接 |
+| `Script` | 用户脚本转换 |
+
+## Script Converter
+
+```xml
+<Converter Name="Double" Type="Script">
+  <Converter.Convert>return Number(value) * 2</Converter.Convert>
+  <Converter.ConvertBack>return Number(value) / 2</Converter.ConvertBack>
+</Converter>
+```
+
+脚本参数：
+
+- `value`：单值输入
+- `values`：多值输入数组
+- `parameter`：`ConverterParameter`
+- `targetType`：目标类型字符串
+- `culture`：当前语言
+- `scope`：当前绑定作用域
+
+`Convert` 必填，`ConvertBack` 可选。脚本异常会返回空值，不会中断组件渲染。
+
+远程组件中的脚本 Converter 属于可执行内容，会进入远程更新确认；不要在 Converter 中做网络请求或重计算。
+
+## ConvertBack
+
+双向输入控件（当前支持 `TextBox`、`CheckBox`）在修改时会调用 `ConvertBack`。如果转换器没有 `ConvertBack` 或返回 `undefined`，本次回写会被忽略。
+
+## 限制
+
+- Converter 同步执行；不要在 `Convert` 中做 I/O 或网络操作
+- `Format` 只处理数字；日期请用 `DateTime`
+- `BoolToVisibility` 返回字符串，用于文本或需要 `Visible`/`Collapsed` 的目标值

@@ -165,3 +165,34 @@ Every visual node supports `<Node.Effects>`; `<Trigger.Effects>` uses `Target` t
 - Use `True` / `False`, not `true` / `false`.
 - Bind with `{path}`; write JSON arguments in `Arguments` or `Options`.
 - XML attributes cannot contain raw `<`; write conditions with `&lt;`.
+
+## Converter
+
+| Attribute | Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | Required | Referenced as `Converter=Name` |
+| `Type` | `String` / `Number` / `Bool` / `DateTime` / `Json` / `Format` / `Map` / `BoolToVisibility` / `Upper` / `Lower` / `Join` / `Script` | `String` | Conversion type |
+| `Format` | string | — | Default format for `Format` / `DateTime` |
+| `MapEntry.From` | string | Required | Map source value |
+| `MapEntry.To` | string | Required | Map target value |
+
+Binding syntax:
+
+```xml
+<Text Value="{Binding Data.News.Title, Converter=Upper}" />
+<TextBox Value="{Binding Inputs.Price, Converter=Money, Mode=TwoWay}" />
+<Text Value="{MultiBinding Paths='Inputs.First|Inputs.Last', Converter=Join, ConverterParameter=' '}" />
+```
+
+## Animation
+
+| Element | Main attributes | Description |
+| :--- | :--- | :--- |
+| `FadeIn` | `From` / `To` | Fade in |
+| `SlideIn` | `Direction` / `Distance` | Slide in from a direction |
+| `ScaleTo` | `From` / `To` | Scale to a target |
+| `RotateTo` | `From` / `To` | Rotate to a target angle |
+| `Pulse` | — | Pulsing scale |
+| `Spin` | — | Continuous rotation |
+
+All animations share `Duration` (ms, default 300), `Delay` (default 0), `Easing` (default `Ease`), `Repeat` (number or `Infinite`, default 1), and `Trigger` (`Loaded` / `Hover` / `Click`, default `Loaded`).

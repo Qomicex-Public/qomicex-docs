@@ -1,0 +1,67 @@
+---
+title: "Animation 动画"
+---
+
+## Animation 动画
+
+像 `Effects` 一样，动画也是可视节点的属性元素，只作用于当前节点。
+
+```xml
+<Button.Animations>
+  <FadeIn Duration="180" Delay="0" Easing="EaseOut" Trigger="Loaded" />
+  <ScaleTo Duration="120" From="0.96" To="1" Trigger="Hover" />
+  <Pulse Duration="600" Repeat="Infinite" Trigger="Click" />
+</Button.Animations>
+```
+
+## 动画类型
+
+| 元素 | 主要属性 | 说明 |
+| :--- | :--- | :--- |
+| `FadeIn` | `From` / `To` | 透明度进入 |
+| `SlideIn` | `Direction` / `Distance` | 从方向滑入 |
+| `ScaleTo` | `From` / `To` | 缩放到目标值 |
+| `RotateTo` | `From` / `To` | 旋转到目标角度 |
+| `Pulse` | — | 循环缩放脉冲 |
+| `Spin` | — | 循环旋转 |
+
+## 通用属性
+
+- `Duration`：毫秒，默认 `300`
+- `Delay`：毫秒，默认 `0`
+- `Easing`：`Linear` / `Ease` / `EaseIn` / `EaseOut` / `EaseInOut`
+- `Repeat`：数字或 `Infinite`
+- `Trigger`：`Loaded` / `Hover` / `Click`
+
+`SlideIn` 的 `Direction` 为 `Left` / `Right` / `Top` / `Bottom`，`Distance` 默认 `8`。
+
+## 默认动画接管规则
+
+- 声明 `Animations` 只接管该节点的默认 transition；没有声明动画的节点继续使用启动器默认动画
+- 声明 `Effects` 只接管 Effect，不影响默认动画
+- 两者可以同时声明，互不覆盖
+
+```xml
+<Button Text="强调">
+  <Button.Effects>
+    <ShadowEffect Radius="8" Color="Black" />
+  </Button.Effects>
+  <Button.Animations>
+    <FadeIn Duration="180" Trigger="Loaded" />
+  </Button.Animations>
+</Button>
+```
+
+## 触发方式
+
+- `Loaded`：挂载后播放
+- `Hover`：鼠标移入时播放
+- `Click`：按下时播放（CSS `:active`）
+
+动画只做视觉呈现，不改变布局尺寸。需要布局变化时使用 `Size`、`When` 或重新渲染。
+
+## 限制
+
+- 动画不会触发数据加载或动作；事件逻辑仍使用 `Trigger`
+- `Click` 当前是按下态播放，不是完整的单击状态机
+- 动画与 Effect 同时使用时，`transform` 可能互相覆盖；建议同一节点只使用一种 transform 类效果

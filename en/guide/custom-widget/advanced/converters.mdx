@@ -1,0 +1,93 @@
+---
+title: "Converters"
+---
+
+## Converters
+
+A converter sits between a binding source and target to format, coerce, or write back values.
+
+## Define converters
+
+```xml
+<Widget.Converters>
+  <Converter Name="Upper" Type="Upper" />
+  <Converter Name="Money" Type="Format" Format="N2" />
+  <Converter Name="Visible" Type="BoolToVisibility" />
+  <Converter Name="Label" Type="Map">
+    <MapEntry From="True" To="On" />
+    <MapEntry From="False" To="Off" />
+  </Converter>
+  <Converter Name="Double" Type="Script">
+    <Converter.Convert>return Number(value) * 2</Converter.Convert>
+    <Converter.ConvertBack>return Number(value) / 2</Converter.ConvertBack>
+  </Converter>
+</Widget.Converters>
+```
+
+## Use in bindings
+
+```xml
+<Text Value="{Binding Data.news.title, Converter=Upper}" />
+<TextBox Value="{Binding Inputs.price, Converter=Money, ConverterParameter='N2', Mode=TwoWay}" />
+```
+
+- `Converter` references a `Converter.Name` in the current XML
+- `ConverterParameter` is optional and overrides the converter's `Format`
+- `Mode`: `OneWay` (default) / `TwoWay` / `OneWayToSource`
+- Existing `{Data.foo}` and `{Inputs.foo}` shorthand remains valid
+
+## MultiBinding
+
+```xml
+<Text Value="{MultiBinding Paths='Inputs.first|Inputs.last', Converter=Join, ConverterParameter=' '}" />
+```
+
+`Paths` is separated by `|`. Script converters receive a `values` array. Built-in converters use the first value, except `Join` which joins all values.
+
+## Built-in types
+
+| Type | Description |
+| :--- | :--- |
+| `String` | Convert to string |
+| `Number` | Convert to number; empty on failure |
+| `Bool` | Convert to boolean |
+| `DateTime` | Format a date with `Format` or parameter |
+| `Json` | Serialize to JSON string |
+| `Format` | Number formatting, such as `N2` |
+| `Map` | Exact match through `MapEntry` |
+| `BoolToVisibility` | `true` → `Visible`, `false` → `Collapsed` |
+| `Upper` / `Lower` | Case conversion |
+| `Join` | Join multiple values |
+| `Script` | User script converter |
+
+## Script converters
+
+```xml
+<Converter Name="Double" Type="Script">
+  <Converter.Convert>return Number(value) * 2</Converter.Convert>
+  <Converter.ConvertBack>return Number(value) / 2</Converter.ConvertBack>
+</Converter>
+```
+
+Script arguments:
+
+- `value`: single input
+- `values`: array of inputs
+- `parameter`: `ConverterParameter`
+- `targetType`: target type string
+- `culture`: current locale
+- `scope`: current binding scope
+
+`Convert` is required; `ConvertBack` is optional. A script error returns an empty value and does not break rendering.
+
+Script converters in remote widgets are executable content and participate in remote-update confirmation. Do not perform network I/O or heavy work in a converter.
+
+## ConvertBack
+
+Two-way input controls (currently `TextBox` and `CheckBox`) call `ConvertBack` on change. If the converter has no `ConvertBack` or returns `undefined`, the write-back is ignored.
+
+## Limits
+
+- Converters run synchronously; do not perform I/O or network work in `Convert`
+- `Format` handles numbers; use `DateTime` for dates
+- `BoolToVisibility` returns the strings `Visible` / `Collapsed`
