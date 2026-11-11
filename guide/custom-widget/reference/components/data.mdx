@@ -28,6 +28,7 @@ title: "Data"
 | `Path` | path | Source=File | — | 本地路径，支持 `{Inputs.*}` |
 | `Mime` | string | 否 | — | 二进制 MIME |
 | `Refresh` | 0–86400 | 否 | `3600` | 缓存秒数 |
+| `Async` | `True` / `False` | 否 | `True` | 后台加载，不阻塞组件渲染 |
 
 ## 数据形状
 
@@ -42,6 +43,7 @@ title: "Data"
 
 - 命名源：`{Data.News.Title}` 或 `{News.Title}`
 - 默认源（Name=Data）：`{Data.Title}`
+- 每个数据源状态：`{Data.Status.News}` = `Loading` / `Completed` / `Error`
 - 最多 8 个数据源。
 
 ## 本地路径

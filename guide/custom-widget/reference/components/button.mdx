@@ -45,6 +45,23 @@ title: "Button"
 
 `Button.Size` 只接受 `Sm` / `Md` / `Lg`；`Text.Size` 的 `Xs`–`2Xl` 不适用于按钮。完整值表见[属性值参考](/guide/custom-widget/reference/values)。
 
+## ShortcutKeys
+
+```xml
+<Button Text="快捷操作" OnClick="Refresh">
+  <Button.ShortcutKeys>
+    <ShortcutKey Key="Alt" />
+    <ShortcutKey Key="L" />
+  </Button.ShortcutKeys>
+</Button>
+```
+
+- 支持 `Alt` / `Ctrl` / `Shift` / `Meta` 修饰键和一个主键。
+- 也可以写 `<ShortcutKey Key="Alt+L" />`。
+- 多个 `ShortcutKey` 组合成一个快捷键。
+- 输入框聚焦时不会触发。
+- 快捷键执行与点击按钮相同的 `OnClick` / `Click` 触发器。
+
 ## 内容语法
 
 ```xml

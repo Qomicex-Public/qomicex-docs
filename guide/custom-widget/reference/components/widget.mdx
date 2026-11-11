@@ -27,6 +27,17 @@ title: "Widget"
 | `Description` | string | 否 | — | 描述 |
 | `UpdateUrl` | https URL | 否 | 导入 URL | 在线更新源 |
 | `LauncherVersion` | semver | 否 | — | 最低启动器版本 |
+| `UpdateTTL` | 秒 / `Default` / `Immediately` / `PreLaunch` / `PreLoad` / `None` | `Default` | 远程 XML 更新检查间隔 |
+| `RefreshTTL` | 秒 / 同上 | `None` | 重新拉取数据的间隔；保留组件状态 |
+
+`UpdateTTL` / `RefreshTTL` 常量：
+
+- `Default`：使用启动器默认值（更新 6 小时；刷新不自动）
+- `Immediately`：每次组件挂载时执行
+- `PreLaunch`：每次启动器进程只执行一次
+- `PreLoad`：每次切换到主页/重新挂载时执行
+- `None`：不自动执行
+- 数字：秒数，例如 `30` 表示 30 秒
 
 ## 子元素
 

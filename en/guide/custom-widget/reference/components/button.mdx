@@ -45,6 +45,23 @@ Action parameters go directly on the `Button` as attributes or attribute element
 
 `Button.Size` only accepts `Sm` / `Md` / `Lg`; the `Xs`–`2Xl` values of `Text.Size` do not apply to buttons. See [Attribute values](/en/guide/custom-widget/reference/values) for the full table.
 
+## ShortcutKeys
+
+```xml
+<Button Text="Shortcut action" OnClick="Refresh">
+  <Button.ShortcutKeys>
+    <ShortcutKey Key="Alt" />
+    <ShortcutKey Key="L" />
+  </Button.ShortcutKeys>
+</Button>
+```
+
+- Supports `Alt` / `Ctrl` / `Shift` / `Meta` modifiers and one main key.
+- You can also write `<ShortcutKey Key="Alt+L" />`.
+- Multiple `ShortcutKey` elements form one shortcut.
+- Shortcuts are ignored while an input is focused.
+- A shortcut runs the same `OnClick` / `Click` trigger as a button click.
+
 ## Content syntax
 
 ```xml

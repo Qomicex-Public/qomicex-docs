@@ -49,6 +49,8 @@ XML 属性中的 `<` 必须写成 `&lt;`，`<=` 写成 `&lt;=`。没有空格时
 | `Grid.Row` / `Grid.Column` | 整数，0 起 | 自动 | `Grid` 内位置 |
 | `Grid.RowSpan` / `Grid.ColumnSpan` | 正整数 | `1` | 跨行 / 跨列 |
 | `Content` | `{PageName}` 或 `{Resources.PageName}` | — | 引用 Page；所有布局/容器、Dialog、Tabs、List 可用 |
+| `UpdateTTL` | 秒 / `Default` / `Immediately` / `PreLaunch` / `PreLoad` / `None` | `Default` | 远程 XML 更新检查间隔 |
+| `RefreshTTL` | 秒 / 同上 | `None` | 重新拉取数据的间隔，保留组件状态 |
 
 ## 文本
 
@@ -71,6 +73,7 @@ XML 属性中的 `<` 必须写成 `&lt;`，`<=` 写成 `&lt;=`。没有空格时
 | `Folder` | `Game` / `Logs` / `Data` / `Screenshots` | — | `OpenFolder` 目标 |
 | `Source` | `Curseforge` / `Modrinth` / `Ftb` | — | `Install` 来源 |
 | `Category` | `Mod` / `Modpack` / `Shader` / `Resourcepack` / `Datapack` / `Save` | — | `Install` 分类 |
+| `ShortcutKeys` | 一个或多个 `ShortcutKey Key="..."` | — | `Button` / `Link` 快捷键 |
 
 `Size` 在 `Text` 和 `Button` 上不是同一组值：`Text` 支持 `Xs`–`2Xl`，`Button` 只支持 `Sm/Md/Lg`。
 
@@ -116,11 +119,20 @@ XML 属性中的 `<` 必须写成 `&lt;`，`<=` 写成 `&lt;=`。没有空格时
 | :--- | :--- | :--- | :--- |
 | `Type`（Data） | `Json` / `Text` / `Xml` / `Binary` | `Json` | `Data` |
 | `Source`（Data） | `Url` / `File` | `Url` | `Data` |
+| `Async` | `True` / `False` | `True` | `Data`；后台加载不阻塞渲染 |
 | `Refresh` | 整数 `0`–`86400` 秒 | `3600` | `Data` / `Widget.Using` |
 | `Type`（Resource） | `String` / `Bool` / `Number` / `Binary` / `Json` / `Page` | `String` | `Resource` |
 | `Type`（Input/Output） | `String` / `Number` / `Bool` / `DateTime` / `Json` / `Binary` | 见组件页 | `Widget.Inputs` / `Widget.Outputs` |
 | `Required` | `True` / `False` | `False` | `Input` |
 | `Default` | 对应类型的字符串 | — | `Input` |
+
+### Data.Status
+
+```xml
+<Text Value="{Data.Status.News}" />
+```
+
+`Data.Status.News` 为 `Loading` / `Completed` / `Error`；`Async="True"` 时组件先渲染，数据完成后自动更新绑定。
 
 ## 触发器
 

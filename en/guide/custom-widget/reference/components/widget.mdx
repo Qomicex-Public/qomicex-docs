@@ -27,6 +27,17 @@ The root element of a component. A `.qwidget` file can contain exactly one `Widg
 | `Description` | string | No | — | Description |
 | `UpdateUrl` | https URL | No | Import URL | Online update source |
 | `LauncherVersion` | semver | No | — | Minimum launcher version |
+| `UpdateTTL` | seconds / `Default` / `Immediately` / `PreLaunch` / `PreLoad` / `None` | `Default` | Remote XML update check interval |
+| `RefreshTTL` | seconds / same | `None` | Data refetch interval; keeps component state |
+
+`UpdateTTL` / `RefreshTTL` constants:
+
+- `Default`: launcher default (6 hours for updates; no automatic refresh)
+- `Immediately`: on every component mount
+- `PreLaunch`: once per launcher process
+- `PreLoad`: on every dashboard switch/remount
+- `None`: never
+- Number: seconds, e.g. `30` = 30 seconds
 
 ## Child elements
 

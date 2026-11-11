@@ -28,6 +28,7 @@ Declares a data source. `Data` renders nothing; it only fetches/reads data.
 | `Path` | path | Source=File | — | Local path; supports `{Inputs.*}` |
 | `Mime` | string | No | — | Binary MIME type |
 | `Refresh` | 0–86400 | No | `3600` | Cache lifetime in seconds |
+| `Async` | `True` / `False` | No | `True` | Load in the background without blocking render |
 
 ## Data shape
 
@@ -42,6 +43,7 @@ Declares a data source. `Data` renders nothing; it only fetches/reads data.
 
 - Named source: `{Data.News.Title}` or `{News.Title}`
 - Default source (Name=Data): `{Data.Title}`
+- Per-source status: `{Data.Status.News}` = `Loading` / `Completed` / `Error`
 - At most 8 data sources.
 
 ## Local paths

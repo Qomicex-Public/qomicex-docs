@@ -70,6 +70,7 @@ In XML attributes, write `<` as `&lt;`, so `<=` becomes `&lt;=`.
 | `Folder` | `Game` / `Logs` / `Data` / `Screenshots` | — | `OpenFolder` target |
 | `Source` | `Curseforge` / `Modrinth` / `Ftb` | — | `Install` source |
 | `Category` | `Mod` / `Modpack` / `Shader` / `Resourcepack` / `Datapack` / `Save` | — | `Install` category |
+| `ShortcutKeys` | One or more `ShortcutKey Key="..."` | — | `Button` / `Link` shortcut |
 
 `Size` is different on `Text` and `Button`: `Text` supports `Xs`–`2Xl`, while `Button` only supports `Sm/Md/Lg`.
 
@@ -82,6 +83,8 @@ In XML attributes, write `<` as `&lt;`, so `<=` becomes `&lt;=`.
 | `Width` | `Sm` / `Md` / `Lg` / `Xl` / `Full` | `Md` | Dialog width |
 | `Size` | Same | `Md` | Alias of `Width` |
 | `Content` | `{PageName}` or `{Resources.PageName}` | — | Page reference; cannot be combined with inline children |
+| `UpdateTTL` | seconds / `Default` / `Immediately` / `PreLaunch` / `PreLoad` / `None` | `Default` | Remote XML update interval |
+| `RefreshTTL` | seconds / same | `None` | Data refetch interval, keeps component state |
 
 ## Input controls
 
@@ -115,11 +118,20 @@ In XML attributes, write `<` as `&lt;`, so `<=` becomes `&lt;=`.
 | :--- | :--- | :--- | :--- |
 | `Type` (Data) | `Json` / `Text` / `Xml` / `Binary` | `Json` | `Data` |
 | `Source` (Data) | `Url` / `File` | `Url` | `Data` |
+| `Async` | `True` / `False` | `True` | `Data`; background load without blocking render |
 | `Refresh` | Integer `0`–`86400` seconds | `3600` | `Data` / `Widget.Using` |
 | `Type` (Resource) | `String` / `Bool` / `Number` / `Binary` / `Json` / `Page` | `String` | `Resource` |
 | `Type` (Input/Output) | `String` / `Number` / `Bool` / `DateTime` / `Json` / `Binary` | See component page | `Widget.Inputs` / `Widget.Outputs` |
 | `Required` | `True` / `False` | `False` | `Input` |
 | `Default` | String matching the type | — | `Input` |
+
+### Data.Status
+
+```xml
+<Text Value="{Data.Status.News}" />
+```
+
+`Data.Status.News` is `Loading` / `Completed` / `Error`; with `Async="True"` the widget renders first and bindings update when data completes.
 
 ## Triggers
 
