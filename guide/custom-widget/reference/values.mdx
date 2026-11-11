@@ -48,6 +48,7 @@ XML 属性中的 `<` 必须写成 `&lt;`，`<=` 写成 `&lt;=`。没有空格时
 | `Columns` | 整数 `1`–`6` | `1` | `Grid` 列数 |
 | `Grid.Row` / `Grid.Column` | 整数，0 起 | 自动 | `Grid` 内位置 |
 | `Grid.RowSpan` / `Grid.ColumnSpan` | 正整数 | `1` | 跨行 / 跨列 |
+| `Content` | `{PageName}` 或 `{Resources.PageName}` | — | 引用 Page；所有布局/容器、Dialog、Tabs、List 可用 |
 
 ## 文本
 
@@ -72,6 +73,16 @@ XML 属性中的 `<` 必须写成 `&lt;`，`<=` 写成 `&lt;=`。没有空格时
 | `Category` | `Mod` / `Modpack` / `Shader` / `Resourcepack` / `Datapack` / `Save` | — | `Install` 分类 |
 
 `Size` 在 `Text` 和 `Button` 上不是同一组值：`Text` 支持 `Xs`–`2Xl`，`Button` 只支持 `Sm/Md/Lg`。
+
+## Dialog
+
+| 属性 | 可选值 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | 必填 | 供 `{Name.Show}` / `{Name.Hide}` 使用 |
+| `Title` | string | — | 标题 |
+| `Width` | `Sm` / `Md` / `Lg` / `Xl` / `Full` | `Md` | 对话框宽度 |
+| `Size` | 同上 | `Md` | `Width` 别名 |
+| `Content` | `{PageName}` 或 `{Resources.PageName}` | — | 引用 Page，不能与内联子元素同时使用 |
 
 ## 输入控件
 
@@ -106,6 +117,7 @@ XML 属性中的 `<` 必须写成 `&lt;`，`<=` 写成 `&lt;=`。没有空格时
 | `Type`（Data） | `Json` / `Text` / `Xml` / `Binary` | `Json` | `Data` |
 | `Source`（Data） | `Url` / `File` | `Url` | `Data` |
 | `Refresh` | 整数 `0`–`86400` 秒 | `3600` | `Data` / `Widget.Using` |
+| `Type`（Resource） | `String` / `Bool` / `Number` / `Binary` / `Json` / `Page` | `String` | `Resource` |
 | `Type`（Input/Output） | `String` / `Number` / `Bool` / `DateTime` / `Json` / `Binary` | 见组件页 | `Widget.Inputs` / `Widget.Outputs` |
 | `Required` | `True` / `False` | `False` | `Input` |
 | `Default` | 对应类型的字符串 | — | `Input` |

@@ -27,6 +27,7 @@ title: "Resources"
 | `Number` | 数字 | `Name` `Text` |
 | `Binary` | base64 → `{ Url, Base64, Mime, Size }` | `Name` `Mime` `Text` |
 | `Resource` | 按 `Type` 解析 | `Name` `Type` `Mime` `Text` |
+| `Resource Type="Page"` | 可复用 Page 节点树，不直接渲染 | `Name` `Type` |
 
 `Text` 属性和标签文本等价：
 
@@ -42,6 +43,7 @@ title: "Resources"
 - `Number` → Number
 - `Binary` → 生成 Blob URL，可直接给 `Image` / `Media`
 - `Resource Type="Json"` → JSON 解析
+- `Resource Type="Page"` → 保存节点树，通过 `Content="{PageName}"` 使用，见 [Page 系统](/guide/custom-widget/advanced/pages)
 - 资源名在组件内唯一；重复会解析失败
 
 ## 示例

@@ -1,0 +1,82 @@
+---
+title: "Page 系统"
+---
+
+## Page 系统
+
+Page 是可复用的节点树，本身不直接渲染。它定义在 `Resources` 中，可以作为布局容器、`Dialog`、`TabItem`、`List` 等的 `Content`。
+
+## 定义 Page
+
+```xml
+<Resources>
+  <Resource Type="Page" Name="InfoPage">
+    <Column Gap="2">
+      <Text Value="标题" Weight="Bold" />
+      <Text Value="{Inputs.Detail}" />
+    </Column>
+  </Resource>
+</Resources>
+```
+
+- `Resource Type="Page"` 必须写 `Name`。
+- Page 内容是普通节点树，可包含布局、控件、Data、Tabs、List 等。
+- Page 不会自动渲染，只有被 `Content` 引用时才会进入 UI。
+- Page 内容共享使用方的作用域，包括 `Inputs`、`Data`、`Results`、`Size`。
+
+## 引用 Page
+
+两种写法等价：
+
+```xml
+<Container Content="{InfoPage}" />
+<Container Content="{Resources.InfoPage}" />
+```
+
+`Content` 与内联子元素互斥：
+
+```xml
+<!-- 正确 -->
+<Container Content="{InfoPage}" />
+
+<!-- 错误：不能同时写 Content 和子元素 -->
+<Container Content="{InfoPage}">
+  <Text Value="inline" />
+</Container>
+```
+
+## 支持的 Content 容器
+
+| 元素 | Page 内容要求 |
+| :--- | :--- |
+| `Container` / `Row` / `Column` / `Grid` / `If` | 任意节点树 |
+| `Dialog` | 任意节点树 |
+| `TabItem` | 任意节点树 |
+| `Tabs` | Page 内容必须全部是 `TabItem` |
+| `List` | Page 内容必须恰好包含一个 `ListItem` |
+| `ListItem` | 任意节点树 |
+
+## 嵌套与限制
+
+- Page 可以继续用 `Content` 引用其它 Page。
+- 会检测 `A→B→A` 循环引用和缺失 Page。
+- Page 仍受 XML 深度、元素数量、嵌套深度限制。
+- Page 中的 `Target` 仍按组件级定位；多个使用点复用同一 Page 时不要重复依赖同名 Target。
+
+## Dialog 示例
+
+```xml
+<Resources>
+  <Resource Type="Page" Name="ConfirmPage">
+    <Column Gap="2">
+      <Text Value="{Inputs.Message}" />
+      <Row Gap="2">
+        <Button Text="关闭" OnClick="{Confirm.Hide}" />
+      </Row>
+    </Column>
+  </Resource>
+</Resources>
+
+<Dialog Name="Confirm" Title="提示" Content="{ConfirmPage}" />
+<Button Text="打开" OnClick="{Confirm.Show}" />
+```

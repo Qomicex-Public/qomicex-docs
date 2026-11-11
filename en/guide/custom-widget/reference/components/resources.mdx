@@ -27,6 +27,7 @@ Named resource container. A resource can be a string, boolean, number, binary, o
 | `Number` | Number | `Name` `Text` |
 | `Binary` | base64 → `{ Url, Base64, Mime, Size }` | `Name` `Mime` `Text` |
 | `Resource` | Parsed according to `Type` | `Name` `Type` `Mime` `Text` |
+| `Resource Type="Page"` | Reusable Page node tree, not rendered directly | `Name` `Type` |
 
 The `Text` attribute is equivalent to the tag body:
 
@@ -42,6 +43,7 @@ The `Text` attribute is equivalent to the tag body:
 - `Number` → Number
 - `Binary` → produces a blob URL that can be passed to `Image` / `Media` directly
 - `Resource Type="Json"` → JSON parse
+- `Resource Type="Page"` → stores a node tree used through `Content="{PageName}"`; see [Page system](/en/guide/custom-widget/advanced/pages)
 - Resource names are unique within a widget; duplicates fail to parse
 
 ## Example

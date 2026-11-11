@@ -73,6 +73,16 @@ In XML attributes, write `<` as `&lt;`, so `<=` becomes `&lt;=`.
 
 `Size` is different on `Text` and `Button`: `Text` supports `Xs`–`2Xl`, while `Button` only supports `Sm/Md/Lg`.
 
+## Dialog
+
+| Attribute | Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | Required | Used by `{Name.Show}` / `{Name.Hide}` |
+| `Title` | string | — | Header title |
+| `Width` | `Sm` / `Md` / `Lg` / `Xl` / `Full` | `Md` | Dialog width |
+| `Size` | Same | `Md` | Alias of `Width` |
+| `Content` | `{PageName}` or `{Resources.PageName}` | — | Page reference; cannot be combined with inline children |
+
 ## Input controls
 
 | Attribute | Values | Default | Description |
@@ -106,6 +116,7 @@ In XML attributes, write `<` as `&lt;`, so `<=` becomes `&lt;=`.
 | `Type` (Data) | `Json` / `Text` / `Xml` / `Binary` | `Json` | `Data` |
 | `Source` (Data) | `Url` / `File` | `Url` | `Data` |
 | `Refresh` | Integer `0`–`86400` seconds | `3600` | `Data` / `Widget.Using` |
+| `Type` (Resource) | `String` / `Bool` / `Number` / `Binary` / `Json` / `Page` | `String` | `Resource` |
 | `Type` (Input/Output) | `String` / `Number` / `Bool` / `DateTime` / `Json` / `Binary` | See component page | `Widget.Inputs` / `Widget.Outputs` |
 | `Required` | `True` / `False` | `False` | `Input` |
 | `Default` | String matching the type | — | `Input` |

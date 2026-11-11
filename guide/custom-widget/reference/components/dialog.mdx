@@ -1,0 +1,56 @@
+---
+title: "Dialog"
+---
+
+## Dialog
+
+浮层对话框。`Dialog` 不占用布局空间，打开后通过 Portal 显示；可以内联内容，也可以引用 `Resource Type="Page"`。
+
+## 签名
+
+```xml
+<Dialog Name="Dialog1" Title="确认" Width="Md">
+  <Text Value="DialogContent" />
+</Dialog>
+
+<Resources>
+  <Resource Type="Page" Name="DialogPage">
+    <Text Value="DialogContent" />
+  </Resource>
+</Resources>
+
+<Dialog Name="Dialog1" Title="确认" Content="{DialogPage}" />
+<Button Text="打开" OnClick="{Dialog1.Show}" />
+```
+
+## 属性
+
+| 属性 | 类型 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | 必填 | Dialog 标识，供 `{Name.Show}` / `{Name.Hide}` 使用 |
+| `Title` | string | — | 标题；不填时只显示关闭按钮 |
+| `Width` | `Sm` / `Md` / `Lg` / `Xl` / `Full` | `Md` | 对话框宽度 |
+| `Size` | 同上 | `Md` | `Width` 的别名；两者同时存在时 `Width` 优先 |
+| `Content` | `{PageName}` 或 `{Resources.PageName}` | — | 引用 Page；不能与内联子元素同时使用 |
+
+## 打开与关闭
+
+```xml
+<Button Text="打开" OnClick="{Dialog1.Show}" />
+<Button Text="关闭" OnClick="{Dialog1.Hide}" />
+```
+
+- 遮罩、Esc、标题栏关闭按钮都会调用 `Hide`。
+- 同一个 Dialog 被多次打开时保持单实例。
+- Dialog 内容与父组件共享 `Inputs` / `Data` / `Results` / `Size` 作用域。
+- Dialog 内可以继续放 Button、Tabs、Container、List 等节点。
+
+## Page 内容
+
+`Dialog Content="{DialogPage}"` 的内容来自 Page。Page 是容器型资源，不会直接渲染；详见[Page 系统](/guide/custom-widget/advanced/pages)。
+
+## 坑
+
+- `Content` 和内联子元素只能二选一。
+- Dialog 的 `Name` 在组件内唯一，不是 `Target`；脚本操作仍使用 `Target`。
+- 关闭按钮/遮罩/Esc 关闭是默认行为，不需要额外配置。

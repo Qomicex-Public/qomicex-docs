@@ -154,6 +154,22 @@ QWidget 的布局全部由元素嵌套完成，没有 `Width` / `Height` / `Marg
 - `Divider`：1px 分隔线。
 - `Spacer`：固定像素间距；内部实现同时设置宽高，横向/纵向都可使用。
 
+## Page 内容
+
+`Container`、`Row`、`Column`、`Grid`、`If`、`Tabs`、`TabItem`、`List`、`ListItem` 都可以用 `Content="{PageName}"` 引用 Page，替代内联子节点：
+
+```xml
+<Resources>
+  <Resource Type="Page" Name="InfoPage">
+    <Text Value="来自 Page" />
+  </Resource>
+</Resources>
+
+<Container Content="{InfoPage}" />
+```
+
+`Content` 与子元素互斥；详见 [Page 系统](/guide/custom-widget/advanced/pages)。
+
 ## 自适应尺寸
 
 自定义组件渲染在主页网格单元内，宽度和高度随用户拖动改变：

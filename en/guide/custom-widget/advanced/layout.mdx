@@ -154,6 +154,22 @@ When no row or column is given, children fill the grid in flow order.
 - `Divider`: a 1px separator line.
 - `Spacer`: fixed pixel spacing; it sets both width and height, so it works horizontally and vertically.
 
+## Page content
+
+`Container`, `Row`, `Column`, `Grid`, `If`, `Tabs`, `TabItem`, `List`, and `ListItem` can use `Content="{PageName}"` instead of inline children:
+
+```xml
+<Resources>
+  <Resource Type="Page" Name="InfoPage">
+    <Text Value="From a Page" />
+  </Resource>
+</Resources>
+
+<Container Content="{InfoPage}" />
+```
+
+`Content` and child elements are mutually exclusive; see [Page system](/en/guide/custom-widget/advanced/pages).
+
 ## Adaptive sizing
 
 A custom widget renders inside a dashboard grid cell whose width and height change when the user resizes it:

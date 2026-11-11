@@ -1,0 +1,56 @@
+---
+title: "Dialog"
+---
+
+## Dialog
+
+A modal overlay. `Dialog` takes no layout space and renders through a portal when open. It can contain inline content or reference a `Resource Type="Page"`.
+
+## Signature
+
+```xml
+<Dialog Name="Dialog1" Title="Confirm" Width="Md">
+  <Text Value="DialogContent" />
+</Dialog>
+
+<Resources>
+  <Resource Type="Page" Name="DialogPage">
+    <Text Value="DialogContent" />
+  </Resource>
+</Resources>
+
+<Dialog Name="Dialog1" Title="Confirm" Content="{DialogPage}" />
+<Button Text="Open" OnClick="{Dialog1.Show}" />
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Name` | identifier | Required | Dialog id used by `{Name.Show}` / `{Name.Hide}` |
+| `Title` | string | — | Header title; without it only the close button is shown |
+| `Width` | `Sm` / `Md` / `Lg` / `Xl` / `Full` | `Md` | Dialog width |
+| `Size` | Same | `Md` | Alias of `Width`; `Width` wins when both are present |
+| `Content` | `{PageName}` or `{Resources.PageName}` | — | Page reference; cannot be combined with inline children |
+
+## Open and close
+
+```xml
+<Button Text="Open" OnClick="{Dialog1.Show}" />
+<Button Text="Close" OnClick="{Dialog1.Hide}" />
+```
+
+- The backdrop, Escape, and header close button call `Hide`.
+- Opening the same Dialog repeatedly keeps a single instance.
+- Dialog content shares the parent `Inputs` / `Data` / `Results` / `Size` scope.
+- Dialog content can contain buttons, tabs, containers, lists, and other nodes.
+
+## Page content
+
+`Dialog Content="{DialogPage}"` reads from a Page. Pages are container resources and never render directly; see [Page system](/en/guide/custom-widget/advanced/pages).
+
+## Gotchas
+
+- Use either `Content` or inline children, not both.
+- `Name` is a Dialog identifier, not a `Target`; scripts still use `Target`.
+- Backdrop/Escape/header close need no extra configuration.

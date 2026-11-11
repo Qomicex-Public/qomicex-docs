@@ -1,0 +1,82 @@
+---
+title: "Page system"
+---
+
+## Page system
+
+A Page is a reusable node tree that never renders on its own. Define it in `Resources` and use it as the `Content` of layouts, `Dialog`, `TabItem`, or `List`.
+
+## Define a Page
+
+```xml
+<Resources>
+  <Resource Type="Page" Name="InfoPage">
+    <Column Gap="2">
+      <Text Value="标题" Weight="Bold" />
+      <Text Value="{Inputs.Detail}" />
+    </Column>
+  </Resource>
+</Resources>
+```
+
+- `Resource Type="Page"` requires `Name`.
+- Page content is a normal node tree and can contain layouts, controls, Data, Tabs, Lists, and so on.
+- Pages do not render automatically; they enter the UI only when referenced by `Content`.
+- Page content shares the consumer's scope: `Inputs`, `Data`, `Results`, and `Size`.
+
+## Reference a Page
+
+Both forms are equivalent:
+
+```xml
+<Container Content="{InfoPage}" />
+<Container Content="{Resources.InfoPage}" />
+```
+
+`Content` and inline children are mutually exclusive:
+
+```xml
+<!-- Correct -->
+<Container Content="{InfoPage}" />
+
+<!-- Error: Content and children cannot be combined -->
+<Container Content="{InfoPage}">
+  <Text Value="inline" />
+</Container>
+```
+
+## Content containers
+
+| Element | Page content requirement |
+| :--- | :--- |
+| `Container` / `Row` / `Column` / `Grid` / `If` | Any node tree |
+| `Dialog` | Any node tree |
+| `TabItem` | Any node tree |
+| `Tabs` | Page content must consist entirely of `TabItem` |
+| `List` | Page content must contain exactly one `ListItem` |
+| `ListItem` | Any node tree |
+
+## Nesting and limits
+
+- A Page may reference another Page through `Content`.
+- Missing Pages and `A→B→A` cycles are rejected.
+- Pages still count toward XML depth, element count, and nesting limits.
+- `Target` in a Page is still widget-level; avoid relying on duplicate Targets when the same Page is used multiple times.
+
+## Dialog example
+
+```xml
+<Resources>
+  <Resource Type="Page" Name="ConfirmPage">
+    <Column Gap="2">
+      <Text Value="{Inputs.Message}" />
+      <Row Gap="2">
+        <Button Text="Close" OnClick="{Confirm.Hide}" />
+      </Row>
+    </Column>
+  </Resource>
+</Resources>
+
+<Dialog Name="Confirm" Title="Notice" Content="{ConfirmPage}" />
+<Button Text="Open" OnClick="{Confirm.Show}" />
+```

@@ -56,6 +56,7 @@
                           "guide/custom-widget/advanced/plugin-api",
                           "guide/custom-widget/advanced/data",
                           "guide/custom-widget/advanced/media-binary",
+                          "guide/custom-widget/advanced/pages",
                           "guide/custom-widget/advanced/security"
                         ]
                       },
@@ -95,6 +96,7 @@
                               "guide/custom-widget/reference/components/progress",
                               "guide/custom-widget/reference/components/file-picker",
                               "guide/custom-widget/reference/components/color-picker",
+                              "guide/custom-widget/reference/components/dialog",
                               "guide/custom-widget/reference/components/data",
                               "guide/custom-widget/reference/components/resources",
                               "guide/custom-widget/reference/components/triggers",
@@ -257,6 +259,7 @@
                           "en/guide/custom-widget/advanced/plugin-api",
                           "en/guide/custom-widget/advanced/data",
                           "en/guide/custom-widget/advanced/media-binary",
+                          "en/guide/custom-widget/advanced/pages",
                           "en/guide/custom-widget/advanced/security"
                         ]
                       },
@@ -296,6 +299,7 @@
                               "en/guide/custom-widget/reference/components/progress",
                               "en/guide/custom-widget/reference/components/file-picker",
                               "en/guide/custom-widget/reference/components/color-picker",
+                              "en/guide/custom-widget/reference/components/dialog",
                               "en/guide/custom-widget/reference/components/data",
                               "en/guide/custom-widget/reference/components/resources",
                               "en/guide/custom-widget/reference/components/triggers",
