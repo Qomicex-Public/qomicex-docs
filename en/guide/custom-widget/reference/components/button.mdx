@@ -29,6 +29,22 @@ A clickable button that can bind a launcher action or function.
 
 Action parameters go directly on the `Button` as attributes or attribute elements; see the [Actions reference](/en/guide/custom-widget/reference/actions).
 
+### Size / Variant values
+
+| Attribute | Value | Effect |
+| :--- | :--- | :--- |
+| `Size` | `Sm` | Small button for list rows and compact toolbars |
+| `Size` | `Md` | Default size |
+| `Size` | `Lg` | Large button for primary actions |
+| `Variant` | `Default` | Primary solid button |
+| `Variant` | `Secondary` | Secondary, less emphasized |
+| `Variant` | `Outline` | Outlined button |
+| `Variant` | `Ghost` | No background until hover |
+| `Variant` | `Destructive` | Destructive red action |
+| `Variant` | `Link` | Text-link style |
+
+`Button.Size` only accepts `Sm` / `Md` / `Lg`; the `Xs`–`2Xl` values of `Text.Size` do not apply to buttons. See [Attribute values](/en/guide/custom-widget/reference/values) for the full table.
+
 ## Content syntax
 
 ```xml

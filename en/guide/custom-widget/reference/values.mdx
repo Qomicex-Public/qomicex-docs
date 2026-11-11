@@ -1,0 +1,132 @@
+---
+title: "Attribute values"
+---
+
+## Attribute values
+
+QWidget attribute values use PascalCase; booleans are `True` / `False`, not `true` / `false`.  
+This page centralizes every enum, numeric range, and default; component pages only list which attributes an element supports.
+
+## Common node attributes
+
+Every visual node supports:
+
+| Attribute | Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Target` | Any unique identifier | — | Script target key; must be unique |
+| `Visible` | `True` / `False` | `True` | `False` hides the node; scripts can toggle it |
+| `When` | Size condition | — | Hides the node when false; see below |
+
+### Size condition `When`
+
+```xml
+<Text When="Size.Width &lt;= 1" Value="Narrow" />
+<Grid When="Size.Width &gt;= 2" Columns="2">...</Grid>
+```
+
+| Field | Value |
+| :--- | :--- |
+| `Size.Width` / `Size.Height` | Grid columns / rows |
+| `Size.PixelWidth` / `Size.PixelHeight` | Rendered pixel size |
+| Operators | `<`, `<=`, `>`, `>=`, `==`, `!=` |
+| Joiners | `and` / `or`; parentheses are not supported |
+
+In XML attributes, write `<` as `&lt;`, so `<=` becomes `&lt;=`.
+
+## Layout
+
+| Attribute | Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Direction` | `Row` / `Column` | `Column` | Main axis |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | — | Cross-axis alignment |
+| `Justify` | `Start` / `Center` / `End` / `Between` | — | Main-axis alignment |
+| `Wrap` | `True` / `False` | `False` | Wrap children |
+| `Border` | `True` / `False` | `True` | Show border |
+| `Background` | `Transparent` / `Card` / `Muted` / `Primary` | `Card` | Background |
+| `Radius` | `None` / `Sm` / `Md` / `Lg` / `Full` | `Lg` | Corner radius |
+| `Gap` / `Padding` | Integer `0`–`8` | `0` | Spacing levels, not pixels |
+| `Columns` | Integer `1`–`6` | `1` | `Grid` columns |
+| `Grid.Row` / `Grid.Column` | Integer, 0-based | Auto | Position inside `Grid` |
+| `Grid.RowSpan` / `Grid.ColumnSpan` | Positive integer | `1` | Row / column span |
+
+## Text
+
+| Attribute | Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Size` | `Xs` / `Sm` / `Md` / `Lg` / `Xl` / `2Xl` | `Md` | Font size |
+| `Weight` | `Normal` / `Medium` / `Semibold` / `Bold` | `Normal` | Font weight |
+| `Color` | `Default` / `Muted` / `Primary` / `Destructive` | `Default` | Text color |
+| `Align` | `Start` / `Center` / `End` | — | Text alignment |
+| `Clamp` | Integer `1`–`6` | — | Maximum lines |
+
+## Buttons and links
+
+| Attribute | Values | Default | Applies to |
+| :--- | :--- | :--- | :--- |
+| `Size` | `Sm` / `Md` / `Lg` | `Md` | `Button` |
+| `Variant` | `Default` / `Secondary` / `Outline` / `Ghost` / `Destructive` / `Link` | `Default` | `Button` |
+| `OnClick` / `OnChange` / `Action` | See [Actions](/en/guide/custom-widget/reference/actions) | — | Action name |
+| `To` | `Instances` / `Downloads` / `Accounts` / `ResourceCenter` / `Settings` / `Connect` / `Running` | — | `Navigate` target |
+| `Folder` | `Game` / `Logs` / `Data` / `Screenshots` | — | `OpenFolder` target |
+| `Source` | `Curseforge` / `Modrinth` / `Ftb` | — | `Install` source |
+| `Category` | `Mod` / `Modpack` / `Shader` / `Resourcepack` / `Datapack` / `Save` | — | `Install` category |
+
+`Size` is different on `Text` and `Button`: `Text` supports `Xs`–`2Xl`, while `Button` only supports `Sm/Md/Lg`.
+
+## Input controls
+
+| Attribute | Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Multiline` | `True` / `False` | `False` | Multiline `TextBox` |
+| `Password` | `True` / `False` | `False` | Password field |
+| `ReadOnly` | `True` / `False` | `False` | Read-only |
+| `Checked` | `True` / `False` | `False` | Initial `CheckBox` state |
+| `MaxLength` | Integer `0`–`10000` | — | Maximum length |
+| `Min` / `Max` | Number | `0` / `100` | `Slider` range |
+| `Step` | Number | `1` | `Slider` step |
+| `Value` | Number / `#RRGGBB` / string | See component page | Initial value |
+| `Options` | JSON array string | `[]` | `Select`; items are `{ "Label": "...", "Value": "..." }` |
+| `Filter` | Extension list | — | `FilePicker`, e.g. `jar,zip` |
+
+## Media
+
+| Attribute | Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Type` | `Audio` / `Video` | `Audio` | Media type |
+| `Controls` | `True` / `False` | `True` | Show player controls |
+| `AutoPlay` | `True` / `False` | `False` | Autoplay |
+| `Loop` | `True` / `False` | `False` | Loop |
+| `Muted` | `True` / `False` | `False` | Mute |
+| `Volume` | Number `0`–`1` | `1` | Volume |
+
+## Data and contracts
+
+| Attribute | Values | Default | Applies to |
+| :--- | :--- | :--- | :--- |
+| `Type` (Data) | `Json` / `Text` / `Xml` / `Binary` | `Json` | `Data` |
+| `Source` (Data) | `Url` / `File` | `Url` | `Data` |
+| `Refresh` | Integer `0`–`86400` seconds | `3600` | `Data` / `Widget.Using` |
+| `Type` (Input/Output) | `String` / `Number` / `Bool` / `DateTime` / `Json` / `Binary` | See component page | `Widget.Inputs` / `Widget.Outputs` |
+| `Required` | `True` / `False` | `False` | `Input` |
+| `Default` | String matching the type | — | `Input` |
+
+## Triggers
+
+| Attribute | Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Event` | `Loaded` / `DataChanged` / `Click` / `Timer` / `Resize` | Required | Event type |
+| `Once` | `True` / `False` | `False` | Run the Timer once |
+| `Interval` | Integer `1000`–`3600000` ms | `60000` | Timer interval |
+| `Function` | Function name defined in the XML | — | Function to call |
+| `Control` | Defined control `Name` | — | Click target |
+| `Data` | Defined data source `Name` | — | DataChanged target |
+
+`Resize` fires 150ms after grid or pixel size changes; use `Loaded` for the initial layout.
+
+## Writing values
+
+- Enum values are case-sensitive; use the PascalCase spellings above.
+- Numeric range attributes take plain numbers, not `px`.
+- Use `True` / `False`, not `true` / `false`.
+- Bind with `{path}`; write JSON arguments in `Arguments` or `Options`.
+- XML attributes cannot contain raw `<`; write conditions with `&lt;`.

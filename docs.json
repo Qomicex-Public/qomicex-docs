@@ -66,6 +66,7 @@
                           "guide/custom-widget/reference/nesting-scope",
                           "guide/custom-widget/reference/actions",
                           "guide/custom-widget/reference/version",
+                          "guide/custom-widget/reference/values",
                           {
                             "group": "组件字典",
                             "pages": [
@@ -265,6 +266,7 @@
                           "en/guide/custom-widget/reference/nesting-scope",
                           "en/guide/custom-widget/reference/actions",
                           "en/guide/custom-widget/reference/version",
+                          "en/guide/custom-widget/reference/values",
                           {
                             "group": "Component reference",
                             "pages": [

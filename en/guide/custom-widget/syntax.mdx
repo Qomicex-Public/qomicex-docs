@@ -44,7 +44,7 @@ Except for the `Widget` root and non-visual elements such as `Data`, `Resources`
 | `Visible` | No | Default `True`; when `False` the node is not rendered and scripts can toggle it |
 | `When` | No | Size condition such as `Size.Width &lt;= 1`; the node is not rendered when false |
 
-`Target` and an input control's `Name` are separate namespaces: `Name` still drives `{Inputs.Name}` and `Trigger Control="Name"`, while `Target` only addresses the UI from scripts.
+`Target` and an input control's `Name` are separate namespaces: `Name` still drives `{Inputs.Name}` and `Trigger Control="Name"`, while `Target` only addresses the UI from scripts. See [Attribute values](/en/guide/custom-widget/reference/values) for all allowed values. Example:
 
 ```xml
 <Text Target="Status" Value="Idle" />

@@ -44,7 +44,7 @@ QWidget 是单文件 XML。根元素固定为 `Widget`，其余元素分为布�
 | `Visible` | 否 | 默认 `True`；设为 `False` 时不渲染，可由脚本动态切换 |
 | `When` | 否 | 尺寸条件，例如 `Size.Width &lt;= 1`；不满足时不渲染 |
 
-`Target` 与输入控件的 `Name` 是两个独立命名空间：`Name` 仍用于 `{Inputs.Name}` 和 `Trigger Control="Name"`，`Target` 只用于脚本操作 UI。示例：
+`Target` 与输入控件的 `Name` 是两个独立命名空间：`Name` 仍用于 `{Inputs.Name}` 和 `Trigger Control="Name"`，`Target` 只用于脚本操作 UI。所有属性可选值见[属性值参考](/guide/custom-widget/reference/values)。示例：
 
 ```xml
 <Text Target="Status" Value="待机" />

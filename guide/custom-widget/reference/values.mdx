@@ -1,0 +1,132 @@
+---
+title: "属性值参考"
+---
+
+## 属性值参考
+
+QWidget 的属性值都使用大驼峰；布尔值写 `True` / `False`，不是 `true` / `false`。  
+本文集中列出所有枚举值、数字范围和默认值；组件页只说明该元素支持哪些属性。
+
+## 通用节点属性
+
+所有可视节点都支持：
+
+| 属性 | 可选值 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Target` | 任意唯一 identifier | — | 脚本定位键，不能与其它节点重复 |
+| `Visible` | `True` / `False` | `True` | `False` 时不渲染，可由脚本切换 |
+| `When` | 尺寸条件表达式 | — | 条件不满足时不渲染，见下方“尺寸条件” |
+
+### 尺寸条件 `When`
+
+```xml
+<Text When="Size.Width &lt;= 1" Value="窄" />
+<Grid When="Size.Width &gt;= 2" Columns="2">...</Grid>
+```
+
+| 字段 | 值 |
+| :--- | :--- |
+| `Size.Width` / `Size.Height` | 网格列数 / 行数 |
+| `Size.PixelWidth` / `Size.PixelHeight` | 实际像素宽高 |
+| 运算符 | `<`、`<=`、`>`、`>=`、`==`、`!=` |
+| 连接词 | `and` / `or`，不支持括号 |
+
+XML 属性中的 `<` 必须写成 `&lt;`，`<=` 写成 `&lt;=`。没有空格时也可以写 `Size.Width<=1`，但推荐保留空格。
+
+## 布局
+
+| 属性 | 可选值 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Direction` | `Row` / `Column` | `Column` | 主轴方向 |
+| `Align` | `Start` / `Center` / `End` / `Stretch` | — | 交叉轴对齐 |
+| `Justify` | `Start` / `Center` / `End` / `Between` | — | 主轴对齐 |
+| `Wrap` | `True` / `False` | `False` | 是否换行 |
+| `Border` | `True` / `False` | `True` | 是否显示边框 |
+| `Background` | `Transparent` / `Card` / `Muted` / `Primary` | `Card` | 背景样式 |
+| `Radius` | `None` / `Sm` / `Md` / `Lg` / `Full` | `Lg` | 圆角 |
+| `Gap` / `Padding` | 整数 `0`–`8` | `0` | 间距档位，不是像素 |
+| `Columns` | 整数 `1`–`6` | `1` | `Grid` 列数 |
+| `Grid.Row` / `Grid.Column` | 整数，0 起 | 自动 | `Grid` 内位置 |
+| `Grid.RowSpan` / `Grid.ColumnSpan` | 正整数 | `1` | 跨行 / 跨列 |
+
+## 文本
+
+| 属性 | 可选值 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Size` | `Xs` / `Sm` / `Md` / `Lg` / `Xl` / `2Xl` | `Md` | 字号 |
+| `Weight` | `Normal` / `Medium` / `Semibold` / `Bold` | `Normal` | 字重 |
+| `Color` | `Default` / `Muted` / `Primary` / `Destructive` | `Default` | 文字颜色 |
+| `Align` | `Start` / `Center` / `End` | — | 文本对齐 |
+| `Clamp` | 整数 `1`–`6` | — | 最大行数 |
+
+## 按钮与链接
+
+| 属性 | 可选值 | 默认 | 适用 |
+| :--- | :--- | :--- | :--- |
+| `Size` | `Sm` / `Md` / `Lg` | `Md` | `Button` |
+| `Variant` | `Default` / `Secondary` / `Outline` / `Ghost` / `Destructive` / `Link` | `Default` | `Button` |
+| `OnClick` / `OnChange` / `Action` | 见[动作参考](/guide/custom-widget/reference/actions) | — | 动作名 |
+| `To` | `Instances` / `Downloads` / `Accounts` / `ResourceCenter` / `Settings` / `Connect` / `Running` | — | `Navigate` 目标 |
+| `Folder` | `Game` / `Logs` / `Data` / `Screenshots` | — | `OpenFolder` 目标 |
+| `Source` | `Curseforge` / `Modrinth` / `Ftb` | — | `Install` 来源 |
+| `Category` | `Mod` / `Modpack` / `Shader` / `Resourcepack` / `Datapack` / `Save` | — | `Install` 分类 |
+
+`Size` 在 `Text` 和 `Button` 上不是同一组值：`Text` 支持 `Xs`–`2Xl`，`Button` 只支持 `Sm/Md/Lg`。
+
+## 输入控件
+
+| 属性 | 可选值 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Multiline` | `True` / `False` | `False` | `TextBox` 多行 |
+| `Password` | `True` / `False` | `False` | 密码输入 |
+| `ReadOnly` | `True` / `False` | `False` | 只读 |
+| `Checked` | `True` / `False` | `False` | `CheckBox` 初始状态 |
+| `MaxLength` | 整数 `0`–`10000` | — | 最大长度 |
+| `Min` / `Max` | 数字 | `0` / `100` | `Slider` 范围 |
+| `Step` | 数字 | `1` | `Slider` 步长 |
+| `Value` | 数字 / `#RRGGBB` / string | 见组件页 | 初始值 |
+| `Options` | JSON 数组字符串 | `[]` | `Select`，元素为 `{ "Label": "...", "Value": "..." }` |
+| `Filter` | 扩展名列表 | — | `FilePicker`，如 `jar,zip` |
+
+## 媒体
+
+| 属性 | 可选值 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Type` | `Audio` / `Video` | `Audio` | 媒体类型 |
+| `Controls` | `True` / `False` | `True` | 显示播放控件 |
+| `AutoPlay` | `True` / `False` | `False` | 自动播放 |
+| `Loop` | `True` / `False` | `False` | 循环 |
+| `Muted` | `True` / `False` | `False` | 静音 |
+| `Volume` | 数字 `0`–`1` | `1` | 音量 |
+
+## 数据与契约
+
+| 属性 | 可选值 | 默认 | 适用 |
+| :--- | :--- | :--- | :--- |
+| `Type`（Data） | `Json` / `Text` / `Xml` / `Binary` | `Json` | `Data` |
+| `Source`（Data） | `Url` / `File` | `Url` | `Data` |
+| `Refresh` | 整数 `0`–`86400` 秒 | `3600` | `Data` / `Widget.Using` |
+| `Type`（Input/Output） | `String` / `Number` / `Bool` / `DateTime` / `Json` / `Binary` | 见组件页 | `Widget.Inputs` / `Widget.Outputs` |
+| `Required` | `True` / `False` | `False` | `Input` |
+| `Default` | 对应类型的字符串 | — | `Input` |
+
+## 触发器
+
+| 属性 | 可选值 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Event` | `Loaded` / `DataChanged` / `Click` / `Timer` / `Resize` | 必填 | 事件类型 |
+| `Once` | `True` / `False` | `False` | Timer 是否只执行一次 |
+| `Interval` | 整数 `1000`–`3600000` 毫秒 | `60000` | Timer 间隔 |
+| `Function` | 当前 XML 中已定义的函数名 | — | 调用的函数 |
+| `Control` | 已定义的控件 `Name` | — | Click 目标 |
+| `Data` | 已定义的数据源 `Name` | — | DataChanged 目标 |
+
+`Resize` 在网格或像素尺寸变化后防抖 150ms 触发；首次尺寸布局请使用 `Loaded`。
+
+## 属性写法
+
+- 枚举值大小写敏感，必须使用本文的大驼峰写法。
+- 数字范围属性写纯数字，不要带 `px`。
+- `True` / `False` 不要写成 `true` / `false`。
+- 字符串绑定写 `{路径}`，JSON 参数写 `Arguments` 或 `Options`。
+- XML 属性中不能直接写 `<`，条件表达式要写成 `&lt;`。
