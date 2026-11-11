@@ -37,19 +37,71 @@ title: "Widget.Using"
 
 ## 作为纯数据源
 
-组件可以没有任何布局或可视节点，只放 `Data`、`Resources`、`Function` 和 `Triggers`。这种组件被 `Widget.Using` 引入时不会显示任何内容，但会正常拉取数据、执行 `Loaded` 触发器和函数，父组件通过 `Children.<As>` 读取它的数据与结果。
+组件可以没有任何布局或可视节点，只放 `Data`、`Resources`、`Function`、`Widget.Inputs`、`Widget.Outputs` 和 `Triggers`。这种组件被 `Widget.Using` 引入时不会显示任何内容，但会正常拉取数据、执行触发器和函数。
+
+### 输入契约
+
+```xml
+<Widget.Inputs>
+  <Input Name="City" Type="String" Required="True" Default="Shanghai" />
+  <Input Name="Limit" Type="Number" Default="10" />
+</Widget.Inputs>
+```
+
+| 属性 | 说明 |
+| :--- | :--- |
+| `Name` | 输入名，唯一，供 `{Inputs.Name}` / `{Inputs.City}` 使用 |
+| `Type` | `String` / `Number` / `Bool` / `DateTime` / `Json` / `Binary` |
+| `Required` | 必填，默认 `False` |
+| `Default` | 缺省值；`Json` / `Binary` 按 JSON 解析 |
+
+父组件通过 `Widget.Using.Arguments` 传值：
+
+```xml
+<Widget.Using Name="天气数据" As="Weather">
+  <Widget.Using.Arguments><![CDATA[{"City":"Paris"}]]></Widget.Using.Arguments>
+</Widget.Using>
+```
+
+- 未声明的输入键、类型不匹配、缺少必填输入都会显示错误占位。
+- `Arguments` 变化会更新子组件 `Inputs`；子组件内部输入控件仍可修改自己的值。
+- 没有声明 `Widget.Inputs` 的旧组件保持原行为：`Arguments` 原样进入 `Inputs`。
+
+### 输出契约
+
+```xml
+<Widget.Outputs>
+  <Output Name="Weather" Type="Json" Source="{Data.Weather}" />
+  <Output Name="Label" Type="String" Source="{Results.Summary.Text}" />
+</Widget.Outputs>
+```
+
+| 属性 | 说明 |
+| :--- | :--- |
+| `Name` | 输出名，唯一，父组件读 `Children.<As>.Outputs.Name` |
+| `Type` | 同上，按类型校验/转换；不匹配时为 `undefined` |
+| `Source` | 子组件作用域路径，可引用 `Data` / `Results` / `Inputs` / `Resources` |
+
+声明 `Widget.Outputs` 后，父组件只能通过 `Outputs` 读取声明过的输出；`Children.<As>.Data` / `Results` 不再暴露，形成输出白名单。没有声明 `Widget.Outputs` 的组件仍暴露旧的完整快照。
+
+### 完整示例
 
 ```xml
 <!-- WeatherData.qwidget：纯数据源，没有可视节点 -->
 <Widget Name="天气数据" Version="1.0.0">
+  <Widget.Inputs>
+    <Input Name="City" Type="String" Required="True" Default="Shanghai" />
+  </Widget.Inputs>
+  <Widget.Outputs>
+    <Output Name="Weather" Type="Json" Source="{Data.Weather}" />
+    <Output Name="Label" Type="String" Source="{Results.Summary.Text}" />
+  </Widget.Outputs>
   <Data Name="Weather" Type="Json"
-        Url="https://api.example.com/weather" />
+        Url="https://api.example.com/weather?city={Inputs.City}" />
   <Function Name="Summary">
     <Function.Output Type="String">Text</Function.Output>
     <Function.Script><![CDATA[
-      const city = Inputs.City || "Shanghai";
-      const item = Data.Weather && Data.Weather[city];
-      return { Text: item ? item.temperature + "°C" : "--" };
+      return { Text: Data.Weather.temperature + "°C" };
     ]]></Function.Script>
   </Function>
   <Triggers>
@@ -57,20 +109,17 @@ title: "Widget.Using"
   </Triggers>
 </Widget>
 
-<!-- 父组件：引入数据源并绑定 -->
+<!-- 父组件：引入数据源并读取输出 -->
 <Widget.Using Name="天气数据" As="Weather">
-  <Widget.Using.Arguments><![CDATA[{"City":"Shanghai"}]]></Widget.Using.Arguments>
+  <Widget.Using.Arguments><![CDATA[{"City":"Paris"}]]></Widget.Using.Arguments>
 </Widget.Using>
-<Text Value="{Children.Weather.Data.Weather.Shanghai.temperature}" />
-<Text Value="{Children.Weather.Results.Summary.Text}" />
+<Text Value="{Children.Weather.Outputs.Label}" />
+<Text Value="{Children.Weather.Outputs.Weather.temperature}" />
 ```
 
-命名规则：
+`Data.Url` / `Data.Path` 支持 `{Inputs.*}` 插值；`Inputs` 变化会重新拉取，旧请求会被取消。URL 的协议/主机仍必须是确认过的 https:443，建议只对查询参数或路径段做参数化。
 
-- 子组件里 `Data Name="Weather"` 的数据在父组件中是 `Children.<As>.Data.Weather.*`；未命名数据源才直接合并到 `Children.<As>.Data.*`。
-- `Function` 结果在 `Children.<As>.Results.<Function>.*`。
-- 纯数据源也受嵌套深度、实例数和数据源数量限制。
-- **当前 `Data.Url` / `Data.Path` 是静态字符串，不支持 `{Inputs.*}` 插值。** `Widget.Using.Arguments` 只能初始化子组件 `Inputs`，供 `Function`、`If` 和绑定使用，不能直接改变请求 URL；需要按输入取数时，让接口返回多组数据后由 `Function` 选择，或等待 URL 参数化能力。
+纯数据源也受嵌套深度、实例数和数据源数量限制。
 
 ## 作用域
 
@@ -82,7 +131,7 @@ title: "Widget.Using"
 <Text Value="{Children.Weather.Results.Load.Items.0.Title}" />
 ```
 
-`Children.<As>.State.Loading` / `.Error` 也可用。
+`Children.<As>.State.Loading` / `.Error` 也可用。未声明 `Widget.Outputs` 时还可读 `.Data` / `.Results`；声明后只暴露 `.Outputs`。
 
 ## 解析
 

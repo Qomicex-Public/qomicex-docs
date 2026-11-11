@@ -37,12 +37,13 @@ title: "组件引用与作用域"
 | 路径 | 说明 |
 | :--- | :--- |
 | `Children.<As>.Inputs` | 子组件输入控件当前值 |
-| `Children.<As>.Data` | 子组件数据源 |
-| `Children.<As>.Results` | 子组件函数/命令/插件结果 |
+| `Children.<As>.Outputs` | 声明了 `Widget.Outputs` 时暴露的输出白名单 |
+| `Children.<As>.Data` | 子组件数据源（未声明输出时可用） |
+| `Children.<As>.Results` | 子组件函数/命令/插件结果（未声明输出时可用） |
 | `Children.<As>.State.Loading` | 加载中 |
 | `Children.<As>.State.Error` | 有错误 |
 
-父组件不能写子组件状态；需要联动时通过 `Arguments` 传初始输入，或把逻辑放在子组件内部。
+父组件不能写子组件状态；需要联动时通过 `Arguments` 传输入，或把逻辑放在子组件内部。声明了 `Widget.Outputs` 后，`Data` / `Results` 不再暴露，父组件只能读 `Outputs`。
 
 ## Arguments
 
@@ -54,7 +55,7 @@ title: "组件引用与作用域"
 
 - 支持 `{Inputs.*}` / `{Data.*}` / `{Results.*}` 插值。
 - JSON 不合法时显示错误占位。
-- 子组件的 `Inputs` 会用这些值初始化；子组件内部仍可修改自己的输入。
+- 子组件的 `Inputs` 会用这些值初始化；`Arguments` 变化时更新对应输入，子组件内部仍可修改自己的输入。
 
 ## 依赖解析
 

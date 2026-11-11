@@ -38,6 +38,7 @@ title: "Widget"
 - `Triggers`
 - `Function`
 - `Widget.Using`
+- `Widget.Inputs` / `Widget.Outputs`（组件契约）
 
 `Data` 也可以出现在任意布局容器内；`Resources`、`Triggers`、`Function` 只允许放在根下。
 
@@ -58,7 +59,7 @@ title: "Widget"
 1. 解析并严格校验 XML：未知元素/属性、重复属性、非法 URL/枚举直接报错。
 2. 解析 `Data` 并开始拉取；解析 `Resources`；解析 `Function`/`Triggers`。
 3. 执行 `Loaded` 触发器。
-4. 渲染节点；父组件通过 `Children` 读取快照。
+4. 渲染节点；父组件通过 `Children` 读取快照；声明了 `Widget.Outputs` 时只暴露 `Children.<As>.Outputs`。
 5. 在线组件按 6 小时 TTL 检查更新。
 
 ## 限制

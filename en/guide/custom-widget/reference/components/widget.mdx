@@ -38,6 +38,7 @@ Direct children of `Widget` can be:
 - `Triggers`
 - `Function`
 - `Widget.Using`
+- `Widget.Inputs` / `Widget.Outputs` (widget contract)
 
 `Data` can also appear inside any layout container; `Resources`, `Triggers`, and `Function` are only allowed at the root.
 
@@ -58,7 +59,7 @@ Root attributes also accept the attribute-element syntax:
 1. Parse and strictly validate the XML: unknown elements/attributes, duplicate attributes, and invalid URLs/enums are hard errors.
 2. Parse `Data` and start fetching; parse `Resources`; parse `Function`/`Triggers`.
 3. Run the `Loaded` trigger.
-4. Render nodes; the parent component reads the snapshot through `Children`.
+4. Render nodes; the parent reads the snapshot through `Children`; when `Widget.Outputs` is declared only `Children.<As>.Outputs` is exposed.
 5. Online components check for updates on a 6-hour TTL.
 
 ## Limitations

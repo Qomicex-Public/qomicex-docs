@@ -37,19 +37,71 @@ Embeds another QWidget into the current widget as a node.
 
 ## As a pure data source
 
-A widget can have no layout or visual nodes at all and contain only `Data`, `Resources`, `Function`, and `Triggers`. When embedded with `Widget.Using`, it renders nothing but still fetches data and runs `Loaded` triggers and functions; the parent reads its data and results through `Children.<As>`.
+A widget can have no layout or visual nodes at all and contain only `Data`, `Resources`, `Function`, `Widget.Inputs`, `Widget.Outputs`, and `Triggers`. When embedded with `Widget.Using`, it renders nothing but still fetches data and runs triggers/functions.
+
+### Input contract
+
+```xml
+<Widget.Inputs>
+  <Input Name="City" Type="String" Required="True" Default="Shanghai" />
+  <Input Name="Limit" Type="Number" Default="10" />
+</Widget.Inputs>
+```
+
+| Attribute | Description |
+| :--- | :--- |
+| `Name` | Unique input name, used as `{Inputs.Name}` |
+| `Type` | `String` / `Number` / `Bool` / `DateTime` / `Json` / `Binary` |
+| `Required` | Default `False` |
+| `Default` | Used when absent; `Json` / `Binary` are parsed as JSON |
+
+The parent passes values through `Widget.Using.Arguments`:
+
+```xml
+<Widget.Using Name="Weather data" As="Weather">
+  <Widget.Using.Arguments><![CDATA[{"City":"Paris"}]]></Widget.Using.Arguments>
+</Widget.Using>
+```
+
+- Unknown keys, type mismatches, and missing required inputs show an error placeholder.
+- Changing `Arguments` updates child `Inputs`; child input controls can still change their own values.
+- Widgets without `Widget.Inputs` keep the legacy behavior: `Arguments` go straight into `Inputs`.
+
+### Output contract
+
+```xml
+<Widget.Outputs>
+  <Output Name="Weather" Type="Json" Source="{Data.Weather}" />
+  <Output Name="Label" Type="String" Source="{Results.Summary.Text}" />
+</Widget.Outputs>
+```
+
+| Attribute | Description |
+| :--- | :--- |
+| `Name` | Unique output name; parent reads `Children.<As>.Outputs.Name` |
+| `Type` | Same type set; values are coerced/validated, invalid values become `undefined` |
+| `Source` | Child scope path; may reference `Data` / `Results` / `Inputs` / `Resources` |
+
+When `Widget.Outputs` is declared, only declared outputs are exposed to the parent; `Children.<As>.Data` and `Results` are no longer exposed, forming an output whitelist. Widgets without `Widget.Outputs` keep exposing the legacy full snapshot.
+
+### Full example
 
 ```xml
 <!-- WeatherData.qwidget: a pure data-source widget with no visual nodes -->
 <Widget Name="Weather data" Version="1.0.0">
+  <Widget.Inputs>
+    <Input Name="City" Type="String" Required="True" Default="Shanghai" />
+  </Widget.Inputs>
+  <Widget.Outputs>
+    <Output Name="Weather" Type="Json" Source="{Data.Weather}" />
+    <Output Name="Label" Type="String" Source="{Results.Summary.Text}" />
+  </Widget.Outputs>
   <Data Name="Weather" Type="Json"
-        Url="https://api.example.com/weather" />
+        Url="https://api.example.com/weather?city={Inputs.City}" />
   <Function Name="Summary">
     <Function.Output Type="String">Text</Function.Output>
     <Function.Script><![CDATA[
-      const city = Inputs.City || "Shanghai";
-      const item = Data.Weather && Data.Weather[city];
-      return { Text: item ? item.temperature + "°C" : "--" };
+      return { Text: Data.Weather.temperature + "°C" };
     ]]></Function.Script>
   </Function>
   <Triggers>
@@ -57,20 +109,17 @@ A widget can have no layout or visual nodes at all and contain only `Data`, `Res
   </Triggers>
 </Widget>
 
-<!-- Parent: embed the data source and bind to it -->
+<!-- Parent: embed the data source and read its outputs -->
 <Widget.Using Name="Weather data" As="Weather">
-  <Widget.Using.Arguments><![CDATA[{"City":"Shanghai"}]]></Widget.Using.Arguments>
+  <Widget.Using.Arguments><![CDATA[{"City":"Paris"}]]></Widget.Using.Arguments>
 </Widget.Using>
-<Text Value="{Children.Weather.Data.Weather.Shanghai.temperature}" />
-<Text Value="{Children.Weather.Results.Summary.Text}" />
+<Text Value="{Children.Weather.Outputs.Label}" />
+<Text Value="{Children.Weather.Outputs.Weather.temperature}" />
 ```
 
-Naming rules:
+`Data.Url` / `Data.Path` support `{Inputs.*}`. When inputs change, the old request is canceled and data is fetched again. The resolved URL must still be https:443 on a confirmed host; parameterize query values or path segments, not the host.
 
-- A named child source such as `Data Name="Weather"` is exposed as `Children.<As>.Data.Weather.*`; only unnamed sources merge directly into `Children.<As>.Data.*`.
-- Function results are exposed as `Children.<As>.Results.<Function>.*`.
-- Pure data sources still count toward nesting depth, instance count, and data-source limits.
-- **`Data.Url` / `Data.Path` are currently static strings; `{Inputs.*}` interpolation is not supported.** `Widget.Using.Arguments` initializes the child `Inputs` for `Function`, `If`, and bindings, but cannot change the request URL directly. To fetch by input, return multiple groups from the endpoint and select in a `Function`, or wait for URL parameterization support.
+Pure data sources still count toward nesting depth, instance count, and data-source limits.
 
 ## Scope
 
@@ -82,7 +131,7 @@ The parent can only read:
 <Text Value="{Children.Weather.Results.Load.Items.0.Title}" />
 ```
 
-`Children.<As>.State.Loading` / `.Error` are available too.
+`Children.<As>.State.Loading` / `.Error` are available too. Without `Widget.Outputs`, `.Data` / `.Results` are also exposed; with declared outputs, only `.Outputs` is exposed.
 
 ## Resolution
 

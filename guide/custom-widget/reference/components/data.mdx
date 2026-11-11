@@ -24,8 +24,8 @@ title: "Data"
 | `Name` | identifier | 否 | `Data` | 数据源名，唯一 |
 | `Type` | `Json` / `Text` / `Xml` / `Binary` | 否 | `Json` | 解析类型 |
 | `Source` | `Url` / `File` | 否 | `Url` | 来源 |
-| `Url` | https URL | Source=Url | — | 远程地址 |
-| `Path` | path | Source=File | — | 本地路径 |
+| `Url` | https URL | Source=Url | — | 远程地址，支持 `{Inputs.*}` |
+| `Path` | path | Source=File | — | 本地路径，支持 `{Inputs.*}` |
 | `Mime` | string | 否 | — | 二进制 MIME |
 | `Refresh` | 0–86400 | 否 | `3600` | 缓存秒数 |
 
@@ -53,6 +53,7 @@ title: "Data"
 ## 缓存
 
 - `Refresh` 秒内复用缓存；`0` 表示每次挂载都刷新。
+- 含 `{Inputs.*}` 的动态 URL/Path 不读写缓存，输入变化时重新拉取。
 - 非二进制缓存到 localStorage；二进制只缓存在内存。
 - `Refresh` 动作会重新拉取过期数据源。
 
@@ -72,6 +73,7 @@ title: "Data"
 
 ## 坑
 
-- `Url` / `Path` 是静态字符串，不支持运行时绑定。
+- `Url` / `Path` 支持 `{Inputs.*}`；解析后的 URL 仍必须是 https:443，且主机在确认列表内。建议只参数化查询参数或路径段，不要参数化主机。
+- 输入变化会取消旧请求并重新拉取；动态数据源不缓存。
 - 在线请求需要域名确认；非 https:443、私网地址会被拒绝。
 - 文本/JSON/XML 上限 1MB，二进制 8MB。

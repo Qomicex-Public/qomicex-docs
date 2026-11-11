@@ -37,12 +37,13 @@ title: "Widget references and scope"
 | Path | Description |
 | :--- | :--- |
 | `Children.<As>.Inputs` | Current values of the child's input controls |
-| `Children.<As>.Data` | Child data sources |
-| `Children.<As>.Results` | Child function/command/plugin results |
+| `Children.<As>.Outputs` | Whitelisted outputs when `Widget.Outputs` is declared |
+| `Children.<As>.Data` | Child data sources (available without declared outputs) |
+| `Children.<As>.Results` | Child function/command/plugin results (available without declared outputs) |
 | `Children.<As>.State.Loading` | Loading |
 | `Children.<As>.State.Error` | Has errors |
 
-The parent cannot write child state; for coordination, pass initial inputs through `Arguments` or keep the logic inside the child.
+The parent cannot write child state; for coordination, pass inputs through `Arguments` or keep the logic inside the child. When `Widget.Outputs` is declared, `Data` / `Results` are no longer exposed and the parent can only read `Outputs`.
 
 ## Arguments
 
@@ -54,7 +55,7 @@ The parent cannot write child state; for coordination, pass initial inputs throu
 
 - Supports `{Inputs.*}` / `{Data.*}` / `{Results.*}` interpolation.
 - Invalid JSON shows an error placeholder.
-- The child's `Inputs` are initialized with these values; the child can still change its own inputs.
+- The child's `Inputs` are initialized with these values; changes to `Arguments` update the corresponding inputs, and the child can still change its own inputs.
 
 ## Dependency resolution
 
