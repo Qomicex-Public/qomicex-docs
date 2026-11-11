@@ -58,6 +58,8 @@
                           "guide/custom-widget/advanced/media-binary",
                           "guide/custom-widget/advanced/pages",
                           "guide/custom-widget/advanced/effects",
+                          "guide/custom-widget/advanced/converters",
+                          "guide/custom-widget/advanced/animations",
                           "guide/custom-widget/advanced/security"
                         ]
                       },
@@ -262,6 +264,8 @@
                           "en/guide/custom-widget/advanced/media-binary",
                           "en/guide/custom-widget/advanced/pages",
                           "en/guide/custom-widget/advanced/effects",
+                          "en/guide/custom-widget/advanced/converters",
+                          "en/guide/custom-widget/advanced/animations",
                           "en/guide/custom-widget/advanced/security"
                         ]
                       },

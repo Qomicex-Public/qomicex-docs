@@ -102,6 +102,20 @@ QWidget 的字符串属性支持 `{路径}` 插值。绑定是只读的：值来
 
 `Arguments` 先按 JSON 解析，再对字符串值做深度插值；整个字符串是一个绑定时保留原始类型。
 
+## WPF 风格 Binding
+
+```xml
+<Text Value="{Binding Data.News.Title, Converter=Upper}" />
+<TextBox Value="{Binding Inputs.Price, Converter=Money, Mode=TwoWay}" />
+<Text Value="{MultiBinding Paths='Inputs.First|Inputs.Last', Converter=Join, ConverterParameter=' '}" />
+```
+
+- `{Binding Path, Converter=Name, ConverterParameter='...', Mode=...}`
+- `{MultiBinding Paths='a|b', Converter=Name, ...}`，路径用 `|` 分隔
+- 旧的 `{Data.foo}` 简写继续有效
+- `Mode`：`OneWay`（默认）/ `TwoWay` / `OneWayToSource`
+- Converter 定义与内置类型见 [Converter](/guide/custom-widget/advanced/converters)
+
 ## 常见错误
 
 - 绑定路径大小写敏感：`{data.Title}` 与 `{Data.Title}` 不同。
