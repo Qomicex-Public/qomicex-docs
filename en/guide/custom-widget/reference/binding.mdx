@@ -4,7 +4,78 @@ title: "Data binding"
 
 ## Data binding
 
-String attributes of a QWidget support `{path}` interpolation. Binding is read-only: values come from data sources, resources, control inputs, function results or nested widgets.
+A QWidget binding is a `source → converter → target` pipeline. Sources include data sources, resources, input controls, function results, command results, nested widget state, and widget size.
+
+Bindings are read-only by default. Input controls with `Mode="TwoWay"` write target changes back to `Inputs` through `ConvertBack`.
+
+```
+Data / Resources / Inputs / Results / Children / Size / State
+        │
+        ▼
+   Binding Path / MultiBinding Paths
+        │
+        ▼
+   Converter (optional)
+        │
+        ▼
+   Text / Button / Image / TextBox / ...
+```
+
+## Two forms
+
+### Shorthand
+
+```xml
+<Text Value="{Data.News.Title}" />
+<Text Value="Hello {Inputs.Name}" />
+<Text Value="{Inputs.Age}" />
+```
+
+- `{path}` is the interpolation marker.
+- A string containing only one binding preserves the original type (number, boolean, object, array).
+- Mixed text is converted to a string.
+- A missing path yields an empty string.
+
+### Explicit Binding
+
+```xml
+<Text Value="{Binding Data.News.Title}" />
+<Text Value="{Binding Data.News.Title, Converter=Upper}" />
+<TextBox Value="{Binding Inputs.Price, Converter=Money, Mode=TwoWay}" />
+```
+
+Parameters:
+
+| Parameter | Description |
+| :--- | :--- |
+| `Path` | Single source path; can also be the first positional argument |
+| `Converter` | A `Converter.Name` defined in the current XML |
+| `ConverterParameter` | Passed to the converter; supports `'...'` / `"..."` |
+| `Mode` | `OneWay` (default) / `TwoWay` / `OneWayToSource` |
+
+Quote parameters that contain commas:
+
+```xml
+<Text Value="{Binding Inputs.Name, Converter=Format, ConverterParameter='N2'}" />
+```
+
+## Path syntax
+
+```text
+Data.News.Items.0.Title
+Resources.AppName
+Inputs.Keyword
+Results.Search.Items.1.Name
+Children.Weather.Data.Temp
+Size.PixelWidth
+State.Loading
+```
+
+- Paths are case-sensitive: `{data.Title}` differs from `{Data.Title}`.
+- Array indexes must be decimal: `Items.0`.
+- Only own object properties are readable; `constructor`, `prototype`, and `__proto__` are blocked.
+- A missing path, type mismatch, or unloaded source yields an empty value.
+- Property names cannot contain dots; use nested objects instead.
 
 ## Namespaces
 
@@ -12,13 +83,13 @@ String attributes of a QWidget support `{path}` interpolation. Binding is read-o
 | :--- | :--- | :--- |
 | `Data` | `{Data.News.Title}` | `Data` elements |
 | `Resources` | `{Resources.AppName}` | `Resources` elements |
-| `Inputs` | `{Inputs.Keyword}` | Current value of input controls |
+| `Inputs` | `{Inputs.Keyword}` | Current input control values |
 | `Results` | `{Results.Search.Items}` | Functions / commands / plugin API |
 | `Children` | `{Children.Weather.Data.Temp}` | Read-only nested widget state |
-| `Size` | `{Size.Width}` / `{Size.PixelWidth}` | Current widget size: grid columns/rows and pixels |
+| `Size` | `{Size.Width}` / `{Size.PixelWidth}` | Grid size and rendered pixels |
 | `State` | `{State.Loading}` / `{State.Error}` | Widget state |
 
-## Data sources
+### Data
 
 ```xml
 <Data Name="News" Type="Json" Url="https://api.example.com/news" />
@@ -26,16 +97,138 @@ String attributes of a QWidget support `{path}` interpolation. Binding is read-o
 ```
 
 - Named source: `{Data.News.Title}`, or directly `{News.Title}`.
-- Unnamed source, default name `Data`: fields merge into `{Data.Title}`.
-- Name conflicts are rejected by XML validation.
+- An unnamed source defaults to `Data`; its fields merge into `{Data.Title}`.
+- Duplicate data source names are rejected by XML validation.
+- `Data.Status.News`: `Loading` / `Completed` / `Error`.
+- With `Async="True"`, the widget renders first and bindings refresh after loading.
 
-## Interpolation rules
+### Resources
 
-- `Value="Hello {Inputs.Name}"` → string concatenation.
-- `Value="{Inputs.Age}"` → the original type is preserved (number/boolean/object), suitable for JSON such as `Arguments`, `Select.Options`.
-- Path not found → empty string.
-- Interpolating an object/array into a string → JSON text.
-- Paths only allow object properties and array indexes; the prototype chain is not accessible.
+```xml
+<Resources>
+  <String Name="AppName">Qomicex</String>
+  <Bool Name="ShowTip">True</Bool>
+  <Number Name="PageSize">10</Number>
+  <Binary Name="Beep" Mime="audio/wav">BASE64...</Binary>
+</Resources>
+
+<Text Value="{Resources.AppName}" />
+```
+
+`String` / `Bool` / `Number` / `Json` / `Binary` preserve their types; `Binary` becomes `{ Url, Base64, Mime, Size }`.
+
+### Results
+
+| Source | Binding shape |
+| :--- | :--- |
+| Function | `{Results.FunctionName.OutputName}` |
+| RunCommand | `{Results.Command.ExitCode}` / `{Results.Command.Stdout}` / `{Results.Command.Stderr}` |
+| PluginApi | `{Results.PluginApi.Value}` |
+
+### Children
+
+```xml
+<Widget.Using Name="Weather" As="Weather" />
+<Text Value="{Children.Weather.Data.Temp}" />
+<Text Value="{Children.Weather.Outputs.Summary}" />
+```
+
+Read-only snapshots include `Inputs` / `Data` / `Results` / `Outputs` / `State`.
+
+### Size and State
+
+```xml
+<Text Value="{Size.Width} × {Size.Height}" />
+<Text Value="{Size.PixelWidth}px" />
+<If Test="{State.Error}">
+  <Text Value="Loading failed" Color="Destructive" />
+</If>
+```
+
+`Size.Width` / `Size.Height` are grid columns/rows; `Size.PixelWidth` / `Size.PixelHeight` are actual pixels. `State.Loading` / `State.Error` are booleans.
+
+## Type rules
+
+| Source type | Whole-value binding | Inside mixed text |
+| :--- | :--- | :--- |
+| String | string | concatenated |
+| Number | number | decimal text |
+| Bool | boolean | `true` / `false` |
+| Json object/array | original object/array | `JSON.stringify` |
+| Xml | `{ Root: { Name, Attributes, Text, Children } }` | JSON text |
+| Binary | `{ Url, Base64, Mime, Size }` | JSON text |
+| Missing/`null` | empty string or `undefined` | empty string |
+
+Exact bindings preserve type, which is useful for:
+
+```xml
+<Button.Arguments><![CDATA[{"age":"{Inputs.Age}","tags":"{Data.Tags}"}]]></Button.Arguments>
+<Select Options="{Data.Options}" />
+<List Items="{Data.Items}" />
+```
+
+## Converter
+
+A converter transforms values between the binding source and target, including formatting, type coercion, and two-way write-back.
+
+```xml
+<Widget.Converters>
+  <Converter Name="Upper" Type="Upper" />
+  <Converter Name="Money" Type="Format" Format="N2" />
+  <Converter Name="Visible" Type="BoolToVisibility" />
+  <Converter Name="Label" Type="Map">
+    <MapEntry From="True" To="On" />
+    <MapEntry From="False" To="Off" />
+  </Converter>
+</Widget.Converters>
+
+<Text Value="{Binding Data.News.Title, Converter=Upper}" />
+<TextBox Value="{Binding Inputs.Price, Converter=Money, Mode=TwoWay}" />
+```
+
+Built-in types are documented in [Converters](/en/guide/custom-widget/advanced/converters):
+
+`String` / `Number` / `Bool` / `DateTime` / `Json` / `Format` / `Map` / `BoolToVisibility` / `Upper` / `Lower` / `Join` / `Script`.
+
+### ConverterParameter
+
+`ConverterParameter` overrides the converter's default `Format`:
+
+```xml
+<Text Value="{Binding Inputs.Price, Converter=Money, ConverterParameter='N0'}" />
+```
+
+### ConvertBack
+
+With `Mode="TwoWay"`, target changes call `ConvertBack`. Supported controls:
+
+- `TextBox`
+- `CheckBox`
+- `Slider`
+
+The write-back target is the `Inputs.<Name>` binding path; if the path is not `Inputs.*`, the control `Name` is used. Returning `undefined` from `ConvertBack` skips the write-back.
+
+## MultiBinding
+
+```xml
+<Text Value="{MultiBinding Paths='Inputs.First|Inputs.Last', Converter=Join, ConverterParameter=' '}" />
+```
+
+- `Paths` is separated by `|`.
+- Multi-value converters receive a `values` array.
+- `Join` joins all values.
+- Current input controls write MultiBinding changes only to the first path.
+
+## Bindings in action parameters
+
+```xml
+<Button Text="Open" OnClick="OpenUrl" Url="{Data.Link}" />
+<Button Text="Save" OnClick="CallFunction" Function="Save">
+  <Button.Arguments><![CDATA[{"name":"{Inputs.Name}","age":18}]]></Button.Arguments>
+</Button>
+```
+
+`Arguments` is parsed as JSON first, then string values are deeply interpolated; a whole-string binding preserves the original type.
 
 ## List scope
 
@@ -48,77 +241,39 @@ String attributes of a QWidget support `{path}` interpolation. Binding is read-o
 </List>
 ```
 
-- `{Item.*}`: the current item; the variable name comes from `As`.
-- `{Index}`: the 0-based index of the current item.
-- With nested lists, the inner list shadows `Item` / `Index`.
+- `{Item.*}`: current item; the variable name comes from `As`.
+- `{Index}`: 0-based current item index.
+- Nested lists shadow `Item` / `Index`.
+- `List.Items` must be an array; an object renders an empty list.
 
-## Type reference
+## Refresh and lifecycle
 
-| Value | Binding result |
-| :--- | :--- |
-| JSON object/array | Object/array; JSON.stringify when interpolated into a string |
-| Text | String |
-| Xml | `{ Root: { Name, Attributes, Text, Children } }` |
-| Binary | `{ Url, Base64, Mime, Size }` |
-| Resources String/Bool/Number | Corresponding primitive type |
-| Resources Binary | `{ Url, Base64, Mime, Size }` |
-| Function output | Per the `Function.Output` type |
-| Command result | `{ ExitCode, Stdout, Stderr }` |
-| PluginApi result | `{ Value }` |
+- Bindings recompute with the latest scope after data changes.
+- `Async="True"` does not block first paint; bindings refresh after loading.
+- `Data.Status.*` supports loading and error placeholders.
+- Remote updates confirm only executable-content changes; ordinary data/text/layout changes are silent.
 
-## State
+## Editor support
 
-```xml
-<Text Value="{State.Loading}" />
-<If Test="{State.Error}">
-  <Text Value="加载失败" Color="Destructive" />
-</If>
-```
-
-`State.Loading` / `State.Error` are booleans.
-
-## Size
-
-```xml
-<Text Value="{Size.Width} × {Size.Height}" />
-<Text Value="{Size.PixelWidth}px" />
-```
-
-| Field | Meaning |
-| :--- | :--- |
-| `Size.Width` / `Size.Height` | Grid columns/rows; nested widgets inherit the parent grid size |
-| `Size.PixelWidth` / `Size.PixelHeight` | Actual rendered pixel size |
-
-`Size` works in normal bindings, declarative `When` conditions, and `Resize` trigger functions.
-
-## Using bindings in action parameters
-
-```xml
-<Button Text="打开" OnClick="OpenUrl" Url="{Data.Link}" />
-<Button Text="提交" OnClick="CallFunction" Function="Save">
-  <Button.Arguments><![CDATA[{"name":"{Inputs.Name}","age":18}]]></Button.Arguments>
-</Button>
-```
-
-`Arguments` is parsed as JSON first, then string values are interpolated deeply; when a whole string is a single binding the original type is preserved.
-
-## WPF-style Binding
-
-```xml
-<Text Value="{Binding Data.News.Title, Converter=Upper}" />
-<TextBox Value="{Binding Inputs.Price, Converter=Money, Mode=TwoWay}" />
-<Text Value="{MultiBinding Paths='Inputs.First|Inputs.Last', Converter=Join, ConverterParameter=' '}" />
-```
-
-- `{Binding Path, Converter=Name, ConverterParameter='...', Mode=...}`
-- `{MultiBinding Paths='a|b', Converter=Name, ...}` with paths separated by `|`
-- Existing `{Data.foo}` shorthand remains valid
-- `Mode`: `OneWay` (default) / `TwoWay` / `OneWayToSource`
-- See [Converters](/en/guide/custom-widget/advanced/converters) for definitions and built-in types
+- Typing `{` completes `Data` / `Resources` / `Inputs` / `Results` / `Children` / `Size` / `State`.
+- Typing `{Binding ` completes paths.
+- `Converter=` completes converter names defined in the current XML.
+- Converter names and `ConverterParameter` are validated during XML parsing.
 
 ## Common mistakes
 
-- Binding paths are case-sensitive: `{data.Title}` differs from `{Data.Title}`.
-- Bindings are empty while a data source is still loading; use `If Test="{State.Loading}"` to show a placeholder.
-- Static `Data.Url` / `Data.Path` do not support runtime binding; use `{Inputs.*}` for dynamic data sources.
-- `List.Items` must be an array; an object renders an empty list.
+- Path case is significant: `{data.Title}` differs from `{Data.Title}`.
+- Bindings are empty while data loads; use `If Test="{State.Loading}"` for a placeholder.
+- Static `Data.Url` / `Data.Path` do not support runtime binding; use `{Inputs.*}` for dynamic sources.
+- A misspelled converter fails parsing with `unknown Converter`.
+- `OneWay` controls do not write back; declare `Mode="TwoWay"` for two-way inputs.
+- `MultiBinding` `Paths` uses `|`, not commas.
+- Script converters run synchronously and must not perform network I/O; remote scripts require executable confirmation.
+
+## Limits
+
+- Paths only read object properties; no method calls, expressions, or indexer syntax.
+- Bindings evaluate synchronously; converters must not perform I/O or heavy work.
+- Static `Data.Url` does not participate in runtime binding; dynamic sources use limited `Inputs` / `Data` forms.
+- Raw `<` in XML attributes must be written as `&lt;`.
+- There is no `Binding.DoNothing`; return `undefined` from `ConvertBack` to skip a write-back.
