@@ -4,7 +4,78 @@ title: "数据绑定"
 
 ## 数据绑定
 
-QWidget 的字符串属性支持 `{路径}` 插值。绑定是只读的：值来自数据源、资源、控件输入、函数结果或嵌套组件。
+QWidget 的绑定是“源值 → Converter → 目标值”的管线。源可以是数据源、资源、输入控件、函数结果、命令结果、嵌套组件状态或组件尺寸。
+
+默认是只读绑定，数据变化会刷新目标。声明了 `Mode="TwoWay"` 的输入控件会在目标变化时通过 `ConvertBack` 写回 `Inputs`。
+
+```
+Data / Resources / Inputs / Results / Children / Size / State
+        │
+        ▼
+   Binding Path / MultiBinding Paths
+        │
+        ▼
+   Converter (可选)
+        │
+        ▼
+   Text / Button / Image / TextBox / ...
+```
+
+## 两种写法
+
+### 简写
+
+```xml
+<Text Value="{Data.News.Title}" />
+<Text Value="Hello {Inputs.Name}" />
+<Text Value="{Inputs.Age}" />
+```
+
+- `{路径}` 是插值标记。
+- 整个字符串只有一个绑定时保留原始类型（数字、布尔、对象、数组）。
+- 混合文本时转换为字符串。
+- 找不到路径时为空字符串。
+
+### 显式 Binding
+
+```xml
+<Text Value="{Binding Data.News.Title}" />
+<Text Value="{Binding Data.News.Title, Converter=Upper}" />
+<TextBox Value="{Binding Inputs.Price, Converter=Money, Mode=TwoWay}" />
+```
+
+显式写法支持：
+
+| 参数 | 说明 |
+| :--- | :--- |
+| `Path` | 单个源路径；也可以写在第一个位置 |
+| `Converter` | 当前 XML 中的 `Converter.Name` |
+| `ConverterParameter` | 传给 Converter 的参数，支持 `'...'` / `"..."` |
+| `Mode` | `OneWay`（默认）/ `TwoWay` / `OneWayToSource` |
+
+带逗号的参数要加引号：
+
+```xml
+<Text Value="{Binding Inputs.Name, Converter=Format, ConverterParameter='N2'}" />
+```
+
+## 路径语法
+
+```text
+Data.News.Items.0.Title
+Resources.AppName
+Inputs.Keyword
+Results.Search.Items.1.Name
+Children.Weather.Data.Temp
+Size.PixelWidth
+State.Loading
+```
+
+- 大小写敏感：`{data.Title}` 与 `{Data.Title}` 不同。
+- 数组下标必须是十进制数字：`Items.0`。
+- 路径只读对象自有属性，不能访问 `constructor`、`prototype`、`__proto__`。
+- 路径缺失、类型不匹配或源尚未加载时返回空值。
+- 属性名不能包含点；带点的字段请通过对象嵌套访问。
 
 ## 命名空间
 
@@ -15,10 +86,10 @@ QWidget 的字符串属性支持 `{路径}` 插值。绑定是只读的：值来
 | `Inputs` | `{Inputs.Keyword}` | 输入控件当前值 |
 | `Results` | `{Results.Search.Items}` | 函数 / 命令 / 插件 API |
 | `Children` | `{Children.Weather.Data.Temp}` | 嵌套组件只读状态 |
-| `Size` | `{Size.Width}` / `{Size.PixelWidth}` | 当前组件尺寸：网格列/行与实际像素 |
+| `Size` | `{Size.Width}` / `{Size.PixelWidth}` | 网格尺寸与实际像素 |
 | `State` | `{State.Loading}` / `{State.Error}` | 组件状态 |
 
-## 数据源
+### Data
 
 ```xml
 <Data Name="News" Type="Json" Url="https://api.example.com/news" />
@@ -26,16 +97,138 @@ QWidget 的字符串属性支持 `{路径}` 插值。绑定是只读的：值来
 ```
 
 - 命名源：`{Data.News.Title}`，也可以直接用 `{News.Title}`。
-- 未命名源默认名 `Data`：字段合并到 `{Data.Title}`。
-- 同名冲突由 XML 校验拒绝。
+- 未命名源默认名 `Data`，字段合并到 `{Data.Title}`。
+- 同名数据源由 XML 校验拒绝。
+- `Data.Status.News`：`Loading` / `Completed` / `Error`。
+- `Async="True"` 时先渲染空值，加载完成后自动刷新绑定。
 
-## 插值规则
+### Resources
 
-- `Value="Hello {Inputs.Name}"` → 字符串拼接。
-- `Value="{Inputs.Age}"` → 保留原始类型（数字/布尔/对象），适合 `Arguments`、`Select.Options` 等 JSON。
-- 找不到路径 → 空字符串。
-- 对象/数组插值到字符串 → JSON 文本。
-- 路径只允许对象属性与数组下标，不能访问原型链。
+```xml
+<Resources>
+  <String Name="AppName">Qomicex</String>
+  <Bool Name="ShowTip">True</Bool>
+  <Number Name="PageSize">10</Number>
+  <Binary Name="Beep" Mime="audio/wav">BASE64...</Binary>
+</Resources>
+
+<Text Value="{Resources.AppName}" />
+```
+
+资源类型 `String` / `Bool` / `Number` / `Json` / `Binary` 会保留对应类型；`Binary` 解析为 `{ Url, Base64, Mime, Size }`。
+
+### Results
+
+| 来源 | 绑定形状 |
+| :--- | :--- |
+| Function | `{Results.FunctionName.OutputName}` |
+| RunCommand | `{Results.Command.ExitCode}` / `{Results.Command.Stdout}` / `{Results.Command.Stderr}` |
+| PluginApi | `{Results.PluginApi.Value}` |
+
+### Children
+
+```xml
+<Widget.Using Name="Weather" As="Weather" />
+<Text Value="{Children.Weather.Data.Temp}" />
+<Text Value="{Children.Weather.Outputs.Summary}" />
+```
+
+只读子组件快照，包含 `Inputs` / `Data` / `Results` / `Outputs` / `State`。
+
+### Size 与 State
+
+```xml
+<Text Value="{Size.Width} × {Size.Height}" />
+<Text Value="{Size.PixelWidth}px" />
+<If Test="{State.Error}">
+  <Text Value="加载失败" Color="Destructive" />
+</If>
+```
+
+`Size.Width` / `Size.Height` 是网格列/行；`Size.PixelWidth` / `Size.PixelHeight` 是实际像素。`State.Loading` / `State.Error` 是布尔值。
+
+## 类型规则
+
+| 源类型 | 整个值是一个绑定时的结果 | 混在字符串中时 |
+| :--- | :--- | :--- |
+| String | string | 原样拼接 |
+| Number | number | 十进制文本 |
+| Bool | boolean | `true` / `false` |
+| Json 对象/数组 | 原始对象/数组 | `JSON.stringify` |
+| Xml | `{ Root: { Name, Attributes, Text, Children } }` | JSON 文本 |
+| Binary | `{ Url, Base64, Mime, Size }` | JSON 文本 |
+| 缺失/`null` | 空字符串或 `undefined` | 空串 |
+
+精确绑定保留类型，适合：
+
+```xml
+<Button.Arguments><![CDATA[{"age":"{Inputs.Age}","tags":"{Data.Tags}"}]]></Button.Arguments>
+<Select Options="{Data.Options}" />
+<List Items="{Data.Items}" />
+```
+
+## Converter
+
+Converter 在绑定源与目标之间转换值，可做格式化、类型转换和双向回写。
+
+```xml
+<Widget.Converters>
+  <Converter Name="Upper" Type="Upper" />
+  <Converter Name="Money" Type="Format" Format="N2" />
+  <Converter Name="Visible" Type="BoolToVisibility" />
+  <Converter Name="Label" Type="Map">
+    <MapEntry From="True" To="开" />
+    <MapEntry From="False" To="关" />
+  </Converter>
+</Widget.Converters>
+
+<Text Value="{Binding Data.News.Title, Converter=Upper}" />
+<TextBox Value="{Binding Inputs.Price, Converter=Money, Mode=TwoWay}" />
+```
+
+内置类型见 [Converter](/guide/custom-widget/advanced/converters)：
+
+`String` / `Number` / `Bool` / `DateTime` / `Json` / `Format` / `Map` / `BoolToVisibility` / `Upper` / `Lower` / `Join` / `Script`。
+
+### ConverterParameter
+
+`ConverterParameter` 会覆盖 Converter 的默认 `Format`：
+
+```xml
+<Text Value="{Binding Inputs.Price, Converter=Money, ConverterParameter='N0'}" />
+```
+
+### ConvertBack
+
+`Mode="TwoWay"` 时，目标变化会调用 `ConvertBack`。当前支持双向回写的控件：
+
+- `TextBox`
+- `CheckBox`
+- `Slider`
+
+回写目标是绑定路径中的 `Inputs.<Name>`；如果路径不是 `Inputs.*`，回退到控件 `Name`。`ConvertBack` 返回 `undefined` 表示本次不写回。
+
+## MultiBinding
+
+```xml
+<Text Value="{MultiBinding Paths='Inputs.First|Inputs.Last', Converter=Join, ConverterParameter=' '}" />
+```
+
+- `Paths` 用 `|` 分隔。
+- 多值 Converter 的 `values` 是数组。
+- `Join` 会连接全部值。
+- 当前输入控件的 MultiBinding 只把回写落到第一个路径。
+
+## Binding 在动作参数中使用
+
+```xml
+<Button Text="打开" OnClick="OpenUrl" Url="{Data.Link}" />
+<Button Text="提交" OnClick="CallFunction" Function="Save">
+  <Button.Arguments><![CDATA[{"name":"{Inputs.Name}","age":18}]]></Button.Arguments>
+</Button>
+```
+
+`Arguments` 先按 JSON 解析，再对字符串值做深度插值；整个字符串是一个绑定时保留原始类型。
 
 ## 列表作用域
 
@@ -48,77 +241,39 @@ QWidget 的字符串属性支持 `{路径}` 插值。绑定是只读的：值来
 </List>
 ```
 
-- `{Item.*}`：当前项；变量名由 `As` 决定。
-- `{Index}`：当前项下标，0 起。
+- `{Item.*}`：当前项，变量名由 `As` 决定。
+- `{Index}`：当前项下标，从 0 开始。
 - 嵌套 List 时内层覆盖 `Item` / `Index`。
+- `List.Items` 必须是数组；对象会显示空列表。
 
-## 类型参考
+## 刷新与生命周期
 
-| 值 | 绑定结果 |
-| :--- | :--- |
-| JSON 对象/数组 | 对象/数组；插值到字符串时 JSON.stringify |
-| Text | 字符串 |
-| Xml | `{ Root: { Name, Attributes, Text, Children } }` |
-| Binary | `{ Url, Base64, Mime, Size }` |
-| Resources String/Bool/Number | 对应基础类型 |
-| Resources Binary | `{ Url, Base64, Mime, Size }` |
-| Function 输出 | 按 `Function.Output` 类型 |
-| Command 结果 | `{ ExitCode, Stdout, Stderr }` |
-| PluginApi 结果 | `{ Value }` |
+- 数据源变化后，绑定使用最新作用域重新计算。
+- `Async="True"` 不阻塞首屏；加载完成后绑定自动更新。
+- `Data.Status.*` 可用于加载态、错误态占位。
+- 远程更新只对可执行内容变化确认；普通数据/文本/布局变化静默替换。
 
-## State
+## 编辑器支持
 
-```xml
-<Text Value="{State.Loading}" />
-<If Test="{State.Error}">
-  <Text Value="加载失败" Color="Destructive" />
-</If>
-```
-
-`State.Loading` / `State.Error` 是布尔值。
-
-## Size
-
-```xml
-<Text Value="{Size.Width} × {Size.Height}" />
-<Text Value="{Size.PixelWidth}px" />
-```
-
-| 字段 | 含义 |
-| :--- | :--- |
-| `Size.Width` / `Size.Height` | 网格列数/行数；嵌套组件沿用父级网格尺寸 |
-| `Size.PixelWidth` / `Size.PixelHeight` | 组件实际渲染像素尺寸 |
-
-`Size` 可用于普通绑定，也可用 `When` 做声明式断点，或在 `Resize` 触发器函数里读取。
-
-## 在动作参数中使用
-
-```xml
-<Button Text="打开" OnClick="OpenUrl" Url="{Data.Link}" />
-<Button Text="提交" OnClick="CallFunction" Function="Save">
-  <Button.Arguments><![CDATA[{"name":"{Inputs.Name}","age":18}]]></Button.Arguments>
-</Button>
-```
-
-`Arguments` 先按 JSON 解析，再对字符串值做深度插值；整个字符串是一个绑定时保留原始类型。
-
-## WPF 风格 Binding
-
-```xml
-<Text Value="{Binding Data.News.Title, Converter=Upper}" />
-<TextBox Value="{Binding Inputs.Price, Converter=Money, Mode=TwoWay}" />
-<Text Value="{MultiBinding Paths='Inputs.First|Inputs.Last', Converter=Join, ConverterParameter=' '}" />
-```
-
-- `{Binding Path, Converter=Name, ConverterParameter='...', Mode=...}`
-- `{MultiBinding Paths='a|b', Converter=Name, ...}`，路径用 `|` 分隔
-- 旧的 `{Data.foo}` 简写继续有效
-- `Mode`：`OneWay`（默认）/ `TwoWay` / `OneWayToSource`
-- Converter 定义与内置类型见 [Converter](/guide/custom-widget/advanced/converters)
+- 输入 `{` 补全 `Data` / `Resources` / `Inputs` / `Results` / `Children` / `Size` / `State`。
+- 输入 `{Binding ` 补全路径。
+- `Converter=` 补全当前 XML 中定义的 Converter 名称。
+- `ConverterParameter` 和 `Converter` 名称在 XML 解析期校验。
 
 ## 常见错误
 
-- 绑定路径大小写敏感：`{data.Title}` 与 `{Data.Title}` 不同。
+- 路径大小写错误：`{data.Title}` 与 `{Data.Title}` 不同。
 - 数据源未加载时绑定为空；用 `If Test="{State.Loading}"` 显示占位。
-- 静态 `Data.Url` / `Data.Path` 不支持运行时绑定；动态数据源用 `{Inputs.*}`。
-- `List.Items` 必须是数组；对象会显示空列表。
+- 静态 `Data.Url` / `Data.Path` 不支持运行时绑定；动态源使用 `{Inputs.*}`。
+- Converter 名称拼错会在解析期报 `未知 Converter`。
+- `OneWay` 控件修改不会写回；双向控件必须声明 `Mode="TwoWay"`。
+- `MultiBinding` 的 `Paths` 用 `|`，不是逗号。
+- 脚本 Converter 同步执行，不能做网络请求；远程脚本会进入可执行确认。
+
+## 限制
+
+- 绑定路径只读对象属性，不支持方法调用、表达式或索引器语法。
+- 绑定是同步求值；Converter 不应做 I/O 或重计算。
+- `Data` 数据源静态 URL 不参与运行时绑定；动态 URL 使用 `Inputs` / `Data` 的有限形式。
+- XML 属性中的 `<` 要写成 `&lt;`。
+- 没有 `Binding.DoNothing`；需要忽略回写时让 `ConvertBack` 返回 `undefined`。
