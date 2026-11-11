@@ -4,7 +4,7 @@ title: "QWidget 函数与 TypeScript"
 
 ## QWidget 函数与 TypeScript
 
-`Function` 让你在组件里写 TypeScript 逻辑。脚本在隔离的 sandbox iframe 中执行，不能访问 DOM、网络、localStorage 或 `import`，只能读取传入的数据并返回一个纯对象。
+`Function` 让你在组件里写 TypeScript 逻辑。脚本在隔离的 sandbox iframe 中执行，不能访问 DOM、网络、localStorage 或 `import`；可以读取传入的数据、返回纯对象，也可以通过 `Host` 读写当前组件的可视属性。
 
 ## 最小示例
 
@@ -87,7 +87,7 @@ TypeScript 代码，建议用 CDATA：
 ]]></Function.Script>
 ```
 
-脚本只能返回可 JSON 序列化的值；`Date` 会被序列化为 ISO 字符串。
+脚本只能返回可 JSON 序列化的值；`Date` 会被序列化为 ISO 字符串。脚本支持顶层 `await`，可直接等待 `Host` 的异步方法。
 
 ## 输入从哪里来
 
@@ -117,14 +117,72 @@ TypeScript 代码，建议用 CDATA：
 
 ## Host
 
+所有 `Host` 方法都是异步的，返回 `Promise`；可以 `await`，也可以忽略返回值。
+
 | 方法 | 说明 |
 | :--- | :--- |
 | `Host.Notify(message, type?)` | 弹出通知；`type` 可为 `info` / `success` / `error` |
 | `Host.OpenUrl(url)` | 用系统浏览器打开 https 链接 |
 | `Host.Navigate(path)` | 站内跳转，如 `/instances` |
 | `Host.Log(message)` | 写入开发者日志 |
+| `Host.SetProperty(Target, Property, Value)` | 修改组件的可视属性，返回写入后的值 |
+| `Host.GetProperty(Target, Property)` | 读取组件的当前可视属性 |
+| `Host.Invoke(Target, Method, Args?)` | 调用组件方法；`Args` 可传数组或单值 |
 
-Host 调用是单向的，不会返回值。脚本不能执行命令或调用插件 API；这两类能力只能通过按钮/触发器动作触发。
+### 可读写属性
+
+`Target` 指向的可视节点都支持修改其 XML 可视属性，例如：
+
+- `Text`：`Value`、`Size`、`Weight`、`Color`、`Clamp`、`Align`
+- `Button` / `Link`：`Text`、`Variant`、`Size`、`Url`
+- `TextBox` / `CheckBox` / `Slider` / `Select` / `ColorPicker` / `FilePicker`：`Value`、`Checked`、`Options` 等
+- `List`：`Items`（可直接传数组）、`Gap`、`EmptyText`
+- `Container` / `Row` / `Column` / `Grid`：`Gap`、`Padding`、`Border`、`Background`、`Radius`、`Align`、`Justify`
+- `Image` / `Media`：`Src`、`Alt`、`Source`、`Volume`、`Muted` 等
+- 所有可视节点：`Visible`，以及内容属性别名 `Content`（Text → Value，Button → Text，List → Items 等）
+
+不能通过 `Host.SetProperty` 修改 `Target`、`Name`、`OnClick`、`OnChange`、`Function`、`Arguments`、`Command`、`WorkingDirectory`、`Timeout`、`PluginId`、`Method` 等结构/动作属性。
+
+### Invoke 方法
+
+| 方法 | 适用节点 | 说明 |
+| :--- | :--- | :--- |
+| `Click` | `Button` / `Link` | 触发与用户点击相同的动作和 `Click` 触发器 |
+| `SetValue` | 所有可写属性节点 | 等价于 `Host.SetProperty(Target, "Value", Args)` |
+| `Toggle` | `CheckBox` | 切换勾选状态 |
+| `Refresh` | 任意节点 | 重新拉取当前组件的数据源 |
+| `Focus` / `Blur` | 输入控件、按钮、链接 | 聚焦/失焦 |
+
+### 示例
+
+```xml
+<Text Target="Status" Value="待机" />
+<List Target="ResultList" Items="Items" As="Item" EmptyText="暂无结果">
+  <ListItem><Text Value="{Item.Title}" /></ListItem>
+</List>
+<Button Target="RefreshButton" Text="刷新"
+        OnClick="CallFunction" Function="Refresh" />
+
+<Function Name="Refresh" Timeout="5000">
+  <Function.Output Type="String">Message</Function.Output>
+  <Function.Script><![CDATA[
+    const previous = await Host.GetProperty("Status", "Value");
+    await Host.SetProperty("Status", "Content", "加载中");
+    const items = await Host.GetProperty("ResultList", "Items");
+    await Host.SetProperty("ResultList", "Items", [
+      { Title: "结果 A" },
+      { Title: "结果 B" },
+    ]);
+    await Host.SetProperty("RefreshButton", "Visible", true);
+    // await Host.Invoke("RefreshButton", "Click");
+    return { Message: previous + " -> " + items.length };
+  ]]></Function.Script>
+</Function>
+```
+
+`Host.Invoke("RefreshButton", "Click")` 会再次执行按钮动作；在按钮自己的脚本里调用自身会造成递归，请只调用其他按钮或加条件保护。
+
+脚本仍然不能直接执行命令或调用插件 API；这两类能力通过按钮/触发器动作触发，或在确认风险后由动作执行。
 
 ## 触发器
 

@@ -35,6 +35,40 @@ title: "Widget.Using"
 
 `Widget.Using` 本身不渲染额外容器，子组件内容按原位渲染。父组件决定外层尺寸。
 
+## 作为纯数据源
+
+组件可以没有任何布局或可视节点，只放 `Data`、`Resources`、`Function` 和 `Triggers`。这种组件被 `Widget.Using` 引入时不会显示任何内容，但会正常拉取数据、执行 `Loaded` 触发器和函数，父组件通过 `Children.<As>` 读取它的数据与结果。
+
+```xml
+<!-- WeatherData.qwidget：纯数据源，没有可视节点 -->
+<Widget Name="天气数据" Version="1.0.0">
+  <Data Name="Weather" Type="Json"
+        Url="https://api.example.com/weather?city={Inputs.City}" />
+  <Function Name="Summary">
+    <Function.Output Type="String">Text</Function.Output>
+    <Function.Script><![CDATA[
+      return { Text: Data.Weather.temperature + "°C" };
+    ]]></Function.Script>
+  </Function>
+  <Triggers>
+    <Trigger Event="DataChanged" Data="Weather" Function="Summary" />
+  </Triggers>
+</Widget>
+
+<!-- 父组件：引入数据源并绑定 -->
+<Widget.Using Name="天气数据" As="Weather">
+  <Widget.Using.Arguments><![CDATA[{"City":"Shanghai"}]]></Widget.Using.Arguments>
+</Widget.Using>
+<Text Value="{Children.Weather.Data.Weather.temperature}" />
+<Text Value="{Children.Weather.Results.Summary.Text}" />
+```
+
+命名规则：
+
+- 子组件里 `Data Name="Weather"` 的数据在父组件中是 `Children.<As>.Data.Weather.*`；未命名数据源才直接合并到 `Children.<As>.Data.*`。
+- `Function` 结果在 `Children.<As>.Results.<Function>.*`。
+- 纯数据源也受嵌套深度、实例数和数据源数量限制。
+
 ## 作用域
 
 父组件只读：

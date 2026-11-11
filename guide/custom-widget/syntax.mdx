@@ -34,6 +34,24 @@ QWidget 是单文件 XML。根元素固定为 `Widget`，其余元素分为布�
 - 属性：`Value`、`Size`、`OnClick`、`EmptyText`
 - 枚举：`Lg`、`Bold`、`Center`、`Json`、`Binary`
 
+## 通用节点属性
+
+除 `Widget` 根元素、`Data`、`Resources`、`Function`、`Triggers` 等非可视元素外，所有可视节点都支持：
+
+| 属性 | 必填 | 说明 |
+| :--- | :--- | :--- |
+| `Target` | 否 | 脚本定位键，整个组件内唯一；供 `Host.SetProperty` / `Host.GetProperty` / `Host.Invoke` 使用 |
+| `Visible` | 否 | 默认 `True`；设为 `False` 时不渲染，可由脚本动态切换 |
+
+`Target` 与输入控件的 `Name` 是两个独立命名空间：`Name` 仍用于 `{Inputs.Name}` 和 `Trigger Control="Name"`，`Target` 只用于脚本操作 UI。示例：
+
+```xml
+<Text Target="Status" Value="待机" />
+<Button Target="Refresh" Text="刷新" OnClick="CallFunction" Function="Refresh" />
+```
+
+脚本示例见[函数与 TypeScript](/guide/custom-widget/advanced/functions#host)。
+
 ## 三种等价写法
 
 同一个属性支持属性语法、内容语法、属性元素语法，三者等价；同一属性被两种语法同时赋值会报错。

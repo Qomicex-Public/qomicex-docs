@@ -4,7 +4,7 @@ title: "QWidget functions and TypeScript"
 
 ## QWidget functions and TypeScript
 
-`Function` lets you write TypeScript logic inside a widget. Scripts run in an isolated sandbox iframe with no DOM, network, localStorage, or `import`; they only read inputs and return a plain object.
+`Function` lets you write TypeScript logic inside a widget. Scripts run in an isolated sandbox iframe with no DOM, network, localStorage, or `import`; they can read inputs, return a plain object, and read/write the current widget's visual properties through `Host`.
 
 ## Minimal example
 
@@ -81,7 +81,7 @@ TypeScript source; CDATA is recommended:
 ]]></Function.Script>
 ```
 
-Scripts must return JSON-serializable values; `Date` is serialized as an ISO string.
+Scripts must return JSON-serializable values; `Date` is serialized as an ISO string. Top-level `await` is supported, so scripts can wait for `Host` calls directly.
 
 ## Input sources
 
@@ -111,14 +111,72 @@ Scripts must return JSON-serializable values; `Date` is serialized as an ISO str
 
 ## Host
 
+All `Host` methods are asynchronous and return a `Promise`; you may `await` them or ignore the result.
+
 | Method | Description |
 | :--- | :--- |
 | `Host.Notify(message, type?)` | Show a notification (`info` / `success` / `error`) |
 | `Host.OpenUrl(url)` | Open an https URL in the system browser |
 | `Host.Navigate(path)` | Navigate inside the launcher |
 | `Host.Log(message)` | Write to developer logs |
+| `Host.SetProperty(Target, Property, Value)` | Write a visual property and return the stored value |
+| `Host.GetProperty(Target, Property)` | Read the current visual property |
+| `Host.Invoke(Target, Method, Args?)` | Invoke a component method; `Args` may be an array or a single value |
 
-Host calls are one-way. Scripts cannot execute commands or call plugin APIs; use button/trigger actions for that.
+### Writable properties
+
+Every visual node addressed by `Target` exposes its XML visual attributes, for example:
+
+- `Text`: `Value`, `Size`, `Weight`, `Color`, `Clamp`, `Align`
+- `Button` / `Link`: `Text`, `Variant`, `Size`, `Url`
+- `TextBox` / `CheckBox` / `Slider` / `Select` / `ColorPicker` / `FilePicker`: `Value`, `Checked`, `Options`, etc.
+- `List`: `Items` (an array is accepted directly), `Gap`, `EmptyText`
+- `Container` / `Row` / `Column` / `Grid`: `Gap`, `Padding`, `Border`, `Background`, `Radius`, `Align`, `Justify`
+- `Image` / `Media`: `Src`, `Alt`, `Source`, `Volume`, `Muted`, etc.
+- All visual nodes: `Visible`, plus the content alias `Content` (Text → Value, Button → Text, List → Items, etc.)
+
+`Host.SetProperty` cannot change structural or action attributes such as `Target`, `Name`, `OnClick`, `OnChange`, `Function`, `Arguments`, `Command`, `WorkingDirectory`, `Timeout`, `PluginId`, or `Method`.
+
+### Invoke methods
+
+| Method | Applies to | Description |
+| :--- | :--- | :--- |
+| `Click` | `Button` / `Link` | Runs the same action and `Click` trigger as a user click |
+| `SetValue` | Any writable node | Same as `Host.SetProperty(Target, "Value", Args)` |
+| `Toggle` | `CheckBox` | Flips the checked state |
+| `Refresh` | Any node | Reloads the current widget's data sources |
+| `Focus` / `Blur` | Inputs, buttons, links | Focus or blur the element |
+
+### Example
+
+```xml
+<Text Target="Status" Value="Idle" />
+<List Target="ResultList" Items="Items" As="Item" EmptyText="No results">
+  <ListItem><Text Value="{Item.Title}" /></ListItem>
+</List>
+<Button Target="RefreshButton" Text="Refresh"
+        OnClick="CallFunction" Function="Refresh" />
+
+<Function Name="Refresh" Timeout="5000">
+  <Function.Output Type="String">Message</Function.Output>
+  <Function.Script><![CDATA[
+    const previous = await Host.GetProperty("Status", "Value");
+    await Host.SetProperty("Status", "Content", "Loading");
+    const items = await Host.GetProperty("ResultList", "Items");
+    await Host.SetProperty("ResultList", "Items", [
+      { Title: "Result A" },
+      { Title: "Result B" },
+    ]);
+    await Host.SetProperty("RefreshButton", "Visible", true);
+    // await Host.Invoke("RefreshButton", "Click");
+    return { Message: previous + " -> " + items.length };
+  ]]></Function.Script>
+</Function>
+```
+
+`Host.Invoke("RefreshButton", "Click")` runs the button's action again; invoking the button from its own script recurses, so only invoke other buttons or guard with a condition.
+
+Scripts still cannot execute commands or call plugin APIs directly; those remain button/trigger actions.
 
 ## Triggers
 
