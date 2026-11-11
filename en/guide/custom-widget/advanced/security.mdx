@@ -1,0 +1,56 @@
+---
+title: "Security and trust"
+---
+
+## Security and trust
+
+Custom widget risk is not determined by whether it uses `RunCommand` or updates online. It depends on:
+
+1. **Where executable content comes from**
+2. **Whether executable content can change at runtime**
+
+A local shortcut widget can run a command silently; a news widget can refresh data silently. Only remote-origin or runtime-generated executable content needs confirmation.
+
+## Risk matrix
+
+| Scenario | Behavior |
+| :--- | :--- |
+| Local widget, literal command such as `calc` / `explorer .` | Runs on click with no prompt |
+| Local widget, command from user `{Inputs.*}` | Runs with no prompt |
+| Remote widget with a static command | Confirmed once on import or command change; later clicks do not prompt |
+| Remote update changes only data sources, text, layout, or styling | Updates silently |
+| Remote update adds/changes `RunCommand`, `PluginApi`, command arguments, or scripts/triggers that can invoke them | Confirm before updating; decline keeps the old XML |
+| Command from `{Data.*}` / `{Results.*}` / `{Children.*}` | Confirm first execution; trust the final command hash until it changes |
+| Command from remote `{Inputs.*}` | Treated as a dynamic remote command |
+| Command invoked by `Loaded` / `Resize` or other automatic triggers | Same source rules; dynamic remote commands still require confirmation |
+
+## Executable fingerprint
+
+Remote updates compare only executable content:
+
+- `RunCommand` `Command` and `WorkingDirectory`
+- `PluginApi` `PluginId`, `Method`, `Arguments`
+- Function scripts and triggers when executable actions exist
+
+Data refreshes, text changes, and layout changes do not trigger confirmation. News, announcements, and status widgets can keep updating in real time.
+
+## Dynamic commands
+
+```xml
+<Button Text="Run" OnClick="RunCommand"
+        Command="{Data.Command}" />
+```
+
+The final command comes from online data. The launcher shows the final command and asks before execution. After confirmation, only the **hash of that command** is trusted; a different command asks again.
+
+Command templates recognize only these binding namespaces:
+
+`Data`, `Resources`, `Inputs`, `Results`, `Children`, `Size`, `State`.
+
+Ordinary shell braces (for example PowerShell script blocks) are not treated as bindings.
+
+## Remaining boundaries
+
+- A locally imported `.qwidget` is treated as content the user chose; literal commands in local widgets do not prompt on every click.
+- An approved remote static command does not prompt again while it stays unchanged. This is intentional.
+- Only use sources you trust. The launcher developers are not responsible for risks caused by custom widgets.

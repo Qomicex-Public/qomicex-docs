@@ -61,10 +61,12 @@ All domains must be checked before saving. Static images/media only load from co
 
 ## Updates and risk
 
-Online widgets check for updates silently every 6 hours. Custom widgets can run TypeScript, execute commands, call plugin APIs, and read local files, so:
+Online widgets check for updates silently every 6 hours; data, text, and layout updates do not prompt. Custom widgets can run TypeScript, execute commands, call plugin APIs, and read local files, so:
 
-- The first save of a widget with scripts or dangerous actions shows a risk notice.
-- Widgets with `Function` / `RunCommand` / `PluginApi` show a persistent risk banner in the editor.
+- Confirm when a remote widget import or update adds/changes executable content; decline keeps the old XML.
+- Literal commands in local widgets and user-input commands do not prompt on every click.
+- Commands generated from online data are confirmed by final command hash.
+- See [Security and trust](/en/guide/custom-widget/advanced/security).
 - Only use widgets you trust. The launcher developers are not responsible for risks caused by custom widgets.
 
 ## Storage and limits

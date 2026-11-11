@@ -76,8 +76,9 @@ A `Trigger` can use the `Function` shorthand, or `Action` plus action parameters
 
 - The editor preview does not execute `RunCommand` / `PluginApi`.
 - `RunCommand` runs through Tauri IPC, output is capped at 64KB, and the timeout can be set from 1 to 60 seconds.
+- Local literal commands do not prompt; remote static commands are confirmed once; commands generated from online data are confirmed by final command hash. See [Security and trust](/en/guide/custom-widget/advanced/security).
 - The target plugin of `PluginApi` must be loaded and have the method registered.
-- Remote widgets can update silently and bring these actions in; only use trusted widgets.
+- Remote updates only prompt when executable content changes; ordinary data updates remain silent.
 
 ## Common errors
 

@@ -55,7 +55,8 @@
                           "guide/custom-widget/advanced/nesting",
                           "guide/custom-widget/advanced/plugin-api",
                           "guide/custom-widget/advanced/data",
-                          "guide/custom-widget/advanced/media-binary"
+                          "guide/custom-widget/advanced/media-binary",
+                          "guide/custom-widget/advanced/security"
                         ]
                       },
                       "guide/custom-widget/examples",
@@ -255,7 +256,8 @@
                           "en/guide/custom-widget/advanced/nesting",
                           "en/guide/custom-widget/advanced/plugin-api",
                           "en/guide/custom-widget/advanced/data",
-                          "en/guide/custom-widget/advanced/media-binary"
+                          "en/guide/custom-widget/advanced/media-binary",
+                          "en/guide/custom-widget/advanced/security"
                         ]
                       },
                       "en/guide/custom-widget/examples",
