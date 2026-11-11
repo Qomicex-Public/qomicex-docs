@@ -83,6 +83,18 @@ In XML attributes, write `<` as `&lt;`, so `<=` becomes `&lt;=`.
 | `Width` | `Sm` / `Md` / `Lg` / `Xl` / `Full` | `Md` | Dialog width |
 | `Size` | Same | `Md` | Alias of `Width` |
 | `Content` | `{PageName}` or `{Resources.PageName}` | — | Page reference; cannot be combined with inline children |
+
+## Effects
+
+| Element | Main attributes | Description |
+| :--- | :--- | :--- |
+| `ShadowEffect` | `Radius` / `Color` / `OffsetX` / `OffsetY` / `Spread` / `Inset` | Shadow; stackable |
+| `BlurEffect` | `Radius` | Blur |
+| `OpacityEffect` | `Value` | Opacity 0–1 |
+| `ScaleEffect` | `Value` | Scale |
+| `RotateEffect` | `Angle` | Rotation angle |
+
+Every visual node supports `<Node.Effects>`; `<Trigger.Effects>` uses `Target` to select the target node.
 | `UpdateTTL` | seconds / `Default` / `Immediately` / `PreLaunch` / `PreLoad` / `None` | `Default` | Remote XML update interval |
 | `RefreshTTL` | seconds / same | `None` | Data refetch interval, keeps component state |
 

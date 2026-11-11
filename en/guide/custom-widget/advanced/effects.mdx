@@ -1,0 +1,120 @@
+---
+title: "Effects"
+---
+
+## Effects
+
+`Effects` is a CSS effect layer for visual nodes. Multiple effects can be stacked. Effects do not change layout size; they affect shadows, filters, opacity, and transforms.
+
+## Inline effects
+
+```xml
+<Button Text="With shadow" OnClick="Refresh">
+  <Button.Effects>
+    <ShadowEffect Radius="5" Color="Black" />
+  </Button.Effects>
+</Button>
+```
+
+Every visual node supports `<Node.Effects>`, such as `Text.Effects`, `Container.Effects`, and `Image.Effects`.
+
+## Effect types
+
+### ShadowEffect
+
+```xml
+<ShadowEffect Radius="8" Color="Black"
+              OffsetX="0" OffsetY="4"
+              Spread="2" Inset="False" />
+```
+
+| Attribute | Range/value | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Radius` | 0–100 | `5` | Blur radius |
+| `Color` | CSS color string | `Black` | Color name, `#RRGGBB`, `rgb(...)`, etc. |
+| `OffsetX` / `OffsetY` | -100–100 | `0` | Offset |
+| `Spread` | 0–100 | `0` | Spread |
+| `Inset` | `True` / `False` | `False` | Inset shadow |
+
+### BlurEffect
+
+```xml
+<BlurEffect Radius="4" />
+```
+
+| Attribute | Range | Default |
+| :--- | :--- | :--- |
+| `Radius` | 0–100 | `5` |
+
+### OpacityEffect
+
+```xml
+<OpacityEffect Value="0.8" />
+```
+
+| Attribute | Range | Default |
+| :--- | :--- | :--- |
+| `Value` | 0–1 | `1` |
+
+### ScaleEffect
+
+```xml
+<ScaleEffect Value="1.05" />
+```
+
+| Attribute | Range | Default |
+| :--- | :--- | :--- |
+| `Value` | 0–10 | `1` |
+
+### RotateEffect
+
+```xml
+<RotateEffect Angle="-8" />
+```
+
+| Attribute | Range | Default |
+| :--- | :--- | :--- |
+| `Angle` | -360–360 | `0` |
+
+## Combining effects
+
+```xml
+<Container>
+  <Container.Effects>
+    <ShadowEffect Radius="12" Color="Black" OffsetY="4" />
+    <ScaleEffect Value="1.02" />
+    <OpacityEffect Value="0.95" />
+  </Container.Effects>
+  ...
+</Container>
+```
+
+- Multiple shadows combine into a `box-shadow` list.
+- Multiple blurs combine into `filter`.
+- Multiple scale/rotate effects combine into `transform`.
+- `OpacityEffect` uses the last value.
+
+## Set effects with Trigger
+
+```xml
+<Button Name="HoverButton" Text="Apply effect" />
+
+<Trigger Event="Click" Control="HoverButton" Target="TargetCard">
+  <Trigger.Effects>
+    <ShadowEffect Radius="8" Color="Red" />
+    <ScaleEffect Value="1.05" />
+  </Trigger.Effects>
+</Trigger>
+```
+
+- A Trigger can contain only `Effects`, without `Function` / `Action`.
+- `Target` is the target node's `Target` attribute.
+- For Click, omitting `Target` uses `Control`.
+- Trigger effects **replace** the target's current effects; they do not stack indefinitely.
+- After triggering, the target's inline `<Node.Effects>` is overridden.
+
+## Limits
+
+- Effects are CSS-only and do not define animation timelines.
+- `ShadowEffect` / `BlurEffect` may paint outside the element box; a clipping parent can hide it.
+- Input focus suppresses shortcuts; effects do not affect typing.

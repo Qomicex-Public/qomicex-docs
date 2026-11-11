@@ -87,6 +87,18 @@ XML 属性中的 `<` 必须写成 `&lt;`，`<=` 写成 `&lt;=`。没有空格时
 | `Size` | 同上 | `Md` | `Width` 别名 |
 | `Content` | `{PageName}` 或 `{Resources.PageName}` | — | 引用 Page，不能与内联子元素同时使用 |
 
+## Effects
+
+| 元素 | 主要属性 | 说明 |
+| :--- | :--- | :--- |
+| `ShadowEffect` | `Radius` / `Color` / `OffsetX` / `OffsetY` / `Spread` / `Inset` | 阴影，可堆叠 |
+| `BlurEffect` | `Radius` | 模糊 |
+| `OpacityEffect` | `Value` | 透明度 0–1 |
+| `ScaleEffect` | `Value` | 缩放 |
+| `RotateEffect` | `Angle` | 旋转角度 |
+
+所有可视节点都支持 `<节点.Effects>`；Trigger 的 `<Trigger.Effects>` 用 `Target` 指定目标。
+
 ## 输入控件
 
 | 属性 | 可选值 | 默认 | 说明 |

@@ -1,0 +1,120 @@
+---
+title: "Effect 效果"
+---
+
+## Effect 效果
+
+`Effects` 是可视节点的 CSS 效果层，可堆叠多个效果。效果不改变布局尺寸，只影响阴影、滤镜、透明度和变换。
+
+## 内联效果
+
+```xml
+<Button Text="带阴影" OnClick="Refresh">
+  <Button.Effects>
+    <ShadowEffect Radius="5" Color="Black" />
+  </Button.Effects>
+</Button>
+```
+
+所有可视节点都支持 `<节点.Effects>`，例如 `Text.Effects`、`Container.Effects`、`Image.Effects`。
+
+## 效果类型
+
+### ShadowEffect
+
+```xml
+<ShadowEffect Radius="8" Color="Black"
+              OffsetX="0" OffsetY="4"
+              Spread="2" Inset="False" />
+```
+
+| 属性 | 范围/值 | 默认 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `Radius` | 0–100 | `5` | 模糊半径 |
+| `Color` | CSS 颜色字符串 | `Black` | 颜色名、`#RRGGBB`、`rgb(...)` 等 |
+| `OffsetX` / `OffsetY` | -100–100 | `0` | 偏移 |
+| `Spread` | 0–100 | `0` | 扩散 |
+| `Inset` | `True` / `False` | `False` | 内阴影 |
+
+### BlurEffect
+
+```xml
+<BlurEffect Radius="4" />
+```
+
+| 属性 | 范围 | 默认 |
+| :--- | :--- | :--- |
+| `Radius` | 0–100 | `5` |
+
+### OpacityEffect
+
+```xml
+<OpacityEffect Value="0.8" />
+```
+
+| 属性 | 范围 | 默认 |
+| :--- | :--- | :--- |
+| `Value` | 0–1 | `1` |
+
+### ScaleEffect
+
+```xml
+<ScaleEffect Value="1.05" />
+```
+
+| 属性 | 范围 | 默认 |
+| :--- | :--- | :--- |
+| `Value` | 0–10 | `1` |
+
+### RotateEffect
+
+```xml
+<RotateEffect Angle="-8" />
+```
+
+| 属性 | 范围 | 默认 |
+| :--- | :--- | :--- |
+| `Angle` | -360–360 | `0` |
+
+## 多效果合成
+
+```xml
+<Container>
+  <Container.Effects>
+    <ShadowEffect Radius="12" Color="Black" OffsetY="4" />
+    <ScaleEffect Value="1.02" />
+    <OpacityEffect Value="0.95" />
+  </Container.Effects>
+  ...
+</Container>
+```
+
+- 多个阴影会合并为 `box-shadow` 列表。
+- 多个模糊会合并为 `filter`。
+- 多个缩放/旋转会合并为 `transform`。
+- `OpacityEffect` 取最后一个值。
+
+## 用 Trigger 设置效果
+
+```xml
+<Button Name="HoverButton" Text="应用效果" />
+
+<Trigger Event="Click" Control="HoverButton" Target="TargetCard">
+  <Trigger.Effects>
+    <ShadowEffect Radius="8" Color="Red" />
+    <ScaleEffect Value="1.05" />
+  </Trigger.Effects>
+</Trigger>
+```
+
+- Trigger 可以只有 `Effects`，不写 `Function` / `Action`。
+- `Target` 是目标节点的 `Target` 属性。
+- Click 事件省略 `Target` 时默认使用 `Control`。
+- Trigger 效果会**替换**目标节点的当前效果，不会无限叠加。
+- 触发效果后，目标节点原有内联 `<Node.Effects>` 被覆盖。
+
+## 限制
+
+- 效果只使用 CSS，不能触发动画时间线；需要过渡时使用内置动画或按钮状态。
+- `ShadowEffect` / `BlurEffect` 可能绘制到元素盒模型外，若父容器裁剪会看不到。
+- 输入框聚焦时快捷键不会触发；Effect 本身不影响输入。

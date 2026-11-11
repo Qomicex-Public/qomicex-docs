@@ -62,6 +62,20 @@ Action parameters go directly on the `Button` as attributes or attribute element
 - Shortcuts are ignored while an input is focused.
 - A shortcut runs the same `OnClick` / `Click` trigger as a button click.
 
+## Effects
+
+Buttons support the same `<Button.Effects>` as other visual nodes:
+
+```xml
+<Button Text="Emphasized">
+  <Button.Effects>
+    <ShadowEffect Radius="8" Color="Black" />
+  </Button.Effects>
+</Button>
+```
+
+See [Effects](/en/guide/custom-widget/advanced/effects) for effect types and Trigger usage.
+
 ## Content syntax
 
 ```xml
