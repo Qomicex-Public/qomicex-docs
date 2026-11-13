@@ -22,12 +22,32 @@ title: "Webview embedding"
 | `Height` | 80–4000 px | `320` | iframe height |
 | `Title` | string | `QWidget webview` | iframe title |
 | `Allow` | string | see below | iframe `allow` features |
+| `Sandbox` | `Scripts` / `Forms` / `Popups` / `Downloads` / `Modals` / `OrientationLock` / `PointerLock` / `Presentation` | `Scripts,Forms,Popups,Downloads` | iframe sandbox allowlist |
+| `Loading` | `Lazy` / `Eager` | `Lazy` | iframe loading mode |
+| `ReferrerPolicy` | `NoReferrer` / `NoReferrerWhenDowngrade` / `Origin` / `OriginWhenCrossOrigin` / `SameOrigin` / `StrictOrigin` / `StrictOriginWhenCrossOrigin` | `NoReferrer` | referrer policy |
+| `Fullscreen` | `True` / `False` | `True` | allow fullscreen |
 
 Default `Allow`:
 
 ```text
 fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write
 ```
+
+`Sandbox` only accepts the safe allowlist; `allow-same-origin`, `allow-top-navigation`, and `allow-popups-to-escape-sandbox` are never exposed. Example:
+
+```xml
+<Webview Src="https://example.com/embed" Height="320"
+         Sandbox="Scripts,Forms,Downloads"
+         Loading="Eager" ReferrerPolicy="NoReferrer" Fullscreen="False" />
+```
+
+## Link behavior
+
+Cross-origin iframe clicks cannot be intercepted by the parent, so there is no iframe parameter that makes links open in the system browser:
+
+- `target="_self"`: navigates inside the iframe.
+- `target="_blank"`: controlled by the `Popups` sandbox token; without `Popups`, no popup opens.
+- To force external links into the system browser, use a backend proxy that rewrites the page, or a native Webview with a navigation hook; a plain iframe cannot do it safely.
 
 ## Security boundaries
 
