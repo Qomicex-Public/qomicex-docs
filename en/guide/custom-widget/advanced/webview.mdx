@@ -32,7 +32,7 @@ fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write
 ## Security boundaries
 
 - `Src` must be HTTPS and its host must be confirmed in the editor.
-- The iframe uses `sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"` and never `allow-same-origin`, so it cannot access the launcher page.
+- The iframe uses `sandbox="allow-scripts allow-forms allow-popups allow-downloads"` and never `allow-same-origin`, so it cannot access the launcher page; popups also stay sandboxed.
 - `file:`, `data:`, and local paths are rejected.
 - Sites may block embedding through `X-Frame-Options` or CSP; use `OpenUrl` to open them externally.
 - Dynamic `Src` hosts must still be confirmed in the widget `hosts`, or the frame will not render.

@@ -32,7 +32,7 @@ fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write
 ## 安全边界
 
 - `Src` 必须是 HTTPS，且域名必须在编辑器中确认。
-- iframe 固定使用 `sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"`，不包含 `allow-same-origin`，不能访问启动器页面。
+- iframe 固定使用 `sandbox="allow-scripts allow-forms allow-popups allow-downloads"`，不包含 `allow-same-origin`，不能访问启动器页面；弹出窗口也不会逃逸沙箱。
 - 不能嵌入 `file:`、`data:` 或本地路径。
 - 目标站点可能通过 `X-Frame-Options` / CSP 禁止嵌入；这种情况下请使用 `OpenUrl` 在外部浏览器打开。
 - 动态 `Src` 的域名仍需在组件 `hosts` 中确认，否则不会渲染。
