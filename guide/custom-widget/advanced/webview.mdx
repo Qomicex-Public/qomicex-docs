@@ -22,12 +22,32 @@ title: "Webview 嵌入"
 | `Height` | 80–4000 像素 | `320` | iframe 高度 |
 | `Title` | 字符串 | `QWidget webview` | iframe 标题 |
 | `Allow` | 字符串 | 见下 | iframe `allow` 特性 |
+| `Sandbox` | `Scripts` / `Forms` / `Popups` / `Downloads` / `Modals` / `OrientationLock` / `PointerLock` / `Presentation` | `Scripts,Forms,Popups,Downloads` | iframe sandbox 白名单 |
+| `Loading` | `Lazy` / `Eager` | `Lazy` | iframe 加载时机 |
+| `ReferrerPolicy` | `NoReferrer` / `NoReferrerWhenDowngrade` / `Origin` / `OriginWhenCrossOrigin` / `SameOrigin` / `StrictOrigin` / `StrictOriginWhenCrossOrigin` | `NoReferrer` | referrer 策略 |
+| `Fullscreen` | `True` / `False` | `True` | 是否允许全屏 |
 
 默认 `Allow`：
 
 ```text
 fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write
 ```
+
+`Sandbox` 只接受安全白名单；`allow-same-origin`、`allow-top-navigation`、`allow-popups-to-escape-sandbox` 永远不开放。示例：
+
+```xml
+<Webview Src="https://example.com/embed" Height="320"
+         Sandbox="Scripts,Forms,Downloads"
+         Loading="Eager" ReferrerPolicy="NoReferrer" Fullscreen="False" />
+```
+
+## 链接行为
+
+跨域 iframe 的点击无法被父页面拦截，所以没有“链接在浏览器打开”的 iframe 参数：
+
+- `target="_self"`：在 iframe 内跳转。
+- `target="_blank"`：受 `Sandbox` 的 `Popups` 控制；移除 `Popups` 后不会打开弹窗。
+- 需要“外部链接一律用系统浏览器打开”时，应使用后端代理重写页面，或改用原生 Webview 的 navigation hook；iframe 本身无法安全实现。
 
 ## 安全边界
 
