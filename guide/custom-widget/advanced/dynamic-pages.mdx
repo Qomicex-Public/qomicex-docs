@@ -1,0 +1,75 @@
+---
+title: "动态 Page"
+---
+
+## 动态 Page
+
+`Page` 可以在运行时由 Function 创建或替换。适合“根据数据动态拼 UI”的场景，例如生成表单、列表详情、公告详情。
+
+## 声明占位 Page
+
+`Content` 在 XML 解析期必须引用一个已声明的 Page，所以先声明一个空 Page：
+
+```xml
+<Widget.Resources>
+  <Resource Type="Page" Name="Result" />
+</Widget.Resources>
+```
+
+然后让容器引用它：
+
+```xml
+<Container Content="{Result}" />
+```
+
+## Host.SetPage
+
+```xml
+<Function Name="BuildResult">
+  <Function.Script><![CDATA[
+    const title = Inputs.Title || '未命名'
+    const body = Inputs.Body || ''
+    await Host.SetPage('Result', `
+      <Page>
+        <Container Gap="2" Padding="3">
+          <Text Value="${title}" Size="Lg" Weight="Bold" />
+          <Text Value="${body}" Size="Sm" />
+        </Container>
+      </Page>
+    `)
+  ]]></Function.Script>
+</Function>
+
+<Triggers>
+  <Trigger Event="Loaded" Function="BuildResult" />
+</Triggers>
+```
+
+`Host.SetPage(name, xml)`：
+
+- `name`：要覆盖的已声明 Page 名。
+- `xml`：必须以 `<Page>` 为根。
+- 只允许普通可视节点；不能包含 `Data`、`Function`、`Trigger`、`Widget` 等顶层资源。
+- 每次调用都会重新解析并替换该 Page。
+- 页面状态只存在于当前组件实例；XML 更新、卸载或重新挂载后重置。
+- 解析失败会抛出错误，函数调用方可以捕获。
+
+## 清空 Page
+
+```ts
+await Host.SetPage('Result', '<Page></Page>')
+```
+
+## 与静态 Page 的关系
+
+- 静态 Page 来自 `Resource Type="Page"`，用于首屏和编辑器预览。
+- 动态 Page 同名覆盖静态 Page；没有调用 `SetPage` 时继续使用静态内容。
+- `Content="{Result}"` 不需要改变语法。
+
+## 限制
+
+- 动态 Page 不能创建新的数据源、函数或触发器。
+- 动态 Page 复用当前组件的绑定作用域、Converter、Resources 和静态 Page 引用。
+- 动态 Page 仍受节点数、深度和 XML 大小限制。
+- 动态 Page 的 `Host.SetPage` 由脚本沙箱调用；远程组件的脚本仍受可执行内容确认约束。
+- 编辑器预览不会执行真实 `Host.SetPage`，请在实际组件中验证动态内容。
