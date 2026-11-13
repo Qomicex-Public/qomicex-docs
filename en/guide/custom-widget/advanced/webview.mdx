@@ -1,0 +1,42 @@
+---
+title: "Webview embedding"
+---
+
+## Webview embedding
+
+`Webview` embeds an HTTPS page in a sandboxed iframe.
+
+```xml
+<Webview
+  Src="https://example.com/embed"
+  Height="320"
+  Title="Announcement"
+/>
+```
+
+## Attributes
+
+| Attribute | Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Src` | HTTPS URL or binding | Required | HTTPS:443 only |
+| `Height` | 80–4000 px | `320` | iframe height |
+| `Title` | string | `QWidget webview` | iframe title |
+| `Allow` | string | see below | iframe `allow` features |
+
+Default `Allow`:
+
+```text
+fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write
+```
+
+## Security boundaries
+
+- `Src` must be HTTPS and its host must be confirmed in the editor.
+- The iframe uses `sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"` and never `allow-same-origin`, so it cannot access the launcher page.
+- `file:`, `data:`, and local paths are rejected.
+- Sites may block embedding through `X-Frame-Options` or CSP; use `OpenUrl` to open them externally.
+- Dynamic `Src` hosts must still be confirmed in the widget `hosts`, or the frame will not render.
+
+## Layout
+
+`Webview` is a fixed-height block. Let the outer `Container` clip or scroll; do not rely on the iframe to resize the widget.

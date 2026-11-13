@@ -1,0 +1,75 @@
+---
+title: "Dynamic Pages"
+---
+
+## Dynamic Pages
+
+A `Page` can be created or replaced at runtime by a Function. This is useful for data-driven UI such as generated forms, detail views, or announcement bodies.
+
+## Declare a placeholder Page
+
+`Content` must reference a declared Page during XML parsing, so declare an empty Page first:
+
+```xml
+<Widget.Resources>
+  <Resource Type="Page" Name="Result" />
+</Widget.Resources>
+```
+
+Then reference it from a container:
+
+```xml
+<Container Content="{Result}" />
+```
+
+## Host.SetPage
+
+```xml
+<Function Name="BuildResult">
+  <Function.Script><![CDATA[
+    const title = Inputs.Title || 'Untitled'
+    const body = Inputs.Body || ''
+    await Host.SetPage('Result', `
+      <Page>
+        <Container Gap="2" Padding="3">
+          <Text Value="${title}" Size="Lg" Weight="Bold" />
+          <Text Value="${body}" Size="Sm" />
+        </Container>
+      </Page>
+    `)
+  ]]></Function.Script>
+</Function>
+
+<Triggers>
+  <Trigger Event="Loaded" Function="BuildResult" />
+</Triggers>
+```
+
+`Host.SetPage(name, xml)`:
+
+- `name`: the declared Page to override.
+- `xml`: must use `<Page>` as its root.
+- Only visual nodes are allowed; `Data`, `Function`, `Trigger`, and `Widget` resources cannot be nested.
+- Each call reparses and replaces that Page.
+- Page state is local to the current widget instance and resets when the XML reloads or the widget unmounts.
+- Parse errors reject the call and can be caught by the Function.
+
+## Clear a Page
+
+```ts
+await Host.SetPage('Result', '<Page></Page>')
+```
+
+## Relationship to static Pages
+
+- Static Pages come from `Resource Type="Page"` and provide the initial/editor-preview content.
+- A dynamic Page overrides the same-named static Page; without `SetPage`, the static content is used.
+- `Content="{Result}"` does not change syntax.
+
+## Limits
+
+- Dynamic Pages cannot create new data sources, functions, or triggers.
+- They reuse the current widget's binding scope, converters, resources, and static Page references.
+- Node count, depth, and XML size limits still apply.
+- `Host.SetPage` runs through the script sandbox; remote widget scripts still require executable-content confirmation.
+- Editor preview does not execute a real `Host.SetPage`; verify dynamic content in the running widget.
