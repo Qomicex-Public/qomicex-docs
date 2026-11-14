@@ -33,7 +33,7 @@ Audio/video player. Supports online URLs and blob URLs.
 ## Runtime behavior
 
 - `Audio` renders `<audio>`, `Video` renders `<video>`.
-- Online https sources require an approved domain; blob URLs play directly.
+- Online https sources may come from any HTTPS host; blob URLs play directly.
 - `Volume` is read only on load; two-way binding is not supported.
 - `AutoPlay` may be blocked by browser policy and needs user interaction.
 - Object URLs are released when the component unmounts.
@@ -48,5 +48,5 @@ Audio/video player. Supports online URLs and blob URLs.
 ## Gotchas
 
 - Online audio/video needs server support for CORS or range requests; otherwise the player reports an error.
-- Remote media domains must be approved in the editor.
+- Media servers can still see the request IP; use a trusted source or local Blob for sensitive content.
 - No playlists, progress events, or script control interfaces; complex players have to wait for a later release.

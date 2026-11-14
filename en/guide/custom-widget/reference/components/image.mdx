@@ -24,7 +24,7 @@ Displays an image. Supports online URLs, blob URLs, and data URLs.
 
 ## Runtime behavior
 
-- For online https images the domain must be approved; unapproved domains are not rendered.
+- Online https images may come from any HTTPS host; `no-referrer` reduces referrer leakage.
 - Blob URLs (from `Data Type="Binary"` or `Resources Binary`) render directly.
 - Without `W` the width is 100%; without `H` the height is automatic.
 - Cropping uses `object-cover`.
@@ -41,5 +41,5 @@ Displays an image. Supports online URLs, blob URLs, and data URLs.
 ## Gotchas
 
 - A failed remote image shows no placeholder; use `If` on the data state when you need one.
-- Domains of a dynamic `Src` must also be approved in the editor, otherwise nothing renders.
+- Any HTTPS image can render, but the remote host still sees the request IP; use a trusted image host or Blob URLs for sensitive content.
 - Large images consume memory; keep `W`/`H` small.
