@@ -24,7 +24,8 @@ title: "Image"
 
 ## 运行时行为
 
-- 在线 https 图片可来自任意 HTTPS 域名；使用 `no-referrer` 降低来源泄露。
+- 静态 https 图片可来自任意 HTTPS 域名。
+- 动态 `Src` 需要匹配 `Widget.ImageHosts`；可用 `*` 或 `*.cdn.com` 一次确认。
 - Blob URL（来自 `Data Type="Binary"` 或 `Resources Binary`）直接渲染。
 - 不写 `W` 时宽度 100%；不写 `H` 时高度自动。
 - 使用 `object-cover` 裁剪。
@@ -41,5 +42,5 @@ title: "Image"
 ## 坑
 
 - 远程图片加载失败不会显示占位；需要占位时用 `If` 判断数据状态。
-- 任意 HTTPS 图片都能显示，但对方仍可看到请求 IP；敏感场景请使用可信图床或 Blob URL。
+- 动态图片未匹配 `ImageHosts` 时不会渲染；对方仍可看到请求 IP，敏感场景请使用可信图床或 Blob。
 - 大图会占用内存；尽量限制 `W/H`。

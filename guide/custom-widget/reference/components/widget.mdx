@@ -39,6 +39,19 @@ title: "Widget"
 - `None`：不自动执行
 - 数字：秒数，例如 `30` 表示 30 秒
 
+## ImageHosts
+
+动态 `Image` / `Media` 的图片、音视频和 poster 域名白名单：
+
+```xml
+<Widget ImageHosts="*.example.com,cdn.example.net" ...>
+```
+
+- 支持精确域名、`*.example.com` 和 `*`
+- 编辑器只需确认一次 `ImageHosts`，不需要逐张图确认
+- 静态 URL 不要求确认
+- `ImageHosts="*"` 表示允许所有 HTTPS 图片/媒体主机
+
 ## 子元素
 
 `Widget` 的直接子元素可以是：

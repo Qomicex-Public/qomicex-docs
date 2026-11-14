@@ -33,7 +33,8 @@ Audio/video player. Supports online URLs and blob URLs.
 ## Runtime behavior
 
 - `Audio` renders `<audio>`, `Video` renders `<video>`.
-- Online https sources may come from any HTTPS host; blob URLs play directly.
+- Static https sources may come from any HTTPS host.
+- Dynamic `Source` / `Poster` must match `Widget.ImageHosts`; blob URLs play directly.
 - `Volume` is read only on load; two-way binding is not supported.
 - `AutoPlay` may be blocked by browser policy and needs user interaction.
 - Object URLs are released when the component unmounts.
@@ -48,5 +49,5 @@ Audio/video player. Supports online URLs and blob URLs.
 ## Gotchas
 
 - Online audio/video needs server support for CORS or range requests; otherwise the player reports an error.
-- Media servers can still see the request IP; use a trusted source or local Blob for sensitive content.
+- Dynamic media that does not match `ImageHosts` does not play; media servers can still see the request IP.
 - No playlists, progress events, or script control interfaces; complex players have to wait for a later release.

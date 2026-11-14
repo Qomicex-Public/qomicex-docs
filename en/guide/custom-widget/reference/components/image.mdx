@@ -24,7 +24,8 @@ Displays an image. Supports online URLs, blob URLs, and data URLs.
 
 ## Runtime behavior
 
-- Online https images may come from any HTTPS host; `no-referrer` reduces referrer leakage.
+- Static https images may come from any HTTPS host.
+- Dynamic `Src` must match `Widget.ImageHosts`; use `*` or `*.cdn.com` for one-time approval.
 - Blob URLs (from `Data Type="Binary"` or `Resources Binary`) render directly.
 - Without `W` the width is 100%; without `H` the height is automatic.
 - Cropping uses `object-cover`.
@@ -41,5 +42,5 @@ Displays an image. Supports online URLs, blob URLs, and data URLs.
 ## Gotchas
 
 - A failed remote image shows no placeholder; use `If` on the data state when you need one.
-- Any HTTPS image can render, but the remote host still sees the request IP; use a trusted image host or Blob URLs for sensitive content.
+- Dynamic images that do not match `ImageHosts` do not render; the remote host still sees the request IP, so use a trusted host or Blob for sensitive content.
 - Large images consume memory; keep `W`/`H` small.
