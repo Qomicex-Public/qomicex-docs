@@ -39,6 +39,19 @@ The root element of a component. A `.qwidget` file can contain exactly one `Widg
 - `None`: never
 - Number: seconds, e.g. `30` = 30 seconds
 
+## ImageHosts
+
+Host allowlist for dynamic `Image` / `Media` sources and posters:
+
+```xml
+<Widget ImageHosts="*.example.com,cdn.example.net" ...>
+```
+
+- Exact hosts, `*.example.com`, and `*` are supported
+- The editor confirms `ImageHosts` once; images are not confirmed one by one
+- Static URLs do not require confirmation
+- `ImageHosts="*"` allows all HTTPS image/media hosts
+
 ## Child elements
 
 Direct children of `Widget` can be:

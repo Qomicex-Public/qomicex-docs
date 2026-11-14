@@ -33,7 +33,8 @@ title: "Media"
 ## 运行时行为
 
 - `Audio` 渲染 `<audio>`，`Video` 渲染 `<video>`。
-- 在线 https 源可来自任意 HTTPS 域名；Blob URL 直接播放。
+- 静态 https 源可来自任意 HTTPS 域名。
+- 动态 `Source` / `Poster` 需要匹配 `Widget.ImageHosts`；Blob URL 直接播放。
 - `Volume` 只在加载时读取，不支持双向绑定。
 - `AutoPlay` 可能被浏览器策略阻止，需要用户交互。
 - 对象 URL 在组件卸载时释放。
@@ -48,5 +49,5 @@ title: "Media"
 ## 坑
 
 - 在线音频/视频需要服务端支持 CORS 或 Range 请求；失败时播放器会报错。
-- 媒体服务端仍可看到请求 IP；敏感场景请使用可信源或本地 Blob。
+- 动态媒体未匹配 `ImageHosts` 时不会播放；媒体服务端仍可看到请求 IP。
 - 没有播放列表、进度事件或脚本控制接口；复杂播放器需要等待后续版本。
