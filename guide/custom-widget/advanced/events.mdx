@@ -1,0 +1,67 @@
+---
+title: "节点事件"
+---
+
+## 节点事件
+
+所有可视节点都支持 `<Node.Actions>`，不再给 Button、Image 分别加事件属性。
+
+```xml
+<Image Src="{Data.Cover.Url}" W="320" H="180">
+  <Image.Actions>
+    <OnClick Function="OpenCover" />
+    <OnMouseOut Function="ResetZoom" />
+  </Image.Actions>
+</Image>
+```
+
+也可以使用显式 `Action`：
+
+```xml
+<Text Value="刷新">
+  <Text.Actions>
+    <Action Event="Click" Function="Refresh" />
+  </Text.Actions>
+</Text>
+```
+
+## 事件
+
+| 元素 / Event | 触发时机 |
+| :--- | :--- |
+| `OnClick` / `Click` | 点击 |
+| `OnDoubleClick` / `DoubleClick` | 双击 |
+| `OnMouseDown` / `MouseDown` | 按下 |
+| `OnMouseUp` / `MouseUp` | 松开 |
+| `OnMouseOver` / `MouseOver` | 移入节点 |
+| `OnMouseOut` / `MouseOut` | 移出节点 |
+| `OnKeyboardDown` / `KeyboardDown` | 节点或其子元素获得焦点后按键 |
+| `OnKeyboardUp` / `KeyboardUp` | 节点或其子元素获得焦点后松开 |
+| `OnContextMenu` / `ContextMenu` | 右键菜单 |
+| `OnLoaded` / `Loaded` | 节点挂载后一次 |
+
+## Function 或 Action
+
+每个事件二选一：
+
+```xml
+<OnClick Function="OpenCover" Arguments='{"id":"{Data.Cover.Id}"}' />
+<OnClick Action="OpenUrl" Url="{Data.Cover.Url}" />
+```
+
+- `Function`：调用组件函数，`Arguments` 可选
+- `Action`：使用与 Button/Trigger 相同的动作参数
+- 事件动作会进入远程组件的可执行内容指纹。远程组件新增或修改危险动作时，仍需要确认。
+
+## 与内置事件的关系
+
+- Button 的 `OnClick`、输入控件的 `OnChange` 继续有效
+- `<Node.Actions>` 是额外事件层；两者同时声明时都会执行
+- `Loaded` 每个节点实例只执行一次；重新挂载会再次执行
+
+## 限制
+
+- 键盘事件要求节点本身或节点内有可聚焦元素
+- `MouseOver` / `MouseOut` 按进入/离开节点触发；在子元素间移动不会重复触发
+- `ContextMenu` 有动作时会阻止默认右键菜单
+- 事件不改变布局；需要动画或属性变化时由 Function 或 Action 完成

@@ -26,6 +26,7 @@ title: "Webview embedding"
 | `Loading` | `Lazy` / `Eager` | `Lazy` | iframe loading mode |
 | `ReferrerPolicy` | `NoReferrer` / `NoReferrerWhenDowngrade` / `Origin` / `OriginWhenCrossOrigin` / `SameOrigin` / `StrictOrigin` / `StrictOriginWhenCrossOrigin` | `NoReferrer` | referrer policy |
 | `Fullscreen` | `True` / `False` | `True` | allow fullscreen |
+| `Background` | `Default` / `Transparent` | `Default` | transparent iframe background |
 
 Default `Allow`:
 
@@ -40,6 +41,14 @@ fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write
          Sandbox="Scripts,Forms,Downloads"
          Loading="Eager" ReferrerPolicy="NoReferrer" Fullscreen="False" />
 ```
+
+## Transparent background
+
+```xml
+<Webview Src="https://example.com/widget" Height="240" Background="Transparent" />
+```
+
+`Background="Transparent"` makes the iframe background transparent; the embedded page's own `html` / `body` must also be transparent, otherwise its background still shows.
 
 ## Link behavior
 

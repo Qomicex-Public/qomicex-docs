@@ -26,6 +26,7 @@ title: "Webview 嵌入"
 | `Loading` | `Lazy` / `Eager` | `Lazy` | iframe 加载时机 |
 | `ReferrerPolicy` | `NoReferrer` / `NoReferrerWhenDowngrade` / `Origin` / `OriginWhenCrossOrigin` / `SameOrigin` / `StrictOrigin` / `StrictOriginWhenCrossOrigin` | `NoReferrer` | referrer 策略 |
 | `Fullscreen` | `True` / `False` | `True` | 是否允许全屏 |
+| `Background` | `Default` / `Transparent` | `Default` | iframe 背景是否透明 |
 
 默认 `Allow`：
 
@@ -40,6 +41,14 @@ fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write
          Sandbox="Scripts,Forms,Downloads"
          Loading="Eager" ReferrerPolicy="NoReferrer" Fullscreen="False" />
 ```
+
+## 透明背景
+
+```xml
+<Webview Src="https://example.com/widget" Height="240" Background="Transparent" />
+```
+
+`Background="Transparent"` 会把 iframe 背景设为透明；嵌入页面自身的 `html` / `body` 也必须透明，否则仍会显示对方页面的底色。
 
 ## 链接行为
 
