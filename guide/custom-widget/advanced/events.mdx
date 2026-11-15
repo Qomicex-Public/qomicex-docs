@@ -33,10 +33,10 @@ title: "节点事件"
 | `OnDoubleClick` / `DoubleClick` | 双击 |
 | `OnMouseDown` / `MouseDown` | 按下 |
 | `OnMouseUp` / `MouseUp` | 松开 |
-| `OnMouseOver` / `MouseOver` | 移入 |
-| `OnMouseOut` / `MouseOut` | 移出 |
-| `OnKeyboardDown` / `KeyboardDown` | 节点内元素获得焦点后按键 |
-| `OnKeyboardUp` / `KeyboardUp` | 节点内元素获得焦点后松开 |
+| `OnMouseOver` / `MouseOver` | 移入节点 |
+| `OnMouseOut` / `MouseOut` | 移出节点 |
+| `OnKeyboardDown` / `KeyboardDown` | 节点或其子元素获得焦点后按键 |
+| `OnKeyboardUp` / `KeyboardUp` | 节点或其子元素获得焦点后松开 |
 | `OnContextMenu` / `ContextMenu` | 右键菜单 |
 | `OnLoaded` / `Loaded` | 节点挂载后一次 |
 
@@ -51,7 +51,7 @@ title: "节点事件"
 
 - `Function`：调用组件函数，`Arguments` 可选
 - `Action`：使用与 Button/Trigger 相同的动作参数
-- 事件动作会进入远程组件的可执行内容指纹；远程组件新增/修改危险动作需要确认
+- 事件动作会进入远程组件的可执行内容指纹。远程组件新增或修改危险动作时，仍需要确认。
 
 ## 与内置事件的关系
 
@@ -61,7 +61,7 @@ title: "节点事件"
 
 ## 限制
 
-- 键盘事件要求节点内有可聚焦元素，或节点本身可聚焦
-- `MouseOut` 使用 DOM `mouseout`，鼠标在子元素间移动也可能触发
+- 键盘事件要求节点本身或节点内有可聚焦元素
+- `MouseOver` / `MouseOut` 按进入/离开节点触发；在子元素间移动不会重复触发
 - `ContextMenu` 有动作时会阻止默认右键菜单
-- 事件不改变布局；需要动画/属性变化时由 Function 或 Action 完成
+- 事件不改变布局；需要动画或属性变化时由 Function 或 Action 完成

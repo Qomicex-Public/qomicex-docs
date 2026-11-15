@@ -15,7 +15,7 @@ Every visual node supports `<Node.Actions>`; controls no longer need their own e
 </Image>
 ```
 
-The explicit `Action` form is also supported:
+You can also use the explicit `Action` form:
 
 ```xml
 <Text Value="Refresh">
@@ -33,10 +33,10 @@ The explicit `Action` form is also supported:
 | `OnDoubleClick` / `DoubleClick` | Double click |
 | `OnMouseDown` / `MouseDown` | Pointer down |
 | `OnMouseUp` / `MouseUp` | Pointer up |
-| `OnMouseOver` / `MouseOver` | Pointer enter |
-| `OnMouseOut` / `MouseOut` | Pointer leave |
-| `OnKeyboardDown` / `KeyboardDown` | Key down while a descendant is focused |
-| `OnKeyboardUp` / `KeyboardUp` | Key up while a descendant is focused |
+| `OnMouseOver` / `MouseOver` | Pointer enters the node |
+| `OnMouseOut` / `MouseOut` | Pointer leaves the node |
+| `OnKeyboardDown` / `KeyboardDown` | Key down while the node or a descendant is focused |
+| `OnKeyboardUp` / `KeyboardUp` | Key up while the node or a descendant is focused |
 | `OnContextMenu` / `ContextMenu` | Context menu |
 | `OnLoaded` / `Loaded` | Once after the node mounts |
 
@@ -51,7 +51,7 @@ Each event uses one of them:
 
 - `Function`: calls a widget function; `Arguments` is optional
 - `Action`: uses the same action arguments as Button/Trigger
-- Event actions are included in the remote executable fingerprint; new or changed dangerous actions require confirmation
+- Event actions are included in the remote executable fingerprint. New or changed dangerous actions still require confirmation.
 
 ## Relationship to built-in events
 
@@ -61,7 +61,7 @@ Each event uses one of them:
 
 ## Limits
 
-- Keyboard events require a focusable descendant or a focusable node
-- `MouseOut` uses DOM `mouseout`; moving between children can fire it
+- Keyboard events require the node itself or a focusable descendant
+- `MouseOver` / `MouseOut` fire when entering or leaving the node; moving between descendants does not repeat them
 - `ContextMenu` prevents the default menu when an action exists
 - Events do not change layout; use a Function or Action for animation/property changes
