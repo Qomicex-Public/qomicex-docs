@@ -1,0 +1,67 @@
+---
+title: "Node events"
+---
+
+## Node events
+
+Every visual node supports `<Node.Actions>`; controls no longer need their own event attributes.
+
+```xml
+<Image Src="{Data.Cover.Url}" W="320" H="180">
+  <Image.Actions>
+    <OnClick Function="OpenCover" />
+    <OnMouseOut Function="ResetZoom" />
+  </Image.Actions>
+</Image>
+```
+
+The explicit `Action` form is also supported:
+
+```xml
+<Text Value="Refresh">
+  <Text.Actions>
+    <Action Event="Click" Function="Refresh" />
+  </Text.Actions>
+</Text>
+```
+
+## Events
+
+| Element / Event | When it fires |
+| :--- | :--- |
+| `OnClick` / `Click` | Click |
+| `OnDoubleClick` / `DoubleClick` | Double click |
+| `OnMouseDown` / `MouseDown` | Pointer down |
+| `OnMouseUp` / `MouseUp` | Pointer up |
+| `OnMouseOver` / `MouseOver` | Pointer enter |
+| `OnMouseOut` / `MouseOut` | Pointer leave |
+| `OnKeyboardDown` / `KeyboardDown` | Key down while a descendant is focused |
+| `OnKeyboardUp` / `KeyboardUp` | Key up while a descendant is focused |
+| `OnContextMenu` / `ContextMenu` | Context menu |
+| `OnLoaded` / `Loaded` | Once after the node mounts |
+
+## Function or Action
+
+Each event uses one of them:
+
+```xml
+<OnClick Function="OpenCover" Arguments='{"id":"{Data.Cover.Id}"}' />
+<OnClick Action="OpenUrl" Url="{Data.Cover.Url}" />
+```
+
+- `Function`: calls a widget function; `Arguments` is optional
+- `Action`: uses the same action arguments as Button/Trigger
+- Event actions are included in the remote executable fingerprint; new or changed dangerous actions require confirmation
+
+## Relationship to built-in events
+
+- Button `OnClick` and input `OnChange` still work
+- `<Node.Actions>` is an additional event layer; both run when declared
+- `Loaded` runs once per node instance and again after remounting
+
+## Limits
+
+- Keyboard events require a focusable descendant or a focusable node
+- `MouseOut` uses DOM `mouseout`; moving between children can fire it
+- `ContextMenu` prevents the default menu when an action exists
+- Events do not change layout; use a Function or Action for animation/property changes
